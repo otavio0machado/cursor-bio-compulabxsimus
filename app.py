@@ -7,6 +7,8 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
+import io
+import hashlib
 
 # Configuração da página
 st.set_page_config(
@@ -81,10 +83,21 @@ def normalize_exam_name(exam_name):
     exam_name = ' '.join(exam_name.split())
     return exam_name
 
-def _collect_compulab_lines(pdf_file):
+def file_to_bytes(uploaded_file):
+    if uploaded_file is None:
+        return None
+    return uploaded_file.getvalue()
+
+def hash_bytes(data):
+    if data is None:
+        return ""
+    return hashlib.md5(data).hexdigest()
+
+def _collect_compulab_lines(file_bytes, page_limit=0):
     lines_all = []
-    with pdfplumber.open(pdf_file) as pdf:
-        for page in pdf.pages:
+    with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
+        pages = pdf.pages[:page_limit] if page_limit and page_limit > 0 else pdf.pages
+        for page in pages:
             text = page.extract_text()
             if not text:
                 continue
@@ -122,13 +135,13 @@ def _split_patient_exam(tokens, exam_name_set):
     return tokens[:split_idx], tokens[split_idx:]
 
 # Extração de dados do COMPULAB
-def extract_compulab_patients(pdf_file):
+def extract_compulab_patients(file_bytes, page_limit=0):
     """Extrai dados de pacientes do COMPULAB com separação por exame"""
     patients = defaultdict(lambda: {"exams": [], "total": Decimal("0")})
     total_value = Decimal("0")
 
     try:
-        lines_all = _collect_compulab_lines(pdf_file)
+        lines_all = _collect_compulab_lines(file_bytes, page_limit=page_limit)
         exam_name_set = _build_exam_name_set(lines_all)
         current_patient = None
 
@@ -213,7 +226,7 @@ def _find_patient_in_tokens(tokens, candidate_patients):
                 return " ".join(tokens[i : i + size]), i + size
     return None, None
 
-def extract_simus_patients(pdf_file, known_patient_names=None):
+def extract_simus_patients(file_bytes, known_patient_names=None, page_limit=0):
     """Extrai dados de pacientes do SIMUS a partir das linhas do PDF"""
     patients = defaultdict(lambda: {'exams': [], 'total': Decimal('0')})
     total_value = Decimal('0')
@@ -221,7 +234,7 @@ def extract_simus_patients(pdf_file, known_patient_names=None):
     contratualizado_value = None
     
     try:
-        with pdfplumber.open(pdf_file) as pdf:
+        with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
             # Primeira página para pegar totais
             first_page = pdf.pages[0]
             first_text = first_page.extract_text()
@@ -245,7 +258,8 @@ def extract_simus_patients(pdf_file, known_patient_names=None):
             pending_exam_prefix = ""
             pending_code = None
 
-            for page in pdf.pages:
+            pages = pdf.pages[:page_limit] if page_limit and page_limit > 0 else pdf.pages
+            for page in pages:
                 text = page.extract_text()
                 if not text:
                     continue
@@ -339,6 +353,14 @@ def extract_simus_patients(pdf_file, known_patient_names=None):
         return None, None, None, None
     
     return patients, total_value, sigtap_value, contratualizado_value
+
+@st.cache_data(show_spinner=False)
+def extract_compulab_patients_cached(file_bytes, page_limit):
+    return extract_compulab_patients(file_bytes, page_limit=page_limit)
+
+@st.cache_data(show_spinner=False)
+def extract_simus_patients_cached(file_bytes, known_patient_names, page_limit):
+    return extract_simus_patients(file_bytes, known_patient_names=known_patient_names, page_limit=page_limit)
 
 # Análise comparativa baseada em NOMES
 def compare_patients(compulab_patients, simus_patients):
@@ -447,14 +469,33 @@ simus_file = st.sidebar.file_uploader(
     help="Upload do PDF do SIMUS"
 )
 
+st.sidebar.markdown("### ⚡ Desempenho")
+page_limit = st.sidebar.number_input(
+    "Limitar páginas (0 = todas)",
+    min_value=0,
+    max_value=1000,
+    value=0,
+    step=10,
+    help="Use para acelerar o processamento em PDFs grandes. 0 = todas as páginas."
+)
+
 analyze_button = st.sidebar.button("🔍 Analisar", type="primary", use_container_width=True)
 
 if analyze_button and compulab_file and simus_file:
     with st.spinner("Processando PDFs e extraindo dados dos pacientes..."):
+        compulab_bytes = file_to_bytes(compulab_file)
+        simus_bytes = file_to_bytes(simus_file)
+
+        if page_limit and page_limit > 0:
+            st.warning("Modo rápido ativo: a análise é parcial (limitada por páginas).")
         # Extrair dados
-        compulab_patients, compulab_total = extract_compulab_patients(compulab_file)
-        simus_patients, simus_total, sigtap_val, contratualizado_val = extract_simus_patients(
-            simus_file, known_patient_names=list(compulab_patients.keys()) if compulab_patients else None
+        compulab_patients, compulab_total = extract_compulab_patients_cached(
+            compulab_bytes, page_limit
+        )
+        simus_patients, simus_total, sigtap_val, contratualizado_val = extract_simus_patients_cached(
+            simus_bytes,
+            tuple(compulab_patients.keys()) if compulab_patients else tuple(),
+            page_limit,
         )
         
         if compulab_patients is None or simus_patients is None:
