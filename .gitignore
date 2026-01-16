@@ -25,6 +25,11 @@ wheels/
 
 # Streamlit
 .streamlit/
+*.key
+*_api_key.txt
+*_secret.txt
+.env
+.env.local
 
 # PDFs (opcional - descomente se não quiser versionar os PDFs)
 # *.pdf

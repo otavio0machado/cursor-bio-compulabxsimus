@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biodiagnóstico - Sistema de Administração</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #f5f5f5 0%, #e8f5e9 100%);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(135deg, #1B5E20 0%, #2E7D32 100%);
+            color: white;
+            padding: 2rem 0;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo h1 {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .badge {
+            background: rgba(255,255,255,0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            padding: 4rem 0;
+            background: white;
+            margin-bottom: 3rem;
+        }
+
+        .hero h2 {
+            font-size: 2.5rem;
+            color: #1B5E20;
+            margin-bottom: 1rem;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            color: #666;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        /* Section */
+        .section {
+            margin: 4rem 0;
+            background: white;
+            border-radius: 16px;
+            padding: 3rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        .section-title {
+            font-size: 2rem;
+            color: #1B5E20;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 40px;
+            background: linear-gradient(135deg, #4CAF50, #1B5E20);
+            border-radius: 2px;
+        }
+
+        /* Feature Grid */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .feature-card {
+            background: #f9f9f9;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 2rem;
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(27, 94, 32, 0.15);
+            border-color: #4CAF50;
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature-card h3 {
+            color: #1B5E20;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature-card ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .feature-card li {
+            padding: 0.5rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .feature-card li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        /* Screenshot Placeholder */
+        .screenshot-container {
+            margin: 2rem 0;
+            text-align: center;
+        }
+
+        .screenshot {
+            width: 100%;
+            max-width: 900px;
+            border: 3px solid #e0e0e0;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin: 1rem auto;
+            display: block;
+            background: #f5f5f5;
+            min-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            font-size: 1.1rem;
+        }
+
+        .screenshot-caption {
+            color: #666;
+            font-style: italic;
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        /* Step by Step */
+        .steps {
+            display: grid;
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .step {
+            display: flex;
+            gap: 1.5rem;
+            align-items: start;
+            padding: 1.5rem;
+            background: #f9f9f9;
+            border-radius: 12px;
+            border-left: 4px solid #4CAF50;
+        }
+
+        .step-number {
+            background: #4CAF50;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .step-content h4 {
+            color: #1B5E20;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Comparison Table */
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .comparison-table th {
+            background: #1B5E20;
+            color: white;
+            padding: 1rem;
+            text-align: left;
+        }
+
+        .comparison-table td {
+            padding: 1rem;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .comparison-table tr:hover {
+            background: #f5f5f5;
+        }
+
+        /* Footer */
+        footer {
+            background: #1B5E20;
+            color: white;
+            text-align: center;
+            padding: 2rem 0;
+            margin-top: 4rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h2 {
+                font-size: 1.8rem;
+            }
+
+            .section {
+                padding: 2rem 1.5rem;
+            }
+
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .highlight {
+            background: linear-gradient(120deg, #a5d6a7 0%, #c8e6c9 100%);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <div class="logo">
+                <h1>🧬 Biodiagnóstico</h1>
+                <span class="badge">💎 Certificação PNCQ Diamante</span>
+            </div>
+            <div>
+                <p style="opacity: 0.9;">Sistema de Administração Laboratorial</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <h2>Sistema Completo de Gestão Laboratorial</h2>
+            <p>
+                Plataforma integrada para análise de faturamento, conversão de documentos, 
+                controle de qualidade e muito mais. Desenvolvido especialmente para o 
+                Laboratório Biodiagnóstico.
+            </p>
+        </div>
+    </section>
+
+    <!-- Funcionalidades Principais -->
+    <div class="container">
+        <section class="section">
+            <h2 class="section-title">🚀 Funcionalidades Principais</h2>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🔄</div>
+                    <h3>Conversor PDF → CSV</h3>
+                    <p>Converta relatórios PDF do COMPULAB e SIMUS para formato CSV estruturado.</p>
+                    <ul>
+                        <li>Extract automática de dados</li>
+                        <li>Formatação inteligente</li>
+                        <li>Exportação para Excel</li>
+                        <li>Validação de dados</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>Análise COMPULAB x SIMUS</h3>
+                    <p>Compare faturamentos mensais entre sistemas e identifique divergências.</p>
+                    <ul>
+                        <li>Análise por paciente</li>
+                        <li>Identificação de faltantes</li>
+                        <li>Divergências de valores</li>
+                        <li>Relatórios detalhados</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🔬</div>
+                    <h3>ProIn QC - Controle de Qualidade</h3>
+                    <p>Sistema completo de controle de qualidade laboratorial.</p>
+                    <ul>
+                        <li>Dashboard com estatísticas</li>
+                        <li>Registro de CQ simplificado</li>
+                        <li>Cálculo automático de CV%</li>
+                        <li>Gráficos Levey-Jennings</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🤖</div>
+                    <h3>Análise por IA (Gemini)</h3>
+                    <p>Análise inteligente de documentos usando Google Gemini AI.</p>
+                    <ul>
+                        <li>Configuração de API Key</li>
+                        <li>Análise automática</li>
+                        <li>Insights inteligentes</li>
+                        <li>Relatórios gerados por IA</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Conversor PDF → CSV -->
+        <section class="section">
+            <h2 class="section-title">🔄 Conversor PDF → CSV</h2>
+            
+            <p style="margin-bottom: 2rem; font-size: 1.1rem; color: #666;">
+                Converta facilmente relatórios PDF do COMPULAB e SIMUS para formato CSV, 
+                permitindo análise em planilhas Excel e outros sistemas.
+            </p>
+
+            <div class="screenshot-container">
+                <div class="screenshot">
+                    📸 <strong>SCREENSHOT 1:</strong> Tela inicial do Conversor PDF → CSV<br>
+                    Mostrando área de upload com drag-and-drop e botões de seleção de arquivo
+                </div>
+                <p class="screenshot-caption">Interface do Conversor com área de upload intuitiva</p>
+            </div>
+
+            <h3 style="color: #1B5E20; margin: 2rem 0 1rem 0;">Como Funciona:</h3>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h4>Upload do PDF</h4>
+                        <p>Faça upload do arquivo PDF do COMPULAB ou SIMUS através da interface drag-and-drop ou botão de seleção.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h4>Processamento Automático</h4>
+                        <p>O sistema extrai automaticamente todos os dados estruturados do PDF, incluindo pacientes, exames e valores.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h4>Visualização Prévia</h4>
+                        <p>Visualize os dados extraídos antes de exportar, com opção de edição e validação.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <h4>Exportação CSV</h4>
+                        <p>Exporte os dados em formato CSV pronto para uso em Excel ou outros sistemas de análise.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="screenshot-container">
+                <div class="screenshot">
+                    📸 <strong>SCREENSHOT 2:</strong> Resultado da conversão<br>
+                    Mostrando tabela com dados extraídos e botão de download CSV
+                </div>
+                <p class="screenshot-caption">Visualização dos dados convertidos com opção de exportação</p>
+            </div>
+        </section>
+
+        <!-- Análise COMPULAB x SIMUS -->
+        <section class="section">
+            <h2 class="section-title">📊 Análise COMPULAB x SIMUS</h2>
+            
+            <p style="margin-bottom: 2rem; font-size: 1.1rem; color: #666;">
+                Sistema completo de análise comparativa mensal de faturamento entre o sistema 
+                COMPULAB (Laboratório Biodiagnóstico) e o SIMUS, identificando automaticamente 
+                divergências, pacientes faltantes e diferenças de valores.
+            </p>
+
+            <div class="screenshot-container">
+                <div class="screenshot">
+                    📸 <strong>SCREENSHOT 3:</strong> Tela de upload de análise<br>
+                    Mostrando dois campos de upload (COMPULAB.pdf e SIMUS.pdf) e botão "Analisar"
+                </div>
+                <p class="screenshot-caption">Interface de upload para análise comparativa</p>
+            </div>
+
+            <h3 style="color: #1B5E20; margin: 2rem 0 1rem 0;">O que o Sistema Analisa:</h3>
+            
+            <div class="feature-grid" style="margin-top: 1rem;">
+                <div class="feature-card">
+                    <h4>🔴 Pacientes Faltantes</h4>
+                    <p>Identifica pacientes que estão no COMPULAB mas não aparecem no SIMUS, listando todos os exames e valores.</p>
+                </div>
+                <div class="feature-card">
+                    <h4>⚠️ Exames Faltantes</h4>
+                    <p>Detecta exames que estão no COMPULAB mas não foram cadastrados no SIMUS, agrupados por paciente.</p>
+                </div>
+                <div class="feature-card">
+                    <h4>💰 Divergências de Valores</h4>
+                    <p>Compara valores de exames comuns entre os sistemas e identifica diferenças por paciente e exame.</p>
+                </div>
+            </div>
+
+            <div class="screenshot-container">
+                <div class="screenshot">
+                    📸 <strong>SCREENSHOT 4:</strong> Dashboard de resultados<br>
+                    Mostrando cards com totais (COMPULAB, SIMUS, Diferença) e gráficos de comparação
+                </div>
+                <p class="screenshot-caption">Dashboard com métricas principais e visualizações</p>
+            </div>
+
+            <h3 style="color: #1B5E20; margin: 2rem 0 1rem 0;">Abas de Análise:</h3>
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Aba</th>
+                        <th>Descrição</th>
+                        <th>Funcionalidades</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>📊 Visão Geral</strong></td>
+                        <td>Resumo executivo da análise</td>
+                        <td>Gráficos interativos, estatísticas gerais, totais comparativos</td>
+                    </tr>
+                    <tr>
+                        <td><strong>🔴 Pacientes Faltantes</strong></td>
+                        <td>Lista de pacientes não encontrados no SIMUS</td>
+                        <td>Tabela detalhada, valores por paciente, exportação</td>
+                    </tr>
+                    <tr>
+                        <td><strong>⚠️ Exames Faltantes</strong></td>
+                        <td>Exames não cadastrados no SIMUS</td>
+                        <td>Agrupamento por paciente, valores individuais, filtros</td>
+                    </tr>
+                    <tr>
+                        <td><strong>💰 Divergências</strong></td>
+                        <td>Diferenças de valores entre sistemas</td>
+                        <td>Comparação lado a lado, cálculo de diferença, gráficos</td>
+                    </tr>
+                    <tr>
+                        <td><strong>📄 Relatório</strong></td>
+                        <td>Relatório completo para download</td>
+                        <td>Exportação TXT/CSV, análise detalhada, resumo executivo</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="screenshot-container">
+                <div class="screenshot">
+                    📸 <strong>SCREENSHOT 5:</strong> Aba de Pacientes Faltantes<br>
+                    Mostrando tabela com lista de pacientes, quantidade de exames e valores totais
+                </div>
+                <p class="screenshot-caption">Detalhamento de pacientes faltantes no SIMUS</p>
+            </div>
+
+            <div class="screenshot-container">
+                <div class="screenshot">
+                    📸 <strong>SCREENSHOT 6:</strong> Gráficos de comparação<br>
+                    Mostrando gráficos de barras e pizza comparando valores entre sistemas
+                </div>
+                <p class="screenshot-caption">Visualizações gráficas interativas da análise</p>
+            </div>
+        </section>
+
+        <!-- ProIn QC -->
+        <section class="section">
+            <h2 class="section-title">🔬 ProIn QC - Controle de Qualidade</h2>
+            
+            <p style="margin-bottom: 2rem; font-size: 1.1rem; color: #666;">
+                Sistema completo de controle de qualidade laboratorial com dashboard interativo, 
+                registro simplificado de controles de qualidade, gestão de reagentes e lotes, 
+                e gráficos Levey-Jennings para auditorias.
+            </p>
+
+            <div class="screenshot-container">
+                <div class="screenshot">
+                    📸 <strong>SCREENSHOT 7:</strong> Dashboard ProIn QC<br>
+                    Mostrando cards com estatísticas (CQs em dia, alertas, reagentes próximos do vencimento)
+                </div>
+                <p class="screenshot-caption">Dashboard principal do ProIn QC com métricas em tempo real</p>
+            </div>
+
+            <h3 style="color: #1B5E20; margin: 2rem 0 1rem 0;">Funcionalidades do ProIn QC:</h3>
+            
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">📊</div>
+                    <div class="step-content">
+                        <h4>Dashboard com Estatísticas</h4>
+                        <p>Visão geral completa com alertas de CQs pendentes, reagentes próximos do vencimento, e estatísticas de controle de qualidade.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">📝</div>
+                    <div class="step-content">
+                        <h4>Registro de CQ Simplificado</h4>
+                        <p>Interface intuitiva para registro de controles de qualidade com cálculo automático de CV% (Coeficiente de Variação).</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">🧪</div>
+                    <div class="step-content">
+                        <h4>Gestão de Reagentes/Lotes</h4>
+                        <p>Controle completo de reagentes e lotes com alertas de validade, histórico de uso e rastreabilidade.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">📈</div>
+                    <div class="step-content">
+                        <h4>Gráfico Levey-Jennings</h4>
+                        <p>Visualização gráfica para auditorias com gráficos Levey-Jennings mostrando tendências e variações dos controles.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">📥</div>
+                    <div class="step-content">
+                        <h4>Importação de Planilhas Excel</h4>
+                        <p>Importe dados de controles de qualidade diretamente de planilhas Excel, facilitando a migração de dados.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="screenshot-container">
+                <div class="screenshot">
+                    📸 <strong>SCREENSHOT 8:</strong> Tela de registro de CQ<br>
+                    Mostrando formulário para inserção de dados do controle de qualidade com campos de valor, média, desvio padrão e CV%
+                </div>
+                <p class="screenshot-caption">Interface de registro de controle de qualidade</p>
+            </div>
+
+            <div class="screenshot-container">
+                <div class="screenshot">
+                    📸 <strong>SCREENSHOT 9:</strong> Gráfico Levey-Jennings<br>
+                    Mostrando gráfico com pontos de controle, linhas de média, ±1SD, ±2SD e ±3SD
+                </div>
+                <p class="screenshot-caption">Gráfico Levey-Jennings para análise de tendências</p>
+            </div>
+
+            <div class="screenshot-container">
+                <div class="screenshot">
+                    📸 <strong>SCREENSHOT 10:</strong> Gestão de Reagentes<br>
+                    Mostrando tabela com lista de reagentes, lotes, validades e alertas de vencimento
+                </div>
+                <p class="screenshot-caption">Interface de gestão de reagentes e lotes</p>
+            </div>
+        </section>
+
+        <!-- Configuração API Gemini -->
+        <section class="section">
+            <h2 class="section-title">🤖 Análise por Inteligência Artificial</h2>
+            
+            <p style="margin-bottom: 2rem; font-size: 1.1rem; color: #666;">
+                Configure sua chave de API do Google Gemini para habilitar análises inteligentes 
+                de documentos e geração automática de relatórios com insights avançados.
+            </p>
+
+            <div class="screenshot-container">
+                <div class="screenshot">
+                    📸 <strong>SCREENSHOT 11:</strong> Página de configuração da API<br>
+                    Mostrando campo para inserção da API Key do Google Gemini com instruções passo a passo
+                </div>
+                <p class="screenshot-caption">Tela de configuração da API Gemini</p>
+            </div>
+
+            <h3 style="color: #1B5E20; margin: 2rem 0 1rem 0;">Como Obter sua API Key:</h3>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h4>Acesse o Google AI Studio</h4>
+                        <p>Visite <span class="highlight">https://makersuite.google.com/app/apikey</span> e faça login com sua conta Google.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h4>Crie uma API Key</h4>
+                        <p>Clique em "Create API Key" e copie a chave gerada.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h4>Configure no Sistema</h4>
+                        <p>Cole a chave no campo de configuração e salve. O sistema estará pronto para análises inteligentes.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Interface e Design -->
+        <section class="section">
+            <h2 class="section-title">🎨 Interface e Design</h2>
+            
+            <p style="margin-bottom: 2rem; font-size: 1.1rem; color: #666;">
+                O sistema possui uma interface moderna e intuitiva, seguindo a identidade visual 
+                do Laboratório Biodiagnóstico com cores verdes (#1B5E20, #4CAF50) e design responsivo.
+            </p>
+
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h4>🎯 Design Responsivo</h4>
+                    <p>Interface adaptável para desktop, tablet e mobile, garantindo experiência otimizada em qualquer dispositivo.</p>
+                </div>
+                <div class="feature-card">
+                    <h4>⚡ Performance</h4>
+                    <p>Processamento rápido de PDFs e análises em tempo real, com feedback visual durante o processamento.</p>
+                </div>
+                <div class="feature-card">
+                    <h4>🔒 Segurança</h4>
+                    <p>API Keys armazenadas localmente, processamento de dados no cliente, sem envio para servidores externos.</p>
+                </div>
+            </div>
+
+            <div class="screenshot-container">
+                <div class="screenshot">
+                    📸 <strong>SCREENSHOT 12:</strong> Layout geral do sistema<br>
+                    Mostrando sidebar de navegação, header com logo e certificação, e área de conteúdo principal
+                </div>
+                <p class="screenshot-caption">Layout geral do sistema com navegação lateral</p>
+            </div>
+        </section>
+
+        <!-- Como Usar -->
+        <section class="section">
+            <h2 class="section-title">📖 Como Usar o Sistema</h2>
+            
+            <h3 style="color: #1B5E20; margin: 2rem 0 1rem 0;">Início Rápido:</h3>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h4>Inicie o Aplicativo</h4>
+                        <p>Execute <code>run_app.bat</code> ou use <code>streamlit run app.py</code> no terminal. O navegador abrirá automaticamente.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h4>Escolha a Funcionalidade</h4>
+                        <p>Na barra lateral, selecione entre: Conversor PDF → CSV, Análise COMPULAB x SIMUS, ProIn QC ou Configuração de API.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h4>Faça Upload dos Arquivos</h4>
+                        <p>Use a interface de upload para selecionar seus PDFs ou planilhas Excel conforme a funcionalidade escolhida.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <h4>Visualize os Resultados</h4>
+                        <p>Analise os resultados, gráficos e relatórios gerados. Exporte quando necessário.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tecnologias -->
+        <section class="section">
+            <h2 class="section-title">🛠️ Tecnologias Utilizadas</h2>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h4>Python</h4>
+                    <p>Linguagem principal do sistema, garantindo robustez e facilidade de manutenção.</p>
+                </div>
+                <div class="feature-card">
+                    <h4>Streamlit</h4>
+                    <p>Framework para aplicativo web principal, permitindo interface interativa e responsiva.</p>
+                </div>
+                <div class="feature-card">
+                    <h4>Reflex</h4>
+                    <p>Framework moderno para interface web do módulo Biodiagnóstico App com design avançado.</p>
+                </div>
+                <div class="feature-card">
+                    <h4>PDFplumber</h4>
+                    <p>Biblioteca para extração precisa de dados de arquivos PDF.</p>
+                </div>
+                <div class="feature-card">
+                    <h4>Pandas</h4>
+                    <p>Manipulação e análise de dados estruturados.</p>
+                </div>
+                <div class="feature-card">
+                    <h4>Plotly</h4>
+                    <p>Geração de gráficos interativos e visualizações avançadas.</p>
+                </div>
+                <div class="feature-card">
+                    <h4>Google Gemini AI</h4>
+                    <p>Inteligência artificial para análises avançadas e geração de insights.</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">
+                <strong>🧬 Laboratório Biodiagnóstico</strong>
+            </p>
+            <p style="opacity: 0.9;">
+                Sistema de Administração - Versão 1.0<br>
+                Desenvolvido especialmente para análise de faturamento e controle de qualidade
+            </p>
+            <p style="margin-top: 1rem; opacity: 0.8; font-size: 0.9rem;">
+                💎 Certificação PNCQ Diamante
+            </p>
+        </div>
+    </footer>
+</body>
+</html>
+

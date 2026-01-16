@@ -1,0 +1,6 @@
+reflex>=0.8.0
+pdfplumber>=0.11.0
+pandas>=2.1.0
+google-generativeai
+openpyxl>=3.1.0
+reportlab>=4.0.0

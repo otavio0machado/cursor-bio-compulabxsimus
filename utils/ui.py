@@ -1,0 +1,544 @@
+"""
+Utilitários de Interface - Laboratório Biodiagnóstico
+Funções para melhorar a UI do Streamlit
+Design baseado na identidade visual oficial do laboratório
+"""
+import streamlit as st
+from config import LAB_INFO, THEME_COLORS
+
+def apply_custom_css():
+    """Aplica CSS customizado ao app - Tema Biodiagnóstico"""
+    css = f"""
+    <style>
+        /* Importar fontes do Google Fonts */
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700&display=swap');
+        
+        /* ===== CONFIGURAÇÕES GERAIS ===== */
+        .main {{
+            font-family: 'Open Sans', sans-serif;
+            background-color: {THEME_COLORS['background']};
+        }}
+        
+        h1, h2, h3, h4, h5, h6 {{
+            font-family: 'Poppins', sans-serif !important;
+            color: {THEME_COLORS['primary']} !important;
+        }}
+        
+        /* ===== HEADER BIODIAGNÓSTICO ===== */
+        .lab-header {{
+            background: linear-gradient(135deg, {THEME_COLORS['gradient_start']} 0%, {THEME_COLORS['gradient_end']} 100%);
+            padding: 2rem 2.5rem;
+            border-radius: 16px;
+            margin-bottom: 2rem;
+            color: white;
+            box-shadow: 0 8px 32px rgba(27, 94, 32, 0.3);
+            position: relative;
+            overflow: hidden;
+        }}
+        
+        /* Padrão de fundo (similar ao site) */
+        .lab-header::before {{
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(139, 195, 74, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(139, 195, 74, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+        }}
+        
+        .lab-header-content {{
+            position: relative;
+            z-index: 1;
+        }}
+        
+        .lab-header .lab-title {{
+            color: white !important;
+            margin: 0;
+            font-weight: 700;
+            font-size: 2rem;
+            font-family: 'Poppins', sans-serif;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }}
+        
+        .lab-header .lab-title .accent {{
+            color: {THEME_COLORS['accent']} !important;
+        }}
+        
+        .lab-header .lab-subtitle {{
+            color: rgba(255, 255, 255, 0.95);
+            margin: 0.5rem 0 0 0;
+            font-size: 1rem;
+            font-weight: 400;
+        }}
+        
+        .lab-header .certification-badge {{
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            margin-top: 1rem;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }}
+        
+        /* ===== CARDS ===== */
+        .custom-card {{
+            background: {THEME_COLORS['surface']};
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(27, 94, 32, 0.08);
+            margin-bottom: 1rem;
+            border: 1px solid rgba(27, 94, 32, 0.05);
+            transition: all 0.3s ease;
+        }}
+        
+        .custom-card:hover {{
+            box-shadow: 0 8px 30px rgba(27, 94, 32, 0.12);
+            transform: translateY(-2px);
+        }}
+        
+        /* ===== BOTÕES ===== */
+        .stButton > button {{
+            border-radius: 25px !important;
+            font-weight: 600 !important;
+            font-family: 'Poppins', sans-serif !important;
+            transition: all 0.3s ease !important;
+            border: none !important;
+            padding: 0.6rem 1.5rem !important;
+        }}
+        
+        .stButton > button[kind="primary"] {{
+            background: linear-gradient(135deg, {THEME_COLORS['accent']} 0%, {THEME_COLORS['accent_dark']} 100%) !important;
+            color: white !important;
+        }}
+        
+        .stButton > button:hover {{
+            transform: translateY(-3px) !important;
+            box-shadow: 0 6px 20px rgba(139, 195, 74, 0.4) !important;
+        }}
+        
+        /* ===== SIDEBAR ===== */
+        [data-testid="stSidebar"] {{
+            background: linear-gradient(180deg, {THEME_COLORS['primary']} 0%, {THEME_COLORS['primary_dark']} 100%) !important;
+        }}
+        
+        [data-testid="stSidebar"] * {{
+            color: white !important;
+        }}
+        
+        [data-testid="stSidebar"] .stMarkdown p,
+        [data-testid="stSidebar"] .stMarkdown h1,
+        [data-testid="stSidebar"] .stMarkdown h2,
+        [data-testid="stSidebar"] .stMarkdown h3 {{
+            color: white !important;
+        }}
+        
+        [data-testid="stSidebar"] hr {{
+            border-color: rgba(255, 255, 255, 0.2) !important;
+        }}
+        
+        [data-testid="stSidebar"] .stButton > button {{
+            background: {THEME_COLORS['accent']} !important;
+            color: white !important;
+            border: none !important;
+        }}
+        
+        [data-testid="stSidebar"] .stButton > button:hover {{
+            background: {THEME_COLORS['accent_light']} !important;
+        }}
+        
+        /* ===== MÉTRICAS ===== */
+        [data-testid="stMetricValue"] {{
+            font-size: 2rem !important;
+            font-weight: 700 !important;
+            font-family: 'Poppins', sans-serif !important;
+            color: {THEME_COLORS['primary']} !important;
+        }}
+        
+        [data-testid="stMetricLabel"] {{
+            font-weight: 500 !important;
+            color: {THEME_COLORS['text_secondary']} !important;
+        }}
+        
+        [data-testid="stMetricDelta"] svg {{
+            display: none;
+        }}
+        
+        /* ===== TABS ===== */
+        .stTabs [data-baseweb="tab-list"] {{
+            gap: 4px;
+            background: {THEME_COLORS['background']};
+            padding: 4px;
+            border-radius: 12px;
+        }}
+        
+        .stTabs [data-baseweb="tab"] {{
+            border-radius: 10px !important;
+            padding: 12px 24px !important;
+            font-family: 'Poppins', sans-serif !important;
+            font-weight: 500 !important;
+            background: transparent !important;
+            color: {THEME_COLORS['text_secondary']} !important;
+        }}
+        
+        .stTabs [aria-selected="true"] {{
+            background: {THEME_COLORS['primary']} !important;
+            color: white !important;
+        }}
+        
+        /* ===== EXPANDERS ===== */
+        .streamlit-expanderHeader {{
+            font-family: 'Poppins', sans-serif !important;
+            font-weight: 500 !important;
+            color: {THEME_COLORS['primary']} !important;
+            background: {THEME_COLORS['background']} !important;
+            border-radius: 10px !important;
+        }}
+        
+        /* ===== DATA FRAMES ===== */
+        .stDataFrame {{
+            border-radius: 12px !important;
+            overflow: hidden !important;
+        }}
+        
+        /* ===== FILE UPLOADER ===== */
+        [data-testid="stFileUploader"] {{
+            background: rgba(139, 195, 74, 0.1) !important;
+            border: 2px dashed {THEME_COLORS['accent']} !important;
+            border-radius: 12px !important;
+            padding: 1rem !important;
+        }}
+        
+        /* ===== INFO BOXES ===== */
+        .stAlert {{
+            border-radius: 12px !important;
+            border: none !important;
+        }}
+        
+        /* ===== FOOTER ===== */
+        .lab-footer {{
+            text-align: center;
+            padding: 2rem;
+            background: linear-gradient(135deg, {THEME_COLORS['gradient_start']} 0%, {THEME_COLORS['gradient_end']} 100%);
+            border-radius: 16px;
+            color: white;
+            margin-top: 3rem;
+        }}
+        
+        .lab-footer p {{
+            margin: 0.3rem 0;
+            color: rgba(255, 255, 255, 0.9);
+        }}
+        
+        .lab-footer .footer-brand {{
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: white;
+        }}
+        
+        /* ===== BADGES ===== */
+        .badge {{
+            display: inline-block;
+            padding: 0.3rem 0.9rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, {THEME_COLORS['accent']} 0%, {THEME_COLORS['accent_dark']} 100%);
+            color: white;
+        }}
+        
+        .badge-outline {{
+            background: transparent;
+            border: 2px solid {THEME_COLORS['accent']};
+            color: {THEME_COLORS['accent']};
+        }}
+        
+        /* ===== ANIMAÇÕES ===== */
+        @keyframes fadeInUp {{
+            from {{
+                opacity: 0;
+                transform: translateY(20px);
+            }}
+            to {{
+                opacity: 1;
+                transform: translateY(0);
+            }}
+        }}
+        
+        @keyframes pulse {{
+            0%, 100% {{
+                opacity: 1;
+            }}
+            50% {{
+                opacity: 0.7;
+            }}
+        }}
+        
+        .fade-in {{
+            animation: fadeInUp 0.6s ease-out;
+        }}
+        
+        .pulse {{
+            animation: pulse 2s ease-in-out infinite;
+        }}
+        
+        /* ===== SCROLLBAR PERSONALIZADA ===== */
+        ::-webkit-scrollbar {{
+            width: 8px;
+            height: 8px;
+        }}
+        
+        ::-webkit-scrollbar-track {{
+            background: {THEME_COLORS['background']};
+            border-radius: 4px;
+        }}
+        
+        ::-webkit-scrollbar-thumb {{
+            background: {THEME_COLORS['accent']};
+            border-radius: 4px;
+        }}
+        
+        ::-webkit-scrollbar-thumb:hover {{
+            background: {THEME_COLORS['accent_dark']};
+        }}
+        
+        /* ===== SPINNER/LOADING ===== */
+        .stSpinner > div {{
+            border-top-color: {THEME_COLORS['accent']} !important;
+        }}
+    </style>
+    """
+    st.markdown(css, unsafe_allow_html=True)
+
+def render_header():
+    """Renderiza o header do laboratório com design oficial"""
+    header_html = f"""
+    <div class="lab-header fade-in">
+        <div class="lab-header-content">
+            <h1 class="lab-title">
+                🧬 Laboratório <span class="accent">Biodiagnóstico</span>
+            </h1>
+            <p class="lab-subtitle">{LAB_INFO['sistema']} • {LAB_INFO['localizacao']}</p>
+            <div class="certification-badge">
+                <span>🏆</span>
+                <span>{LAB_INFO['certificacao']}</span>
+            </div>
+        </div>
+    </div>
+    """
+    st.markdown(header_html, unsafe_allow_html=True)
+
+def render_footer():
+    """Renderiza o footer do laboratório"""
+    footer_html = f"""
+    <div class="lab-footer fade-in">
+        <p class="footer-brand">🧬 {LAB_INFO['nome']}</p>
+        <p>{LAB_INFO['slogan']}</p>
+        <p style="font-size: 0.85rem; margin-top: 1rem;">
+            © 2025 {LAB_INFO['nome']} - Todos os direitos reservados
+        </p>
+        <p style="font-size: 0.8rem; opacity: 0.8;">
+            Sistema de Administração v{LAB_INFO['versao']}
+        </p>
+    </div>
+    """
+    st.markdown(footer_html, unsafe_allow_html=True)
+
+def render_module_card(module_key, module_info):
+    """Renderiza um card de módulo"""
+    if not module_info.get('ativo', False):
+        return
+    
+    col1, col2 = st.columns([1, 4])
+    with col1:
+        st.markdown(f"### {module_info['icone']}")
+    with col2:
+        st.markdown(f"**{module_info['nome']}**")
+        st.caption(module_info['descricao'])
+    
+    st.markdown("---")
+
+def create_sidebar_menu():
+    """Cria o menu lateral"""
+    st.sidebar.markdown(f"## 🏥 {LAB_INFO['nome_curto']}")
+    st.sidebar.markdown("---")
+    
+    # Menu de navegação
+    st.sidebar.markdown("### 📋 Menu")
+    
+    # Páginas disponíveis
+    page = st.sidebar.radio(
+        "Selecione uma seção:",
+        ["📊 Análise de Faturamento", "🔄 Conversor PDF", "📈 Dashboard", "⚙️ Configurações"],
+        label_visibility="collapsed"
+    )
+    
+    return page
+
+def render_info_box(title, content, icon="ℹ️", type="info"):
+    """Renderiza uma caixa de informação com estilo Biodiagnóstico"""
+    colors = {
+        "info": THEME_COLORS['accent'],
+        "success": THEME_COLORS['success'],
+        "warning": THEME_COLORS['warning'],
+        "error": THEME_COLORS['error']
+    }
+    
+    bg_colors = {
+        "info": "rgba(139, 195, 74, 0.1)",
+        "success": "rgba(76, 175, 80, 0.1)",
+        "warning": "rgba(255, 167, 38, 0.1)",
+        "error": "rgba(239, 83, 80, 0.1)"
+    }
+    
+    box_html = f"""
+    <div style="
+        background: {bg_colors.get(type, bg_colors['info'])};
+        border-left: 4px solid {colors.get(type, THEME_COLORS['accent'])};
+        padding: 1rem 1.25rem;
+        border-radius: 0 12px 12px 0;
+        margin: 1rem 0;
+        font-family: 'Open Sans', sans-serif;
+    ">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 0.5rem;">
+            <span style="font-size: 1.2rem;">{icon}</span>
+            <strong style="color: {THEME_COLORS['primary']}; font-family: 'Poppins', sans-serif;">{title}</strong>
+        </div>
+        <p style="margin: 0; color: {THEME_COLORS['text_secondary']}; font-size: 0.95rem; line-height: 1.5;">{content}</p>
+    </div>
+    """
+    st.markdown(box_html, unsafe_allow_html=True)
+
+def render_metric_card(title, value, delta=None, icon="📊", color=None):
+    """Renderiza um card de métrica customizado com estilo Biodiagnóstico"""
+    delta_html = ""
+    if delta:
+        delta_color = THEME_COLORS['success'] if delta >= 0 else THEME_COLORS['error']
+        delta_icon = "↑" if delta >= 0 else "↓"
+        delta_html = f'<span style="color: {delta_color}; font-size: 0.9rem; font-weight: 600;">{delta_icon} {abs(delta):.2f}%</span>'
+    
+    main_color = color if color else THEME_COLORS['primary']
+    
+    card_html = f"""
+    <div class="custom-card" style="
+        background: linear-gradient(135deg, {THEME_COLORS['surface']} 0%, {THEME_COLORS['background']} 100%);
+        border-top: 4px solid {main_color};
+    ">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <div style="
+                font-size: 2.5rem;
+                background: {main_color}15;
+                padding: 0.75rem;
+                border-radius: 12px;
+            ">{icon}</div>
+            <div style="flex: 1;">
+                <p style="margin: 0; color: {THEME_COLORS['text_secondary']}; font-size: 0.85rem; font-family: 'Poppins', sans-serif; text-transform: uppercase; letter-spacing: 0.5px;">{title}</p>
+                <p style="margin: 0.25rem 0 0 0; font-size: 1.75rem; font-weight: 700; color: {main_color}; font-family: 'Poppins', sans-serif;">{value}</p>
+                {delta_html}
+            </div>
+        </div>
+    </div>
+    """
+    st.markdown(card_html, unsafe_allow_html=True)
+
+def render_stats_row(stats):
+    """Renderiza uma linha de estatísticas com estilo Biodiagnóstico
+    
+    Args:
+        stats: lista de dicionários com keys: title, value, icon, color (opcional)
+    """
+    cols = st.columns(len(stats))
+    for i, stat in enumerate(stats):
+        with cols[i]:
+            render_metric_card(
+                title=stat.get('title', ''),
+                value=stat.get('value', ''),
+                icon=stat.get('icon', '📊'),
+                color=stat.get('color', THEME_COLORS['primary'])
+            )
+
+def render_section_header(title, subtitle=None, icon="📋"):
+    """Renderiza um cabeçalho de seção estilizado"""
+    subtitle_html = f'<p style="margin: 0.5rem 0 0 0; color: {THEME_COLORS["text_secondary"]}; font-size: 0.95rem;">{subtitle}</p>' if subtitle else ''
+    
+    header_html = f"""
+    <div style="
+        margin: 2rem 0 1.5rem 0;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid {THEME_COLORS['accent']}30;
+    ">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="
+                font-size: 1.5rem;
+                background: {THEME_COLORS['accent']}20;
+                padding: 0.5rem;
+                border-radius: 10px;
+            ">{icon}</span>
+            <div>
+                <h2 style="margin: 0; color: {THEME_COLORS['primary']}; font-family: 'Poppins', sans-serif; font-size: 1.5rem;">{title}</h2>
+                {subtitle_html}
+            </div>
+        </div>
+    </div>
+    """
+    st.markdown(header_html, unsafe_allow_html=True)
+
+def render_status_badge(text, status="info"):
+    """Renderiza um badge de status"""
+    colors = {
+        "info": THEME_COLORS['accent'],
+        "success": THEME_COLORS['success'],
+        "warning": THEME_COLORS['warning'],
+        "error": THEME_COLORS['error'],
+        "primary": THEME_COLORS['primary']
+    }
+    
+    badge_html = f"""
+    <span style="
+        display: inline-block;
+        padding: 0.3rem 0.9rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        font-family: 'Poppins', sans-serif;
+        background: {colors.get(status, THEME_COLORS['accent'])};
+        color: white;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    ">{text}</span>
+    """
+    return badge_html
+
+def render_welcome_message():
+    """Renderiza mensagem de boas-vindas"""
+    welcome_html = f"""
+    <div style="
+        background: linear-gradient(135deg, {THEME_COLORS['primary']}10 0%, {THEME_COLORS['accent']}10 100%);
+        padding: 1.5rem;
+        border-radius: 16px;
+        margin-bottom: 2rem;
+        border: 1px solid {THEME_COLORS['accent']}30;
+    ">
+        <h3 style="margin: 0 0 0.5rem 0; color: {THEME_COLORS['primary']}; font-family: 'Poppins', sans-serif;">
+            👋 Bem-vindo ao Sistema de Administração
+        </h3>
+        <p style="margin: 0; color: {THEME_COLORS['text_secondary']}; line-height: 1.6;">
+            Utilize o menu lateral para navegar pelas funcionalidades. 
+            Faça upload dos arquivos PDF ou CSV para começar a análise de faturamento.
+        </p>
+    </div>
+    """
+    st.markdown(welcome_html, unsafe_allow_html=True)
