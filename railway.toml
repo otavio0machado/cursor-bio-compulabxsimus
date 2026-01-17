@@ -1,0 +1,10 @@
+[build]
+builder = "dockerfile"
+dockerfilePath = "biodiagnostico_app/Dockerfile"
+watchPatterns = ["biodiagnostico_app/**"]
+
+[deploy]
+startCommand = "cd biodiagnostico_app && ./start.sh"
+healthcheckPath = "/"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
