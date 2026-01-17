@@ -1,8 +1,8 @@
 #!/bin/bash
 # start.sh - Script para iniciar Nginx + Reflex
 
-# Iniciar Nginx em background
+echo "Starting Nginx..."
 nginx
 
-# Iniciar Reflex em foreground
-reflex run --env prod --frontend-port 3001 --backend-port 8001
+echo "Starting Reflex on ports 3000 (frontend) and 8000 (backend)..."
+exec reflex run --env prod --frontend-port 3000 --backend-port 8000

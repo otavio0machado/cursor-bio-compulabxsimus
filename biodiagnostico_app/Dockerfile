@@ -32,10 +32,10 @@ RUN chmod +x start.sh
 # Create uploaded_files directory
 RUN mkdir -p /app/uploaded_files
 
-# Expose ports
-EXPOSE 3000
-EXPOSE 8000
+# Expose single port for Railway (Nginx proxy)
+EXPOSE 8080
 
 # Command to run the application
 CMD ["./start.sh"]
+
 
