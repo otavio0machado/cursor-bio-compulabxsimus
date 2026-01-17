@@ -1,4 +1,5 @@
 import reflex as rx
+import os
 
 config = rx.Config(
     app_name="biodiagnostico_app",
@@ -9,4 +10,5 @@ config = rx.Config(
     # Configurações do servidor
     frontend_port=3000,
     backend_port=8000,
+    api_url=os.getenv("API_URL", "http://localhost:8000"),
 )

@@ -17,13 +17,13 @@ O Reflex possui seu próprio serviço de hospedagem otimizado.
 
 2. **Faça Login na Reflex Cloud**:
    ```bash
-   reflex login
+   py -m reflex login
    ```
 
 3. **Faça o Deploy**:
    Dentro da pasta `biodiagnostico_app/`:
    ```bash
-   reflex deploy
+   py -m reflex deploy
    ```
    Siga as instruções interativas no terminal.
 
