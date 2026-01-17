@@ -677,6 +677,7 @@ class State(rx.State):
         if self.simus_file_path and os.path.exists(self.simus_file_path):
             try:
                 os.unlink(self.simus_file_path)
+            except:
                 pass
         
         self.simus_file_name = ""
