@@ -516,13 +516,16 @@ class State(rx.State):
     
     async def handle_simus_upload(self, files: List[rx.UploadFile]):
         """Processa upload do arquivo SIMUS - Salva em disco para evitar travamento"""
+        print(f"DEBUG: Iniciando upload SIMUS. Files: {len(files) if files else 0}")
         if not files:
+            print("DEBUG: Nenhum arquivo recebido")
             return
         
         self.is_uploading = True
         self.error_message = ""
         self.success_message = ""
         self.processing_status = "📤 Carregando arquivo SIMUS..."
+        print("DEBUG: Status atualizado para carregando")
         
         # Limpar arquivo anterior se existir
         if self.simus_file_path and os.path.exists(self.simus_file_path):

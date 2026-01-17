@@ -1,70 +1,71 @@
-# 🚀 Guia de Deploy - Reflex (React + Tailwind)
+# 🚀 Guia de Deploy - Biodiagnóstico App
 
-Como sua aplicação agora é construída com **Reflex**, o processo de deploy é diferente do Streamlit. Uma aplicação Reflex consiste em duas partes:
-1. **Frontend**: Arquivos estáticos (HTML/CSS/JS) compilados (React).
-2. **Backend**: Servidor Python (FastAPI).
+## ⚠️ Importante: Upload de Arquivos Grandes
 
-Existem duas formas principais de fazer o deploy:
-
-## Opção 1: Reflex Cloud (Recomendado - Mais Fácil)
-
-O Reflex possui seu próprio serviço de hospedagem otimizado.
-
-1. **Instale o CLI do Reflex** (você já tem):
-   ```bash
-   pip install reflex
-   ```
-
-2. **Faça Login na Reflex Cloud**:
-   ```bash
-   py -m reflex login
-   ```
-
-3. **Faça o Deploy**:
-   Dentro da pasta `biodiagnostico_app/`:
-   ```bash
-   py -m reflex deploy
-   ```
-   Siga as instruções interativas no terminal.
-
-## Opção 2: Self-Hosting (Docker / Railway / Render)
-
-Se preferir hospedar em sua própria infraestrutura ou serviços como Railway/Render:
-
-### Usando Docker (Padrão de Ouro)
-
-1. **Crie um Dockerfile** na raiz de `biodiagnostico_app/`.
-   (Eu posso criar isso para você se desejar).
-
-2. **Construa e Rode**:
-   ```bash
-   docker build -t biodiagnostico .
-   docker run -p 3000:3000 -p 8000:8000 biodiagnostico
-   ```
-
-### Usando Railway (Excelente Custo-Benefício)
-
-1. Crie um repositório no GitHub com o conteúdo da pasta `biodiagnostico_app`.
-2. Conecte sua conta do Railway ao GitHub.
-3. O Railway detectará o projeto Python/Nixpacks.
-4. Configure as variáveis de ambiente necessárias.
-5. Comando de start: `reflex run --env prod`
-
-## 🛠️ Gerando a Build de Produção Localmente
-
-Antes de fazer deploy, é uma boa prática testar a build de produção localmente para garantir que não há erros de compilação.
-
-1. **Vá para a pasta do app**:
-   ```bash
-   cd biodiagnostico_app
-   ```
-
-2. **Exporte o projeto**:
-   ```bash
-   reflex export
-   ```
-   Isso criará uma pasta `.zip` (ou pasta de build) contendo o frontend compilado e o backend, pronto para ser enviado para um servidor.
+Esta aplicação processa arquivos PDF de até **50MB** (ex: SIMUS.pdf ~12MB). 
+O **Reflex Cloud** tem limite de ~5MB para uploads, por isso recomendamos **Railway**.
 
 ---
 
-**Precisa de ajuda com o Dockerfile ou configuração do Railway?** Basta pedir!
+## ✅ Opção Recomendada: Railway (Suporta uploads grandes)
+
+O Railway permite configuração customizada do Nginx para uploads de até 100MB.
+
+### Passo 1: Criar conta no Railway
+1. Acesse [railway.app](https://railway.app)
+2. Crie uma conta (pode usar GitHub)
+
+### Passo 2: Conectar repositório
+1. No Railway, clique em **"New Project"**
+2. Selecione **"Deploy from GitHub repo"**
+3. Escolha o repositório `cursor-bio-compulabxsimus`
+4. **Root Directory**: Configure para `biodiagnostico_app`
+
+### Passo 3: Configurar variáveis de ambiente
+No painel do Railway, adicione:
+```
+API_URL=https://sua-app.railway.app
+```
+
+### Passo 4: Deploy automático
+O Railway detectará o `Dockerfile` e fará o deploy automaticamente.
+Após ~5 minutos, sua aplicação estará disponível em uma URL `.railway.app`.
+
+---
+
+## 🐳 Alternativa: Docker Local
+
+Para testar localmente com a mesma configuração de produção:
+
+```bash
+cd biodiagnostico_app
+docker build -t biodiagnostico .
+docker run -p 3000:3000 -p 8000:8000 biodiagnostico
+```
+
+Acesse: http://localhost:3000
+
+---
+
+## ⚡ Reflex Cloud (Apenas para arquivos pequenos)
+
+> **Limitação**: Uploads máximo de ~5MB
+
+Se seus arquivos forem pequenos:
+
+```bash
+cd biodiagnostico_app
+py -m reflex login
+py -m reflex deploy
+```
+
+---
+
+## 📁 Arquivos de Configuração
+
+| Arquivo | Descrição |
+|---------|-----------|
+| `Dockerfile` | Container com Nginx + Reflex |
+| `nginx.conf` | Limite de upload de 100MB |
+| `start.sh` | Script de inicialização |
+| `railway.json` | Configuração do Railway |

@@ -4,3 +4,4 @@ pandas>=2.1.0
 google-generativeai
 openpyxl>=3.1.0
 reportlab>=4.0.0
+python-multipart>=0.0.9

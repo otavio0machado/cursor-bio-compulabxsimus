@@ -11,4 +11,5 @@ config = rx.Config(
     frontend_port=3000,
     backend_port=8000,
     api_url=os.getenv("API_URL", "http://localhost:8000"),
+    cors_allowed_origins=["*"],
 )
