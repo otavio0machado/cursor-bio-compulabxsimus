@@ -1,41 +1,32 @@
-# Dockerfile for Reflex App with Nginx (100MB upload support)
+# Dockerfile simples para Reflex App
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies including nginx and curl (required for reflex init)
+# Instalar dependências do sistema
 RUN apt-get update && apt-get install -y \
     nodejs \
     npm \
     git \
     unzip \
-    nginx \
     curl \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy local code to the container
+# Copiar código
 COPY . .
 
-# Install Python dependencies
+# Instalar dependências Python
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Initialize Reflex (downloads frontend packages)
+# Inicializar Reflex
 RUN reflex init
 
-# Copy nginx config
-COPY nginx.conf /etc/nginx/nginx.conf
-
-# Make start script executable
-RUN chmod +x start.sh
-
-# Create uploaded_files directory
+# Criar diretório para uploads
 RUN mkdir -p /app/uploaded_files
 
-# Expose single port for Railway (Nginx proxy)
+# Expor porta única
 EXPOSE 8080
 
-# Command to run the application
-CMD ["./start.sh"]
-
-
+# Rodar Reflex diretamente na porta 8080
+CMD ["reflex", "run", "--env", "prod", "--frontend-port", "8080", "--backend-port", "8000"]

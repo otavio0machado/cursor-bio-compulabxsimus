@@ -5,10 +5,9 @@ watchPatterns = ["biodiagnostico_app/**"]
 
 [deploy]
 healthcheckPath = "/"
-healthcheckTimeout = 300
+healthcheckTimeout = 600
 restartPolicyType = "ON_FAILURE"
 numReplicas = 1
 
 [[services]]
 port = 8080
-
