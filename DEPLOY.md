@@ -1,71 +1,50 @@
-# 🚀 Guia de Deploy - Biodiagnóstico App
+# Deploy no Railway com Cloudinary
 
-## ⚠️ Importante: Upload de Arquivos Grandes
+Este guia descreve como fazer o deploy da aplicação Biodiagnóstico no Railway.app, utilizando Nginx para proxy reverso e Cloudinary para armazenamento de arquivos.
 
-Esta aplicação processa arquivos PDF de até **50MB** (ex: SIMUS.pdf ~12MB). 
-O **Reflex Cloud** tem limite de ~5MB para uploads, por isso recomendamos **Railway**.
+## 1. Pré-requisitos
 
----
+1.  Conta no [GitHub](https://github.com/) com o código do projeto.
+2.  Conta no [Railway](https://railway.app/).
+3.  Conta no [Cloudinary](https://cloudinary.com/) (Gratuita).
 
-## ✅ Opção Recomendada: Railway (Suporta uploads grandes)
+## 2. Configuração do Cloudinary
 
-O Railway permite configuração customizada do Nginx para uploads de até 100MB.
+Para que os uploads funcionem em produção, precisamos de uma conta no Cloudinary para armazenar os arquivos.
 
-### Passo 1: Criar conta no Railway
-1. Acesse [railway.app](https://railway.app)
-2. Crie uma conta (pode usar GitHub)
+1.  Crie uma conta gratuita em [cloudinary.com](https://cloudinary.com).
+2.  No Dashboard, copie as seguintes credenciais:
+    *   **Cloud Name**
+    *   **API Key**
+    *   **API Secret**
 
-### Passo 2: Conectar repositório
-1. No Railway, clique em **"New Project"**
-2. Selecione **"Deploy from GitHub repo"**
-3. Escolha o repositório `cursor-bio-compulabxsimus`
-4. **Root Directory**: Configure para `biodiagnostico_app`
+## 3. Configuração no Railway
 
-### Passo 3: Configurar variáveis de ambiente
-No painel do Railway, adicione:
-```
-API_URL=https://sua-app.railway.app
-```
+1.  Crie um **New Project** → **Deploy from GitHub repo**.
+2.  Selecione o repositório `cursor-bio-compulabxsimus`.
+3.  Vá em **Settings**:
+    *   **Root Directory**: `biodiagnostico_app` (IMPORTANTE!)
+4.  Vá em **Variables** e adicione:
 
-### Passo 4: Deploy automático
-O Railway detectará o `Dockerfile` e fará o deploy automaticamente.
-Após ~5 minutos, sua aplicação estará disponível em uma URL `.railway.app`.
+| Variável | Valor |
+|----------|-------|
+| `API_URL` | `https://[SEU-DOMINIO-RAILWAY].up.railway.app` (sem barra no final) |
+| `CLOUDINARY_CLOUD_NAME` | *(Seu Cloud Name)* |
+| `CLOUDINARY_API_KEY` | *(Sua API Key)* |
+| `CLOUDINARY_API_SECRET` | *(Seu API Secret)* |
 
----
+> **Nota:** A URL do Railway pode ser encontrada/gerada na aba **Settings** → **Networking** → **Public Networking**.
 
-## 🐳 Alternativa: Docker Local
+## 4. Testando o Deploy
 
-Para testar localmente com a mesma configuração de produção:
+1.  Aguarde o deploy finalizar (aba **Deployments**).
+2.  Acesse a URL pública (ex: `https://biodiagnostico-prod.up.railway.app`).
+3.  Faça login (`evandrotorresmachado@gmail.com` / `eva123`).
+4.  Vá em **Conversor** e tente fazer upload do **SIMUS.pdf**.
+5.  Se funcionar, você verá a mensagem "✅ SIMUS carregado... (Salvo na nuvem)".
 
-```bash
-cd biodiagnostico_app
-docker build -t biodiagnostico .
-docker run -p 3000:3000 -p 8000:8000 biodiagnostico
-```
+## 5. Solução de Problemas
 
-Acesse: http://localhost:3000
-
----
-
-## ⚡ Reflex Cloud (Apenas para arquivos pequenos)
-
-> **Limitação**: Uploads máximo de ~5MB
-
-Se seus arquivos forem pequenos:
-
-```bash
-cd biodiagnostico_app
-py -m reflex login
-py -m reflex deploy
-```
-
----
-
-## 📁 Arquivos de Configuração
-
-| Arquivo | Descrição |
-|---------|-----------|
-| `Dockerfile` | Container com Nginx + Reflex |
-| `nginx.conf` | Limite de upload de 100MB |
-| `start.sh` | Script de inicialização |
-| `railway.json` | Configuração do Railway |
+*   **Erro "WebSocket error" ou Tela Branca**: Verifique se a URL está com `https://` e se o `API_URL` está correto.
+*   **Erro no Upload**: Verifique se as credenciais do Cloudinary estão corretas nas variáveis de ambiente.
+*   **Healthcheck Failing**: O Nginx demora um pouco para subir, o Railway pode tentar reiniciar. Aumente o *Healthcheck Timeout* no `railway.json` ou `railway.toml` se necessário (já configurado para 300s).

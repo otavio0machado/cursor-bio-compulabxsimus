@@ -13,7 +13,7 @@ import gc
 import tempfile
 import os
 import shutil
-
+from .services import cloudinary_service
 
 class AnalysisResult(BaseModel):
     """Resultado de uma análise individual"""
@@ -103,10 +103,13 @@ class State(rx.State):
     simus_file_name: str = ""
     compulab_file_path: str = ""  # Caminho do arquivo temporário COMPULAB
     simus_file_path: str = ""  # Caminho do arquivo temporário SIMUS
+    compulab_file_url: str = "" # URL do arquivo no Cloudinary
+    simus_file_url: str = "" # URL do arquivo no Cloudinary
     compulab_file_bytes: bytes = b""  # Mantido para compatibilidade, mas não usado para arquivos grandes
     simus_file_bytes: bytes = b""  # Mantido para compatibilidade, mas não usado para arquivos grandes
     compulab_file_size_bytes: int = 0
     simus_file_size_bytes: int = 0
+
     is_uploading: bool = False
     
     # Limites de upload
@@ -497,10 +500,30 @@ class State(rx.State):
             self.compulab_file_size_bytes = total_size
             self.compulab_file_bytes = b""  # Não armazenar bytes para arquivos grandes
             
+            # --- Upload para Cloudinary ---
+            self.processing_status = "☁️ Enviando para nuvem (Cloudinary)..."
+            await asyncio.sleep(0.01)
+            
+            # Executar upload em thread separada
+            loop = asyncio.get_event_loop()
+            file_url = await loop.run_in_executor(
+                None, 
+                lambda: cloudinary_service.upload_file(tmp_file_path, resource_type="raw")
+            )
+            
+            if file_url:
+                self.compulab_file_url = file_url
+                print(f"DEBUG: Upload Cloudinary sucesso: {file_url}")
+            else:
+                print("DEBUG: Erro upload Cloudinary")
+                # Não falhar o processo todo se o Cloudinary falhar, mas avisar?
+                # Por enquanto segue, pois temos o arquivo local APENAS SE ESTIVERMOS NA MESMA SESSÃO/CONTAINER
+            
             # Mensagem com detalhes
             size_str = self.compulab_file_size
             file_type = "PDF" if file.name.lower().endswith('.pdf') else "CSV"
-            self.success_message = f"✅ COMPULAB carregado: {file.name} ({file_type}, {size_str})"
+            cloud_status = " (Salvo na nuvem)" if self.compulab_file_url else " (Local)"
+            self.success_message = f"✅ COMPULAB carregado: {file.name} ({file_type}, {size_str}){cloud_status}"
             self.processing_status = ""
             
         except Exception as e:
@@ -593,10 +616,28 @@ class State(rx.State):
             self.simus_file_size_bytes = total_size
             self.simus_file_bytes = b""  # Não armazenar bytes para arquivos grandes
             
+            # --- Upload para Cloudinary ---
+            self.processing_status = "☁️ Enviando para nuvem (Cloudinary)..."
+            await asyncio.sleep(0.01)
+            
+            # Executar upload em thread separada
+            loop = asyncio.get_event_loop()
+            file_url = await loop.run_in_executor(
+                None, 
+                lambda: cloudinary_service.upload_file(tmp_file_path, resource_type="raw")
+            )
+            
+            if file_url:
+                self.simus_file_url = file_url
+                print(f"DEBUG: Upload Cloudinary sucesso: {file_url}")
+            else:
+                print("DEBUG: Erro upload Cloudinary")
+            
             # Mensagem com detalhes
             size_str = self.simus_file_size
             file_type = "PDF" if file.name.lower().endswith('.pdf') else "CSV"
-            self.success_message = f"✅ SIMUS carregado: {file.name} ({file_type}, {size_str})"
+            cloud_status = " (Salvo na nuvem)" if self.simus_file_url else " (Local)"
+            self.success_message = f"✅ SIMUS carregado: {file.name} ({file_type}, {size_str}){cloud_status}"
             self.processing_status = ""
             
         except Exception as e:
@@ -621,6 +662,7 @@ class State(rx.State):
         
         self.compulab_file_name = ""
         self.compulab_file_path = ""
+        self.compulab_file_url = ""
         self.compulab_file_bytes = b""
         self.compulab_file_size_bytes = 0
         self.success_message = ""
@@ -635,11 +677,11 @@ class State(rx.State):
         if self.simus_file_path and os.path.exists(self.simus_file_path):
             try:
                 os.unlink(self.simus_file_path)
-            except:
                 pass
         
         self.simus_file_name = ""
         self.simus_file_path = ""
+        self.simus_file_url = ""
         self.simus_file_bytes = b""
         self.simus_file_size_bytes = 0
         self.success_message = ""
