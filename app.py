@@ -1136,93 +1136,149 @@ st.sidebar.markdown("*© 2025 Biodiagnóstico*")
 # PÁGINA 1: CONVERSOR PDF → CSV
 # ═══════════════════════════════════════════════════════════════════════════════
 if pagina_selecionada == "🔄 Conversor PDF → CSV":
-    # Header simplificado
-    st.markdown("---")
-    st.header("🔄 Conversor PDF → CSV")
-    st.markdown("**Transforme seus relatórios em dados estruturados**")
+    # Badge de certificação no topo
+    st.markdown("""
+    <div class="page-header-cert-badge">
+        <span style="font-size: 1rem;">💎</span>
+        <span style="color: #1B5E20; font-weight: 600; font-size: 0.875rem;">Certificação PNCQ Diamante</span>
+    </div>
+    """, unsafe_allow_html=True)
     
-    # Cards de funcionalidades simplificados
+    # Título principal moderno
+    st.markdown("""
+    <div class="page-header">
+        <h1 class="page-header-title">Conversor PDF → CSV</h1>
+        <p class="page-header-subtitle">Transforme seus relatórios em dados estruturados</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Cards de funcionalidades melhorados
     col_f1, col_f2, col_f3, col_f4 = st.columns(4)
     
     with col_f1:
         st.markdown("""
-        <div style="text-align: center; padding: 1rem;">
-            <div style="font-size: 2rem; margin-bottom: 0.5rem;">📄</div>
-            <strong>Extração Inteligente</strong><br>
-            <small>Extrai dados automaticamente dos PDFs</small>
+        <div class="feature-card">
+            <div class="feature-card-icon">📄</div>
+            <div class="feature-card-title">Extração Inteligente</div>
+            <div class="feature-card-desc">Extrai dados automaticamente dos PDFs</div>
         </div>
         """, unsafe_allow_html=True)
     
     with col_f2:
         st.markdown("""
-        <div style="text-align: center; padding: 1rem;">
-            <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔄</div>
-            <strong>Padronização</strong><br>
-            <small>Normaliza nomes de exames e pacientes</small>
+        <div class="feature-card">
+            <div class="feature-card-icon">🔄</div>
+            <div class="feature-card-title">Padronização</div>
+            <div class="feature-card-desc">Normaliza nomes de exames e pacientes</div>
         </div>
         """, unsafe_allow_html=True)
     
     with col_f3:
         st.markdown("""
-        <div style="text-align: center; padding: 1rem;">
-            <div style="font-size: 2rem; margin-bottom: 0.5rem;">📊</div>
-            <strong>CSV Estruturado</strong><br>
-            <small>Gera arquivos prontos para análise</small>
+        <div class="feature-card">
+            <div class="feature-card-icon">📊</div>
+            <div class="feature-card-title">CSV Estruturado</div>
+            <div class="feature-card-desc">Gera arquivos prontos para análise</div>
         </div>
         """, unsafe_allow_html=True)
     
     with col_f4:
         st.markdown("""
-        <div style="text-align: center; padding: 1rem;">
-            <div style="font-size: 2rem; margin-bottom: 0.5rem;">⚡</div>
-            <strong>Processamento Rápido</strong><br>
-            <small>Conversão em segundos</small>
+        <div class="feature-card">
+            <div class="feature-card-icon">⚡</div>
+            <div class="feature-card-title">Processamento Rápido</div>
+            <div class="feature-card-desc">Conversão em segundos</div>
         </div>
         """, unsafe_allow_html=True)
     
-    st.markdown("---")
+    st.markdown("<br>", unsafe_allow_html=True)
     
-    # Seção de Upload
-    st.markdown("### 📁 Upload de Arquivos")
-    st.markdown("*Arraste seus arquivos ou clique para selecionar*")
-    st.markdown("---")
+    # Seção de Upload Moderna
+    st.markdown("""
+    <div style="margin: 2rem 0 1rem 0;">
+        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+            <span style="font-size: 1.5rem;">📁</span>
+            <h3 style="color: #1B5E20; font-weight: 700; margin: 0; font-size: 1.5rem;">Upload de Arquivos</h3>
+        </div>
+        <p style="color: #666; margin: 0; font-size: 1rem;">Arraste seus arquivos ou clique para selecionar</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
     
     with col1:
-        st.subheader("📄 PDF COMPULAB")
-        if UI_AVAILABLE:
-            erlenmeyer = get_erlenmeyer_svg()
-            st.markdown(erlenmeyer, unsafe_allow_html=True)
+        # Card COMPULAB
+        erlenmeyer = get_erlenmeyer_svg() if UI_AVAILABLE else ""
+        has_compulab = 'compulab_pdf_conv' in locals() or False
+        card_class = "upload-card-container has-file" if has_compulab else "upload-card-container"
+        
+        st.markdown(f"""
+        <div class="{card_class}">
+            <div class="upload-card-icon">
+                {erlenmeyer}
+            </div>
+            <div>
+                <div class="upload-card-title">COMPULAB</div>
+                <div class="upload-card-subtitle">Relatório de faturamento COMPULAB</div>
+            </div>
+            <div class="upload-card-badge">
+                <span class="file-type">PDF</span>
+                <span class="file-size">Máx. 50MB</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
         compulab_pdf_conv = st.file_uploader(
             "Selecione o PDF do COMPULAB",
             type=['pdf'],
             key="compulab_conv_page",
-            help="Faça upload do PDF COMPULAB para converter"
+            help="Faça upload do PDF COMPULAB para converter",
+            label_visibility="collapsed"
         )
         if compulab_pdf_conv:
-            st.success(f"✅ {compulab_pdf_conv.name} ({compulab_pdf_conv.size / 1024 / 1024:.2f} MB)")
+            st.success(f"✅ **{compulab_pdf_conv.name}** ({compulab_pdf_conv.size / 1024 / 1024:.2f} MB)")
     
     with col2:
-        st.subheader("📄 PDF SIMUS")
-        if UI_AVAILABLE:
-            tubes = get_tubes_svg()
-            st.markdown(tubes, unsafe_allow_html=True)
+        # Card SIMUS
+        tubes = get_tubes_svg() if UI_AVAILABLE else ""
+        has_simus = 'simus_pdf_conv' in locals() or False
+        card_class = "upload-card-container has-file" if has_simus else "upload-card-container"
+        
+        st.markdown(f"""
+        <div class="{card_class}">
+            <div class="upload-card-icon">
+                {tubes}
+            </div>
+            <div>
+                <div class="upload-card-title">SIMUS</div>
+                <div class="upload-card-subtitle">Relatório de faturamento SIMUS</div>
+            </div>
+            <div class="upload-card-badge">
+                <span class="file-type">PDF</span>
+                <span class="file-size">Máx. 50MB</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
         simus_pdf_conv = st.file_uploader(
             "Selecione o PDF do SIMUS",
             type=['pdf'],
             key="simus_conv_page",
-            help="Faça upload do PDF SIMUS para converter"
+            help="Faça upload do PDF SIMUS para converter",
+            label_visibility="collapsed"
         )
         if simus_pdf_conv:
-            st.success(f"✅ {simus_pdf_conv.name} ({simus_pdf_conv.size / 1024 / 1024:.2f} MB)")
+            st.success(f"✅ **{simus_pdf_conv.name}** ({simus_pdf_conv.size / 1024 / 1024:.2f} MB)")
     
-    st.markdown("---")
+    st.markdown("<br>", unsafe_allow_html=True)
     
-    st.markdown("---")
-    
+    # Botão de conversão estilizado
     if compulab_pdf_conv and simus_pdf_conv:
-        if st.button("🔄 Converter PDFs para CSV", type="primary", use_container_width=True):
+        col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
+        with col_btn2:
+            converter_clicked = st.button("🔄 Converter para CSV", type="primary", use_container_width=True)
+            
+        if converter_clicked:
             with st.spinner("🔄 Convertendo PDFs para CSV... Isso pode levar alguns segundos."):
                 try:
                     compulab_csv, simus_csv, success = generate_csvs_from_pdfs(compulab_pdf_conv, simus_pdf_conv)
@@ -1296,19 +1352,40 @@ if pagina_selecionada == "🔄 Conversor PDF → CSV":
 # PÁGINA 2: ANÁLISE COMPULAB x SIMUS
 # ═══════════════════════════════════════════════════════════════════════════════
 elif pagina_selecionada == "📊 Análise COMPULAB x SIMUS":
-    st.header("📊 Análise de Faturamento COMPULAB x SIMUS")
-    st.markdown("**Compare os dados de faturamento e identifique divergências**")
+    # Header moderno
+    st.markdown("""
+    <div class="page-header">
+        <h1 class="page-header-title">Análise COMPULAB × SIMUS</h1>
+        <p class="page-header-subtitle">Compare os dados de faturamento e identifique divergências</p>
+    </div>
+    """, unsafe_allow_html=True)
     
-    st.markdown("---")
-    
-    # Upload de arquivos NA ÁREA PRINCIPAL (não na sidebar)
-    st.markdown("### 📁 Upload de Arquivos para Análise")
-    st.markdown("*Faça upload dos arquivos COMPULAB e SIMUS (PDF ou CSV) para começar a análise*")
+    # Upload de arquivos NA ÁREA PRINCIPAL com design moderno
+    st.markdown("""
+    <div style="margin: 2rem 0 1.5rem 0;">
+        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+            <span style="font-size: 1.5rem;">📁</span>
+            <h3 style="color: #1B5E20; font-weight: 700; margin: 0; font-size: 1.5rem;">Upload de Arquivos para Análise</h3>
+        </div>
+        <p style="color: #666; margin: 0; font-size: 1rem;">Faça upload dos arquivos COMPULAB e SIMUS (PDF ou CSV) para começar a análise</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     col_upload1, col_upload2 = st.columns(2)
     
     with col_upload1:
-        st.markdown("#### 📄 COMPULAB")
+        # Card COMPULAB compacto
+        erlenmeyer = get_erlenmeyer_svg() if UI_AVAILABLE else ""
+        st.markdown(f"""
+        <div class="upload-card-container" style="min-height: 200px; padding: 1.5rem;">
+            <div class="upload-card-icon">
+                {erlenmeyer if erlenmeyer else '<div style="font-size: 3rem;">📄</div>'}
+            </div>
+            <div class="upload-card-title" style="font-size: 1.1rem;">COMPULAB</div>
+            <div class="upload-card-subtitle" style="font-size: 0.85rem;">PDF ou CSV</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
         compulab_file = st.file_uploader(
             "Selecione o arquivo COMPULAB",
             type=['pdf', 'csv'],
@@ -1317,10 +1394,22 @@ elif pagina_selecionada == "📊 Análise COMPULAB x SIMUS":
             label_visibility="collapsed"
         )
         if compulab_file:
-            st.success(f"✅ {compulab_file.name}")
+            file_type = "PDF" if compulab_file.type == "application/pdf" else "CSV"
+            st.success(f"✅ **{compulab_file.name}** ({file_type}, {compulab_file.size / 1024 / 1024:.2f} MB)")
     
     with col_upload2:
-        st.markdown("#### 📄 SIMUS")
+        # Card SIMUS compacto
+        tubes = get_tubes_svg() if UI_AVAILABLE else ""
+        st.markdown(f"""
+        <div class="upload-card-container" style="min-height: 200px; padding: 1.5rem;">
+            <div class="upload-card-icon">
+                {tubes if tubes else '<div style="font-size: 3rem;">📄</div>'}
+            </div>
+            <div class="upload-card-title" style="font-size: 1.1rem;">SIMUS</div>
+            <div class="upload-card-subtitle" style="font-size: 0.85rem;">PDF ou CSV</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
         simus_file = st.file_uploader(
             "Selecione o arquivo SIMUS",
             type=['pdf', 'csv'],
@@ -1329,9 +1418,10 @@ elif pagina_selecionada == "📊 Análise COMPULAB x SIMUS":
             label_visibility="collapsed"
         )
         if simus_file:
-            st.success(f"✅ {simus_file.name}")
+            file_type = "PDF" if simus_file.type == "application/pdf" else "CSV"
+            st.success(f"✅ **{simus_file.name}** ({file_type}, {simus_file.size / 1024 / 1024:.2f} MB)")
     
-    st.markdown("---")
+    st.markdown("<br>", unsafe_allow_html=True)
     
     # Botão de análise na área principal
     col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])

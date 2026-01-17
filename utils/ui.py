@@ -315,8 +315,9 @@ def apply_custom_css():
         [data-testid="stFileUploader"] {{
             background: transparent !important;
             border: none !important;
-            border-radius: 12px !important;
+            border-radius: 16px !important;
             padding: 0 !important;
+            margin-top: 0.5rem !important;
         }}
         
         [data-testid="stFileUploader"] > div {{
@@ -328,13 +329,215 @@ def apply_custom_css():
             background: {THEME_COLORS['accent']} !important;
             color: white !important;
             border: none !important;
-            border-radius: 8px !important;
-            padding: 0.5rem 1rem !important;
+            border-radius: 10px !important;
+            padding: 0.6rem 1.2rem !important;
             font-weight: 600 !important;
+            font-size: 0.9rem !important;
+            transition: all 0.3s ease !important;
         }}
         
         [data-testid="stFileUploader"] button:hover {{
             background: {THEME_COLORS['accent_dark']} !important;
+            transform: translateY(-2px) !important;
+            box-shadow: 0 4px 12px rgba(139, 195, 74, 0.4) !important;
+        }}
+        
+        /* Cards de upload customizados */
+        .upload-card-container {{
+            position: relative;
+            border: 2px dashed {THEME_COLORS['accent']};
+            border-radius: 20px;
+            padding: 2.5rem 2rem;
+            text-align: center;
+            background: linear-gradient(135deg, rgba(139, 195, 74, 0.03) 0%, rgba(76, 175, 80, 0.05) 100%);
+            transition: all 0.3s ease;
+            min-height: 320px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 1.5rem;
+        }}
+        
+        .upload-card-container:hover {{
+            border-color: {THEME_COLORS['primary']};
+            background: linear-gradient(135deg, rgba(139, 195, 74, 0.08) 0%, rgba(76, 175, 80, 0.1) 100%);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(27, 94, 32, 0.15);
+        }}
+        
+        .upload-card-container.has-file {{
+            border-style: solid;
+            border-color: {THEME_COLORS['success']};
+            background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(139, 195, 74, 0.05) 100%);
+        }}
+        
+        .upload-card-icon {{
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
+            transition: transform 0.3s ease;
+        }}
+        
+        .upload-card-container:hover .upload-card-icon {{
+            transform: scale(1.05);
+        }}
+        
+        .upload-card-title {{
+            color: {THEME_COLORS['primary']};
+            font-weight: 700;
+            font-size: 1.25rem;
+            margin: 0.5rem 0 0.25rem 0;
+            font-family: 'Poppins', sans-serif;
+        }}
+        
+        .upload-card-subtitle {{
+            color: #666;
+            font-size: 0.95rem;
+            margin: 0;
+        }}
+        
+        .upload-card-badge {{
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }}
+        
+        .upload-card-badge .file-type {{
+            background: #EF5350;
+            color: white;
+            padding: 0.35rem 0.9rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }}
+        
+        .upload-card-badge .file-size {{
+            color: #666;
+            font-size: 0.8rem;
+        }}
+        
+        /* Feature cards melhorados */
+        .feature-card {{
+            background: white;
+            border: 1px solid rgba(139, 195, 74, 0.2);
+            border-radius: 16px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 0.75rem;
+        }}
+        
+        .feature-card:hover {{
+            border-color: {THEME_COLORS['accent']};
+            box-shadow: 0 8px 24px rgba(139, 195, 74, 0.15);
+            transform: translateY(-4px);
+        }}
+        
+        .feature-card-icon {{
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, {THEME_COLORS['accent']}15 0%, {THEME_COLORS['accent']}25 100%);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }}
+        
+        .feature-card-title {{
+            color: {THEME_COLORS['primary']};
+            font-weight: 700;
+            font-size: 1rem;
+            margin: 0;
+            font-family: 'Poppins', sans-serif;
+        }}
+        
+        .feature-card-desc {{
+            color: #666;
+            font-size: 0.85rem;
+            margin: 0;
+            line-height: 1.4;
+        }}
+        
+        /* Page header melhorado */
+        .page-header {{
+            margin-bottom: 2rem;
+        }}
+        
+        .page-header-cert-badge {{
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: white;
+            border: 1px solid rgba(0,0,0,0.1);
+            padding: 0.6rem 1.2rem;
+            border-radius: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 1.5rem;
+        }}
+        
+        .page-header-title {{
+            color: {THEME_COLORS['primary']} !important;
+            font-size: 2.75rem !important;
+            font-weight: 800 !important;
+            margin: 0.5rem 0 !important;
+            font-family: 'Poppins', sans-serif !important;
+            line-height: 1.2 !important;
+        }}
+        
+        .page-header-subtitle {{
+            color: #666 !important;
+            font-size: 1.125rem !important;
+            margin: 0.5rem 0 2rem 0 !important;
+            font-weight: 400 !important;
+        }}
+        
+        /* Radio buttons do sidebar melhorados */
+        [data-testid="stRadio"] {{
+            background: transparent !important;
+        }}
+        
+        [data-testid="stRadio"] > div {{
+            gap: 0.5rem !important;
+        }}
+        
+        [data-testid="stRadio"] label {{
+            padding: 0.75rem 1rem !important;
+            border-radius: 10px !important;
+            transition: all 0.2s ease !important;
+            font-weight: 500 !important;
+        }}
+        
+        [data-testid="stRadio"] label:hover {{
+            background: rgba(255, 255, 255, 0.1) !important;
+        }}
+        
+        [data-testid="stRadio"] input:checked + label {{
+            background: {THEME_COLORS['accent']} !important;
+            color: white !important;
+        }}
+        
+        /* Melhorias gerais */
+        .main .block-container {{
+            padding-top: 3rem !important;
+            padding-bottom: 3rem !important;
+        }}
+        
+        /* Métricas melhoradas */
+        [data-testid="stMetricValue"] {{
+            font-family: 'Poppins', sans-serif !important;
+        }}
+        
+        /* Tabelas melhoradas */
+        .stDataFrame {{
+            border: 1px solid rgba(139, 195, 74, 0.2) !important;
         }}
         
         /* ===== INFO BOXES ===== */
