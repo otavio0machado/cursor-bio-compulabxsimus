@@ -939,17 +939,19 @@ def render_upload_card(title, subtitle, icon_svg, file_uploader_key, file_obj):
     return card_html
 
 def get_erlenmeyer_svg():
-    """SVG do Erlenmeyer (COMPULAB)"""
-    return """
-    <svg viewBox="0 0 80 100" width="70" height="88" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));">
+    """SVG do Erlenmeyer (COMPULAB) - ID único para evitar conflitos"""
+    import uuid
+    grad_id = f"liquidGrad_{uuid.uuid4().hex[:8]}"
+    return f"""
+    <svg viewBox="0 0 80 100" width="70" height="88" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1)); display: block; margin: 0 auto;">
         <defs>
-            <linearGradient id="liquidGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <linearGradient id="{grad_id}" x1="0%" y1="0%" x2="0%" y2="100%">
                 <stop offset="0%" style="stop-color:#81C784;stop-opacity:0.3" />
                 <stop offset="100%" style="stop-color:#4CAF50;stop-opacity:0.5" />
             </linearGradient>
         </defs>
         <path d="M28 10 L52 10 L52 35 L70 85 Q72 92 65 95 L15 95 Q8 92 10 85 L28 35 Z" 
-              fill="url(#liquidGrad)" stroke="#1B5E20" stroke-width="2.5"/>
+              fill="url(#{grad_id})" stroke="#1B5E20" stroke-width="2.5"/>
         <rect x="26" y="5" width="28" height="8" rx="3" fill="none" stroke="#1B5E20" stroke-width="2.5"/>
         <ellipse cx="40" cy="75" rx="20" ry="8" fill="#4CAF50" opacity="0.2"/>
         <circle cx="48" cy="60" r="4" fill="#4CAF50" opacity="0.6">
@@ -962,24 +964,26 @@ def get_erlenmeyer_svg():
     """
 
 def get_tubes_svg():
-    """SVG dos Tubos de ensaio (SIMUS)"""
-    return """
-    <svg viewBox="0 0 100 100" width="70" height="88" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));">
+    """SVG dos Tubos de ensaio (SIMUS) - ID único para evitar conflitos"""
+    import uuid
+    grad_id = f"tubeGrad_{uuid.uuid4().hex[:8]}"
+    return f"""
+    <svg viewBox="0 0 100 100" width="70" height="88" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1)); display: block; margin: 0 auto;">
         <defs>
-            <linearGradient id="tubeGrad1" x1="0%" y1="0%" x2="0%" y2="100%">
+            <linearGradient id="{grad_id}" x1="0%" y1="0%" x2="0%" y2="100%">
                 <stop offset="0%" style="stop-color:#81C784;stop-opacity:0.2" />
                 <stop offset="100%" style="stop-color:#4CAF50;stop-opacity:0.5" />
             </linearGradient>
         </defs>
         <!-- Tubo 1 -->
         <rect x="18" y="15" width="15" height="68" rx="7" fill="none" stroke="#1B5E20" stroke-width="2.5"/>
-        <rect x="18" y="52" width="15" height="31" rx="7" fill="url(#tubeGrad1)"/>
+        <rect x="18" y="52" width="15" height="31" rx="7" fill="url(#{grad_id})"/>
         <!-- Tubo 2 -->
         <rect x="42" y="15" width="15" height="68" rx="7" fill="none" stroke="#1B5E20" stroke-width="2.5"/>
-        <rect x="42" y="42" width="15" height="41" rx="7" fill="url(#tubeGrad1)"/>
+        <rect x="42" y="42" width="15" height="41" rx="7" fill="url(#{grad_id})"/>
         <!-- Tubo 3 -->
         <rect x="66" y="15" width="15" height="68" rx="7" fill="none" stroke="#1B5E20" stroke-width="2.5"/>
-        <rect x="66" y="58" width="15" height="25" rx="7" fill="url(#tubeGrad1)"/>
+        <rect x="66" y="58" width="15" height="25" rx="7" fill="url(#{grad_id})"/>
         <!-- Upload badge -->
         <circle cx="81" cy="75" r="10" fill="#4CAF50">
             <animate attributeName="r" values="10;11;10" dur="1.5s" repeatCount="indefinite"/>

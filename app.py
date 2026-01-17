@@ -1207,17 +1207,14 @@ if pagina_selecionada == "🔄 Conversor PDF → CSV":
     col1, col2 = st.columns(2)
     
     with col1:
-        # Card COMPULAB
+        # Card COMPULAB com SVG
         erlenmeyer = get_erlenmeyer_svg() if UI_AVAILABLE else ""
-        has_compulab = 'compulab_pdf_conv' in locals() or False
-        card_class = "upload-card-container has-file" if has_compulab else "upload-card-container"
-        
         st.markdown(f"""
-        <div class="{card_class}">
-            <div class="upload-card-icon">
-                {erlenmeyer}
+        <div class="upload-card-container" style="min-height: 320px;">
+            <div class="upload-card-icon" style="margin-bottom: 1rem;">
+                {erlenmeyer if erlenmeyer else '<div style="font-size: 4rem; color: #4CAF50;">🧪</div>'}
             </div>
-            <div>
+            <div style="margin-bottom: 1rem;">
                 <div class="upload-card-title">COMPULAB</div>
                 <div class="upload-card-subtitle">Relatório de faturamento COMPULAB</div>
             </div>
@@ -1239,17 +1236,14 @@ if pagina_selecionada == "🔄 Conversor PDF → CSV":
             st.success(f"✅ **{compulab_pdf_conv.name}** ({compulab_pdf_conv.size / 1024 / 1024:.2f} MB)")
     
     with col2:
-        # Card SIMUS
+        # Card SIMUS com SVG
         tubes = get_tubes_svg() if UI_AVAILABLE else ""
-        has_simus = 'simus_pdf_conv' in locals() or False
-        card_class = "upload-card-container has-file" if has_simus else "upload-card-container"
-        
         st.markdown(f"""
-        <div class="{card_class}">
-            <div class="upload-card-icon">
-                {tubes}
+        <div class="upload-card-container" style="min-height: 320px;">
+            <div class="upload-card-icon" style="margin-bottom: 1rem;">
+                {tubes if tubes else '<div style="font-size: 4rem; color: #4CAF50;">🧪</div>'}
             </div>
-            <div>
+            <div style="margin-bottom: 1rem;">
                 <div class="upload-card-title">SIMUS</div>
                 <div class="upload-card-subtitle">Relatório de faturamento SIMUS</div>
             </div>
