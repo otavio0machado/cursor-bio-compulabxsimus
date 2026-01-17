@@ -1,9 +1,9 @@
-# Dockerfile simples para Reflex App
+# Dockerfile para Reflex + Nginx
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# Instalar dependências do sistema
+# Instalar dependências
 RUN apt-get update && apt-get install -y \
     nodejs \
     npm \
@@ -11,22 +11,21 @@ RUN apt-get update && apt-get install -y \
     unzip \
     curl \
     ca-certificates \
+    nginx \
     && rm -rf /var/lib/apt/lists/*
 
-# Copiar código
 COPY . .
 
-# Instalar dependências Python
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Inicializar Reflex
 RUN reflex init
 
-# Criar diretório para uploads
+COPY nginx.conf /etc/nginx/nginx.conf
+
+RUN chmod +x start.sh
+
 RUN mkdir -p /app/uploaded_files
 
-# Expor porta única
 EXPOSE 8080
 
-# Rodar Reflex diretamente na porta 8080
-CMD ["reflex", "run", "--env", "prod", "--frontend-port", "8080", "--backend-port", "8000"]
+CMD ["./start.sh"]
