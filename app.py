@@ -14,7 +14,11 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 try:
-    from utils.ui import apply_custom_css, render_header, render_footer, create_sidebar_menu, render_info_box
+    from utils.ui import (
+        apply_custom_css, render_header, render_footer, create_sidebar_menu, 
+        render_info_box, render_sidebar_logo, render_upload_card,
+        get_erlenmeyer_svg, get_tubes_svg
+    )
     from config import LAB_INFO, THEME_COLORS, MODULES
     UI_AVAILABLE = True
 except ImportError:
@@ -27,6 +31,10 @@ except ImportError:
     def create_sidebar_menu(): return "📊 Análise de Faturamento"
     def render_info_box(title, content, icon="ℹ️", type="info"): 
         st.info(f"{icon} **{title}**: {content}")
+    def render_sidebar_logo(): pass
+    def render_upload_card(*args, **kwargs): return ""
+    def get_erlenmeyer_svg(): return ""
+    def get_tubes_svg(): return ""
 
 try:
     import google.generativeai as genai
@@ -34,7 +42,7 @@ try:
 except ImportError:
     GEMINI_AVAILABLE = False
 
-# Configuração da página
+# Configuração da página (DEVE ser a primeira coisa, antes de qualquer renderização)
 if UI_AVAILABLE:
     page_title = f"{LAB_INFO['nome']} - Sistema de Administração"
 else:
@@ -49,12 +57,20 @@ st.set_page_config(
 
 # Aplicar CSS customizado
 if UI_AVAILABLE:
-    apply_custom_css()
-    render_header()
+    try:
+        apply_custom_css()
+    except Exception as e:
+        st.warning(f"Erro ao aplicar CSS: {e}")
+
+# Header
+if UI_AVAILABLE:
+    try:
+        render_header()
+    except Exception as e:
+        st.title("📊 Análise de Faturamento - COMPULAB vs SIMUS")
+        st.warning(f"Erro ao renderizar header: {e}")
 else:
     st.title("📊 Análise de Faturamento - COMPULAB vs SIMUS")
-
-st.markdown("---")
 
 # Funções auxiliares
 def parse_currency_value(value_str):
@@ -1066,10 +1082,13 @@ def load_from_csv(csv_file):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 # Sidebar - Menu de Navegação
-if UI_AVAILABLE:
-    st.sidebar.markdown(f"### 🧬 {LAB_INFO['nome_curto']}")
-    st.sidebar.markdown(f"*{LAB_INFO['sistema']}*")
-else:
+try:
+    if UI_AVAILABLE:
+        render_sidebar_logo()
+    else:
+        st.sidebar.markdown(f"### 🧬 {LAB_INFO.get('nome_curto', 'Biodiagnóstico')}")
+        st.sidebar.markdown(f"*{LAB_INFO.get('sistema', 'Sistema de Administração')}*")
+except Exception as e:
     st.sidebar.markdown("### 🧬 Biodiagnóstico")
     st.sidebar.markdown("*Sistema de Administração*")
 
@@ -1085,35 +1104,84 @@ pagina_selecionada = st.sidebar.radio(
 
 st.sidebar.markdown("---")
 
+# Controle de Qualidade
+st.sidebar.markdown("### 🔬 Controle Qualidade")
+st.sidebar.markdown("- ProIn QC")
+
+st.sidebar.markdown("---")
+
+# Configurações
+st.sidebar.markdown("### ⚙️ Configurações")
+st.sidebar.markdown("- API Gemini")
+
+st.sidebar.markdown("---")
+
+# Footer do sidebar
+st.sidebar.markdown("**v1.1.0**")
+st.sidebar.markdown("*© 2025 Biodiagnóstico*")
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # PÁGINA 1: CONVERSOR PDF → CSV
 # ═══════════════════════════════════════════════════════════════════════════════
 if pagina_selecionada == "🔄 Conversor PDF → CSV":
+    # Header simplificado
+    st.markdown("---")
     st.header("🔄 Conversor PDF → CSV")
-    st.markdown("**Converta seus PDFs COMPULAB e SIMUS para formato CSV com nomes de exames padronizados!**")
+    st.markdown("**Transforme seus relatórios em dados estruturados**")
     
-    st.markdown("""
-    <div style="
-        background: linear-gradient(135deg, rgba(139, 195, 74, 0.1) 0%, rgba(27, 94, 32, 0.1) 100%);
-        padding: 1.5rem;
-        border-radius: 12px;
-        border-left: 4px solid #8BC34A;
-        margin-bottom: 2rem;
-    ">
-        <h4 style="margin: 0 0 0.5rem 0; color: #1B5E20;">✨ O que esta ferramenta faz:</h4>
-        <ul style="margin: 0; color: #558B2F;">
-            <li>✅ Extrai dados dos PDFs de faturamento</li>
-            <li>✅ Padroniza nomes de exames (SIMUS → COMPULAB)</li>
-            <li>✅ Normaliza nomes de pacientes</li>
-            <li>✅ Gera CSVs prontos para análise ou arquivamento</li>
-        </ul>
-    </div>
-    """, unsafe_allow_html=True)
+    # Cards de funcionalidades simplificados
+    col_f1, col_f2, col_f3, col_f4 = st.columns(4)
+    
+    with col_f1:
+        st.markdown("""
+        <div style="text-align: center; padding: 1rem;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">📄</div>
+            <strong>Extração Inteligente</strong><br>
+            <small>Extrai dados automaticamente dos PDFs</small>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col_f2:
+        st.markdown("""
+        <div style="text-align: center; padding: 1rem;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔄</div>
+            <strong>Padronização</strong><br>
+            <small>Normaliza nomes de exames e pacientes</small>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col_f3:
+        st.markdown("""
+        <div style="text-align: center; padding: 1rem;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">📊</div>
+            <strong>CSV Estruturado</strong><br>
+            <small>Gera arquivos prontos para análise</small>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col_f4:
+        st.markdown("""
+        <div style="text-align: center; padding: 1rem;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">⚡</div>
+            <strong>Processamento Rápido</strong><br>
+            <small>Conversão em segundos</small>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("---")
+    
+    # Seção de Upload
+    st.markdown("### 📁 Upload de Arquivos")
+    st.markdown("*Arraste seus arquivos ou clique para selecionar*")
+    st.markdown("---")
     
     col1, col2 = st.columns(2)
     
     with col1:
         st.subheader("📄 PDF COMPULAB")
+        if UI_AVAILABLE:
+            erlenmeyer = get_erlenmeyer_svg()
+            st.markdown(erlenmeyer, unsafe_allow_html=True)
         compulab_pdf_conv = st.file_uploader(
             "Selecione o PDF do COMPULAB",
             type=['pdf'],
@@ -1121,10 +1189,13 @@ if pagina_selecionada == "🔄 Conversor PDF → CSV":
             help="Faça upload do PDF COMPULAB para converter"
         )
         if compulab_pdf_conv:
-            st.success(f"✅ {compulab_pdf_conv.name}")
+            st.success(f"✅ {compulab_pdf_conv.name} ({compulab_pdf_conv.size / 1024 / 1024:.2f} MB)")
     
     with col2:
         st.subheader("📄 PDF SIMUS")
+        if UI_AVAILABLE:
+            tubes = get_tubes_svg()
+            st.markdown(tubes, unsafe_allow_html=True)
         simus_pdf_conv = st.file_uploader(
             "Selecione o PDF do SIMUS",
             type=['pdf'],
@@ -1132,7 +1203,9 @@ if pagina_selecionada == "🔄 Conversor PDF → CSV":
             help="Faça upload do PDF SIMUS para converter"
         )
         if simus_pdf_conv:
-            st.success(f"✅ {simus_pdf_conv.name}")
+            st.success(f"✅ {simus_pdf_conv.name} ({simus_pdf_conv.size / 1024 / 1024:.2f} MB)")
+    
+    st.markdown("---")
     
     st.markdown("---")
     

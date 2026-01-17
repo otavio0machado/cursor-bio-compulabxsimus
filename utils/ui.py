@@ -130,7 +130,8 @@ def apply_custom_css():
         
         /* ===== SIDEBAR ===== */
         [data-testid="stSidebar"] {{
-            background: linear-gradient(180deg, {THEME_COLORS['primary']} 0%, {THEME_COLORS['primary_dark']} 100%) !important;
+            background: {THEME_COLORS['primary']} !important;
+            min-width: 256px !important;
         }}
         
         [data-testid="stSidebar"] * {{
@@ -146,6 +147,7 @@ def apply_custom_css():
         
         [data-testid="stSidebar"] hr {{
             border-color: rgba(255, 255, 255, 0.2) !important;
+            margin: 1rem 0 !important;
         }}
         
         [data-testid="stSidebar"] .stButton > button {{
@@ -156,6 +158,103 @@ def apply_custom_css():
         
         [data-testid="stSidebar"] .stButton > button:hover {{
             background: {THEME_COLORS['accent_light']} !important;
+        }}
+        
+        /* Logo do sidebar */
+        .sidebar-logo {{
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 1.5rem 1rem;
+            margin-bottom: 0.5rem;
+        }}
+        
+        .sidebar-logo-icon {{
+            width: 45px;
+            height: 52px;
+        }}
+        
+        .sidebar-logo-text {{
+            display: flex;
+            flex-direction: column;
+        }}
+        
+        .sidebar-logo-text .lab-name {{
+            font-size: 10px;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            opacity: 0.9;
+            font-weight: 500;
+        }}
+        
+        .sidebar-logo-text .lab-brand {{
+            font-size: 18px;
+            font-weight: bold;
+            letter-spacing: 0.05em;
+        }}
+        
+        /* Menu sections */
+        .sidebar-section-title {{
+            font-size: 10px;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            opacity: 0.5;
+            font-weight: 600;
+            padding: 1rem 1rem 0.5rem 1rem;
+            margin: 0;
+        }}
+        
+        /* Menu items */
+        .sidebar-menu-item {{
+            padding: 0.75rem 1rem;
+            margin: 0.25rem 0.5rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }}
+        
+        .sidebar-menu-item:hover {{
+            background: rgba(255, 255, 255, 0.1) !important;
+        }}
+        
+        .sidebar-menu-item.active {{
+            background: {THEME_COLORS['accent']} !important;
+        }}
+        
+        .sidebar-menu-item-icon {{
+            font-size: 18px;
+        }}
+        
+        .sidebar-menu-item-text {{
+            font-size: 14px;
+            font-weight: 500;
+        }}
+        
+        /* Sair button */
+        .sidebar-logout {{
+            background: rgba(220, 38, 38, 0.6) !important;
+            padding: 0.75rem 1rem;
+            margin: 0.5rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }}
+        
+        .sidebar-logout:hover {{
+            background: rgba(220, 38, 38, 0.8) !important;
+        }}
+        
+        /* Footer sidebar */
+        .sidebar-footer {{
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            text-align: center;
+            margin-top: auto;
+            font-size: 12px;
+            opacity: 0.5;
         }}
         
         /* ===== MÉTRICAS ===== */
@@ -214,10 +313,28 @@ def apply_custom_css():
         
         /* ===== FILE UPLOADER ===== */
         [data-testid="stFileUploader"] {{
-            background: rgba(139, 195, 74, 0.1) !important;
-            border: 2px dashed {THEME_COLORS['accent']} !important;
+            background: transparent !important;
+            border: none !important;
             border-radius: 12px !important;
-            padding: 1rem !important;
+            padding: 0 !important;
+        }}
+        
+        [data-testid="stFileUploader"] > div {{
+            background: transparent !important;
+            border: none !important;
+        }}
+        
+        [data-testid="stFileUploader"] button {{
+            background: {THEME_COLORS['accent']} !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 8px !important;
+            padding: 0.5rem 1rem !important;
+            font-weight: 600 !important;
+        }}
+        
+        [data-testid="stFileUploader"] button:hover {{
+            background: {THEME_COLORS['accent_dark']} !important;
         }}
         
         /* ===== INFO BOXES ===== */
@@ -324,15 +441,21 @@ def apply_custom_css():
     st.markdown(css, unsafe_allow_html=True)
 
 def render_header():
-    """Renderiza o header do laboratório com design oficial"""
+    """Renderiza o header do laboratório com design oficial moderno"""
     header_html = f"""
     <div class="lab-header fade-in">
         <div class="lab-header-content">
-            <h1 class="lab-title">
-                🧬 Laboratório <span class="accent">Biodiagnóstico</span>
-            </h1>
+            <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
+                <div style="font-size: 2.5rem;">🧬</div>
+                <div>
+                    <h1 class="lab-title" style="margin: 0; display: flex; align-items: baseline; gap: 5px;">
+                        <span>Laboratório</span> 
+                        <span class="accent" style="color: {THEME_COLORS['accent']} !important;">Biodiagnóstico</span>
+                    </h1>
+                </div>
+            </div>
             <p class="lab-subtitle">{LAB_INFO['sistema']} • {LAB_INFO['localizacao']}</p>
-            <div class="certification-badge">
+            <div class="certification-badge" style="margin-top: 1rem;">
                 <span>🏆</span>
                 <span>{LAB_INFO['certificacao']}</span>
             </div>
@@ -542,3 +665,116 @@ def render_welcome_message():
     </div>
     """
     st.markdown(welcome_html, unsafe_allow_html=True)
+
+def render_sidebar_logo():
+    """Renderiza o logo do sidebar com ícone de tubos de ensaio"""
+    logo_html = f"""
+    <div class="sidebar-logo">
+        <svg viewBox="0 0 60 70" width="45" height="52" class="sidebar-logo-icon">
+            <path d="M20 5 L40 5 L40 25 L55 60 Q57 65 52 68 L8 68 Q3 65 5 60 L20 25 Z" 
+                  fill="#4CAF50" stroke="#8BC34A" stroke-width="2"/>
+            <rect x="18" y="2" width="24" height="6" rx="2" fill="#4CAF50" stroke="#8BC34A" stroke-width="1"/>
+            <circle cx="25" cy="45" r="3" fill="#FFD54F"/>
+            <circle cx="35" cy="50" r="2.5" fill="#FFD54F"/>
+            <circle cx="30" cy="55" r="2" fill="#FFD54F"/>
+            <circle cx="22" cy="52" r="1.5" fill="#FFD54F"/>
+        </svg>
+        <div class="sidebar-logo-text">
+            <span class="lab-name">LABORATÓRIO</span>
+            <span class="lab-brand">BIODIAGNÓSTICO</span>
+        </div>
+    </div>
+    """
+    st.sidebar.markdown(logo_html, unsafe_allow_html=True)
+
+def render_upload_card(title, subtitle, icon_svg, file_uploader_key, file_obj):
+    """Renderiza um card de upload estilizado com SVG"""
+    has_file = file_obj is not None
+    border_style = "solid" if has_file else "dashed"
+    bg_style = "rgba(76, 175, 80, 0.1)" if has_file else "transparent"
+    
+    card_html = f"""
+    <div style="
+        border: 2px {border_style} {THEME_COLORS['accent']};
+        border-radius: 16px;
+        padding: 2rem;
+        text-align: center;
+        background: {bg_style};
+        transition: all 0.3s;
+        min-height: 250px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 1rem;
+    ">
+        {icon_svg}
+        <div>
+            <h4 style="margin: 0.5rem 0 0.25rem 0; color: {THEME_COLORS['primary']}; font-weight: bold; font-size: 1.1rem;">
+                {title}
+            </h4>
+            <p style="margin: 0; color: #666; font-size: 0.9rem;">
+                {subtitle}
+            </p>
+        </div>
+        <div style="display: flex; gap: 0.5rem; align-items: center; margin-top: 0.5rem;">
+            <span style="background: #EF5350; color: white; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">
+                PDF
+            </span>
+            <span style="color: #666; font-size: 0.75rem;">
+                Máx. 50MB
+            </span>
+        </div>
+    </div>
+    """
+    return card_html
+
+def get_erlenmeyer_svg():
+    """SVG do Erlenmeyer (COMPULAB)"""
+    return """
+    <svg viewBox="0 0 80 100" width="70" height="88" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));">
+        <defs>
+            <linearGradient id="liquidGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" style="stop-color:#81C784;stop-opacity:0.3" />
+                <stop offset="100%" style="stop-color:#4CAF50;stop-opacity:0.5" />
+            </linearGradient>
+        </defs>
+        <path d="M28 10 L52 10 L52 35 L70 85 Q72 92 65 95 L15 95 Q8 92 10 85 L28 35 Z" 
+              fill="url(#liquidGrad)" stroke="#1B5E20" stroke-width="2.5"/>
+        <rect x="26" y="5" width="28" height="8" rx="3" fill="none" stroke="#1B5E20" stroke-width="2.5"/>
+        <ellipse cx="40" cy="75" rx="20" ry="8" fill="#4CAF50" opacity="0.2"/>
+        <circle cx="48" cy="60" r="4" fill="#4CAF50" opacity="0.6">
+            <animate attributeName="cy" values="60;55;60" dur="2s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="35" cy="68" r="3" fill="#4CAF50" opacity="0.4">
+            <animate attributeName="cy" values="68;62;68" dur="1.5s" repeatCount="indefinite"/>
+        </circle>
+    </svg>
+    """
+
+def get_tubes_svg():
+    """SVG dos Tubos de ensaio (SIMUS)"""
+    return """
+    <svg viewBox="0 0 100 100" width="70" height="88" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));">
+        <defs>
+            <linearGradient id="tubeGrad1" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" style="stop-color:#81C784;stop-opacity:0.2" />
+                <stop offset="100%" style="stop-color:#4CAF50;stop-opacity:0.5" />
+            </linearGradient>
+        </defs>
+        <!-- Tubo 1 -->
+        <rect x="18" y="15" width="15" height="68" rx="7" fill="none" stroke="#1B5E20" stroke-width="2.5"/>
+        <rect x="18" y="52" width="15" height="31" rx="7" fill="url(#tubeGrad1)"/>
+        <!-- Tubo 2 -->
+        <rect x="42" y="15" width="15" height="68" rx="7" fill="none" stroke="#1B5E20" stroke-width="2.5"/>
+        <rect x="42" y="42" width="15" height="41" rx="7" fill="url(#tubeGrad1)"/>
+        <!-- Tubo 3 -->
+        <rect x="66" y="15" width="15" height="68" rx="7" fill="none" stroke="#1B5E20" stroke-width="2.5"/>
+        <rect x="66" y="58" width="15" height="25" rx="7" fill="url(#tubeGrad1)"/>
+        <!-- Upload badge -->
+        <circle cx="81" cy="75" r="10" fill="#4CAF50">
+            <animate attributeName="r" values="10;11;10" dur="1.5s" repeatCount="indefinite"/>
+        </circle>
+        <path d="M81 72 L81 78 M78 75 L81 72 L84 75" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/>
+    </svg>
+    """
