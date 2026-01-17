@@ -1236,9 +1236,17 @@ elif pagina_selecionada == "📊 Análise COMPULAB x SIMUS":
     # Configuração da API do Gemini
     st.sidebar.markdown("### 🤖 Análise por IA")
     
+    # Tentar carregar API key dos secrets do Streamlit Cloud primeiro
+    default_api_key = ""
+    try:
+        default_api_key = st.secrets.get("GEMINI_API_KEY", "")
+    except:
+        pass
+    
     gemini_api_key = st.sidebar.text_input(
         "🔑 Gemini API Key",
         type="password",
+        value=default_api_key,
         help="Cole sua chave da API do Google Gemini aqui. Obtenha em: https://makersuite.google.com/app/apikey"
     )
     

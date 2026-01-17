@@ -1,0 +1,20 @@
+EXPLICAÇÃO DA DIFERENÇA ENTRE COMPULAB E SIMUS
+====================================================================================================
+
+RESUMO:
+  COMPULAB Total:        R$ 30.872,24
+  SIMUS Contratualizado: R$ 27.644,68
+  DIFERENÇA:            R$ 3.227,56
+
+
+CAUSA PROVÁVEL DA DIFERENÇA:
+----------------------------------------------------------------------------------------------------
+O COMPULAB contém 0 códigos de exames que NÃO estão no SIMUS.
+O valor total desses códigos exclusivos é: R$ 0,00
+
+⚠ A diferença não é totalmente explicada pelos códigos exclusivos.
+  Diferença restante: R$ 3.227,56
+
+
+CÓDIGOS EXCLUSIVOS DO COMPULAB:
+----------------------------------------------------------------------------------------------------

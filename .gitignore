@@ -1,12 +1,13 @@
-# Python
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
+
+# C extensions
 *.so
+
+# Distribution / packaging
 .Python
-env/
-venv/
-ENV/
 build/
 develop-eggs/
 dist/
@@ -23,26 +24,45 @@ wheels/
 .installed.cfg
 *.egg
 
-# Streamlit
-.streamlit/
-*.key
-*_api_key.txt
-*_secret.txt
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Translations
+*.mo
+*.pot
+
+# Environments
 .env
-.env.local
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
 
-# PDFs (opcional - descomente se não quiser versionar os PDFs)
-# *.pdf
-
-# Arquivos de análise gerados
-*.txt
-*.csv
-!requirements.txt
-!README.md
+# Streamlit secrets (IMPORTANTE - não commitar!)
+.streamlit/secrets.toml
 
 # IDE
-.vscode/
 .idea/
+.vscode/
 *.swp
 *.swo
 *~
@@ -51,3 +71,25 @@ wheels/
 .DS_Store
 Thumbs.db
 
+# Arquivos temporários
+*.tmp
+*.temp
+*.log
+
+# Arquivos de upload temporários
+uploaded_files/
+*.pdf
+!COMPULAB.pdf
+!SIMUS.pdf
+
+# Arquivos de dados sensíveis
+*.csv
+!*_example.csv
+
+# Reflex/Next.js (se usar a versão Reflex)
+.web/
+node_modules/
+.next/
+
+# Arquivos de cache
+.reflex/

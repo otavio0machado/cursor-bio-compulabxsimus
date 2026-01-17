@@ -1,0 +1,184 @@
+═══════════════════════════════════════════════════════════════════════════════
+    GUIA PASSO A PASSO - COMO USAR O APLICATIVO
+═══════════════════════════════════════════════════════════════════════════════
+
+MÉTODO MAIS FÁCIL (RECOMENDADO):
+═══════════════════════════════════════════════════════════════════════════════
+
+PASSO 1: Testar a Instalação
+───────────────────────────────────────────────────────────────────────────────
+1. Clique duas vezes no arquivo: testar_instalacao.bat
+2. Aguarde alguns segundos
+3. Se aparecer "TUDO PRONTO!", vá para o PASSO 2
+4. Se aparecer erro, siga as instruções na tela
+
+
+PASSO 2: Iniciar o Aplicativo
+───────────────────────────────────────────────────────────────────────────────
+1. Clique duas vezes no arquivo: run_app.bat
+2. Aguarde alguns segundos
+3. O navegador abrirá automaticamente
+4. Se não abrir, veja a URL no terminal (geralmente: http://localhost:8501)
+   e cole no navegador
+
+
+PASSO 3: Usar o Aplicativo
+───────────────────────────────────────────────────────────────────────────────
+1. No navegador, você verá a interface do aplicativo
+2. Na BARRA LATERAL ESQUERDA, você verá:
+   
+   📁 Upload de Arquivos
+   Faça upload dos PDFs para análise
+   
+   [COMPULAB.pdf] [Browse files]
+   [SIMUS.pdf]    [Browse files]
+   
+   [🔍 Analisar]
+
+3. Clique em "Browse files" do COMPULAB.pdf
+   → Selecione o arquivo PDF do COMPULAB
+   → Clique em "Abrir"
+
+4. Clique em "Browse files" do SIMUS.pdf
+   → Selecione o arquivo PDF do SIMUS
+   → Clique em "Abrir"
+
+5. Clique no botão azul "🔍 Analisar"
+
+6. Aguarde alguns segundos (você verá "Processando PDFs...")
+
+7. Os resultados aparecerão automaticamente!
+
+
+═══════════════════════════════════════════════════════════════════════════════
+MÉTODO ALTERNATIVO (Via Linha de Comando):
+═══════════════════════════════════════════════════════════════════════════════
+
+PASSO 1: Abrir o PowerShell ou Prompt de Comando
+───────────────────────────────────────────────────────────────────────────────
+- Pressione Windows + R
+- Digite: powershell
+- Pressione Enter
+
+
+PASSO 2: Navegar até a Pasta
+───────────────────────────────────────────────────────────────────────────────
+Digite (ou copie e cole):
+cd "C:\Users\otavio\Desktop\cursor bio compulabxsimus"
+
+Pressione Enter
+
+
+PASSO 3: Verificar Instalação (Opcional)
+───────────────────────────────────────────────────────────────────────────────
+Digite:
+py -m pip show streamlit
+
+Se aparecer informações sobre o streamlit, está instalado!
+Se aparecer erro, instale com:
+py -m pip install -r requirements.txt
+
+
+PASSO 4: Iniciar o Aplicativo
+───────────────────────────────────────────────────────────────────────────────
+Digite:
+py -m streamlit run app.py
+
+Pressione Enter
+
+
+PASSO 5: Abrir no Navegador
+───────────────────────────────────────────────────────────────────────────────
+1. Você verá uma mensagem como:
+   "You can now view your Streamlit app in your browser."
+   "Local URL: http://localhost:8501"
+
+2. O navegador abrirá automaticamente
+   Se não abrir, copie o link http://localhost:8501 e cole no navegador
+
+
+PASSO 6: Usar o Aplicativo
+───────────────────────────────────────────────────────────────────────────────
+(Siga os mesmos passos do MÉTODO MAIS FÁCIL, PASSO 3)
+
+
+═══════════════════════════════════════════════════════════════════════════════
+O QUE VOCÊ VERÁ NO APLICATIVO:
+═══════════════════════════════════════════════════════════════════════════════
+
+Após clicar em "Analisar", você verá:
+
+1. RESUMO DA ANÁLISE (no topo)
+   ┌─────────────────┬──────────────────┬──────────────┐
+   │ COMPULAB Total  │ SIMUS Total      │ Diferença    │
+   │ R$ 30.872,24    │ R$ 27.644,68     │ R$ 3.227,56  │
+   └─────────────────┴──────────────────┴──────────────┘
+
+2. ABAS DE ANÁLISE:
+   
+   [📊 Visão Geral] [🔴 Códigos Exclusivos] [⚖️ Comparação] [📄 Relatório]
+   
+   - Visão Geral: Gráficos e estatísticas gerais
+   - Códigos Exclusivos: Exames só no COMPULAB
+   - Comparação: Diferenças de valores
+   - Relatório: Relatório completo para download
+
+
+═══════════════════════════════════════════════════════════════════════════════
+SOLUÇÃO DE PROBLEMAS:
+═══════════════════════════════════════════════════════════════════════════════
+
+PROBLEMA: "streamlit não é reconhecido"
+SOLUÇÃO: Use sempre: py -m streamlit run app.py
+         Nunca use apenas: streamlit run app.py
+
+
+PROBLEMA: "py não é reconhecido"
+SOLUÇÃO: Tente: python -m streamlit run app.py
+
+
+PROBLEMA: Navegador não abre
+SOLUÇÃO: Copie a URL do terminal (http://localhost:8501) e cole no navegador
+
+
+PROBLEMA: Erro ao processar PDFs
+SOLUÇÃO: 
+- Verifique se os PDFs são do COMPULAB e SIMUS
+- Certifique-se de que os arquivos não estão corrompidos
+- Tente com outros PDFs para testar
+
+
+PROBLEMA: Porta 8501 já está em uso
+SOLUÇÃO:
+1. Feche outras janelas do Streamlit
+2. Ou use: py -m streamlit run app.py --server.port 8502
+
+
+═══════════════════════════════════════════════════════════════════════════════
+COMANDOS RÁPIDOS:
+═══════════════════════════════════════════════════════════════════════════════
+
+Testar instalação:
+  testar_instalacao.bat (clique duas vezes)
+
+Iniciar aplicativo:
+  run_app.bat (clique duas vezes)
+  
+  OU
+  
+  py -m streamlit run app.py (no terminal)
+
+Parar aplicativo:
+  Pressione Ctrl+C no terminal
+
+
+═══════════════════════════════════════════════════════════════════════════════
+PRECISA DE MAIS AJUDA?
+═══════════════════════════════════════════════════════════════════════════════
+
+Consulte o arquivo: INSTALACAO_DETALHADA.md
+para instruções ainda mais detalhadas.
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
