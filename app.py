@@ -1081,7 +1081,7 @@ def load_from_csv(csv_file):
 # INTERFACE STREAMLIT - NAVEGAÇÃO POR ABAS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-# Sidebar - Menu de Navegação
+# Sidebar - Menu de Navegação Moderno
 try:
     if UI_AVAILABLE:
         render_sidebar_logo()
@@ -1094,25 +1094,37 @@ except Exception as e:
 
 st.sidebar.markdown("---")
 
-# Menu de navegação principal
+# Menu de navegação principal - TODAS as páginas disponíveis
 st.sidebar.markdown("### 📋 Menu Principal")
 pagina_selecionada = st.sidebar.radio(
     "Selecione uma função:",
-    ["🔄 Conversor PDF → CSV", "📊 Análise COMPULAB x SIMUS"],
+    ["🔄 Conversor PDF → CSV", "📊 Análise COMPULAB x SIMUS", "🔬 ProIn QC"],
     label_visibility="collapsed"
 )
 
 st.sidebar.markdown("---")
 
-# Controle de Qualidade
-st.sidebar.markdown("### 🔬 Controle Qualidade")
-st.sidebar.markdown("- ProIn QC")
-
-st.sidebar.markdown("---")
-
 # Configurações
 st.sidebar.markdown("### ⚙️ Configurações")
-st.sidebar.markdown("- API Gemini")
+
+# API Gemini na sidebar (apenas para análise)
+if pagina_selecionada == "📊 Análise COMPULAB x SIMUS":
+    # Tentar carregar API key dos secrets do Streamlit Cloud primeiro
+    default_api_key = ""
+    try:
+        default_api_key = st.secrets.get("GEMINI_API_KEY", "")
+    except:
+        pass
+    
+    gemini_api_key = st.sidebar.text_input(
+        "🔑 Gemini API Key",
+        type="password",
+        value=default_api_key,
+        help="Cole sua chave da API do Google Gemini aqui. Obtenha em: https://makersuite.google.com/app/apikey"
+    )
+else:
+    gemini_api_key = ""
+    st.sidebar.info("💡 API Gemini disponível na página de Análise")
 
 st.sidebar.markdown("---")
 
@@ -1287,59 +1299,55 @@ elif pagina_selecionada == "📊 Análise COMPULAB x SIMUS":
     st.header("📊 Análise de Faturamento COMPULAB x SIMUS")
     st.markdown("**Compare os dados de faturamento e identifique divergências**")
     
-    # Sidebar para upload de arquivos (específico desta página)
-    st.sidebar.markdown("### 📁 Arquivos para Análise")
+    st.markdown("---")
     
-    compulab_file = st.sidebar.file_uploader(
-        "COMPULAB (PDF ou CSV)",
-        type=['pdf', 'csv'],
-        help="Upload do arquivo COMPULAB (PDF ou CSV)",
-        key="compulab_analysis"
-    )
+    # Upload de arquivos NA ÁREA PRINCIPAL (não na sidebar)
+    st.markdown("### 📁 Upload de Arquivos para Análise")
+    st.markdown("*Faça upload dos arquivos COMPULAB e SIMUS (PDF ou CSV) para começar a análise*")
     
-    simus_file = st.sidebar.file_uploader(
-        "SIMUS (PDF ou CSV)",
-        type=['pdf', 'csv'],
-        help="Upload do arquivo SIMUS (PDF ou CSV)",
-        key="simus_analysis"
-    )
+    col_upload1, col_upload2 = st.columns(2)
     
-    st.sidebar.markdown("---")
+    with col_upload1:
+        st.markdown("#### 📄 COMPULAB")
+        compulab_file = st.file_uploader(
+            "Selecione o arquivo COMPULAB",
+            type=['pdf', 'csv'],
+            help="Upload do arquivo COMPULAB (PDF ou CSV)",
+            key="compulab_analysis",
+            label_visibility="collapsed"
+        )
+        if compulab_file:
+            st.success(f"✅ {compulab_file.name}")
     
-    # Configuração da API do Gemini
-    st.sidebar.markdown("### 🤖 Análise por IA")
+    with col_upload2:
+        st.markdown("#### 📄 SIMUS")
+        simus_file = st.file_uploader(
+            "Selecione o arquivo SIMUS",
+            type=['pdf', 'csv'],
+            help="Upload do arquivo SIMUS (PDF ou CSV)",
+            key="simus_analysis",
+            label_visibility="collapsed"
+        )
+        if simus_file:
+            st.success(f"✅ {simus_file.name}")
     
-    # Tentar carregar API key dos secrets do Streamlit Cloud primeiro
-    default_api_key = ""
-    try:
-        default_api_key = st.secrets.get("GEMINI_API_KEY", "")
-    except:
-        pass
+    st.markdown("---")
     
-    gemini_api_key = st.sidebar.text_input(
-        "🔑 Gemini API Key",
-        type="password",
-        value=default_api_key,
-        help="Cole sua chave da API do Google Gemini aqui. Obtenha em: https://makersuite.google.com/app/apikey"
-    )
+    # Botão de análise na área principal
+    col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
+    with col_btn2:
+        analyze_button = st.button("🔍 Analisar Faturamento", type="primary", use_container_width=True)
     
+    # Configurar API Gemini se fornecida
     if gemini_api_key:
-        st.sidebar.success("✅ API Key configurada!")
         if GEMINI_AVAILABLE:
             try:
                 genai.configure(api_key=gemini_api_key)
+                st.info("✅ API Key do Gemini configurada!")
             except Exception as e:
-                st.sidebar.error(f"Erro ao configurar API: {str(e)}")
-    else:
-        st.sidebar.caption("Configure para usar análise por IA")
-    
-    if not GEMINI_AVAILABLE:
-        st.sidebar.warning("⚠️ google-generativeai não instalada")
-    
-    st.sidebar.markdown("---")
-    
-    # Botão de análise
-    analyze_button = st.sidebar.button("🔍 Analisar Faturamento", type="primary", use_container_width=True)
+                st.error(f"Erro ao configurar API: {str(e)}")
+        else:
+            st.warning("⚠️ Biblioteca google-generativeai não está instalada")
     
     # Processar análise quando botão for clicado
     if analyze_button and compulab_file and simus_file:
@@ -1793,23 +1801,31 @@ Seja específico, prático e use linguagem profissional mas acessível. Responda
     
     # Mensagem inicial quando não há análise
     else:
-        st.markdown("""
-        <div style="
-            background: linear-gradient(135deg, rgba(139, 195, 74, 0.1) 0%, rgba(27, 94, 32, 0.1) 100%);
-            padding: 2rem;
-            border-radius: 16px;
-            text-align: center;
-            margin: 2rem 0;
-        ">
-            <h3 style="color: #1B5E20; margin-bottom: 1rem;">👋 Bem-vindo à Análise de Faturamento</h3>
-            <p style="color: #558B2F; margin-bottom: 1.5rem;">
-                Faça upload dos arquivos COMPULAB e SIMUS na barra lateral para começar a análise.
-            </p>
-            <p style="color: #689F38; font-size: 0.9rem;">
-                💡 <strong>Dica:</strong> Use arquivos CSV para análise mais rápida!
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
+        if not compulab_file or not simus_file:
+            st.info("👆 Faça upload dos arquivos COMPULAB e SIMUS acima para começar a análise.")
+        else:
+            st.info("👆 Clique no botão '🔍 Analisar Faturamento' acima para iniciar a análise.")
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PÁGINA 3: PROIN QC
+# ═══════════════════════════════════════════════════════════════════════════════
+elif pagina_selecionada == "🔬 ProIn QC":
+    st.header("🔬 ProIn QC - Sistema de Controle de Qualidade")
+    st.markdown("**Gerencie o controle de qualidade do laboratório**")
+    
+    st.markdown("---")
+    
+    st.info("🚧 **Esta funcionalidade está em desenvolvimento.**")
+    st.markdown("""
+    O ProIn QC será uma ferramenta completa para:
+    - Registro de controles de qualidade
+    - Gestão de reagentes e lotes
+    - Relatórios de Levey-Jennings
+    - Alertas e notificações
+    - Manutenção de equipamentos
+    """)
+    
+    st.warning("💡 Esta funcionalidade está disponível na versão Reflex do aplicativo.")
 
 # Rodapé
 if UI_AVAILABLE:

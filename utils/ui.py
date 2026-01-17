@@ -668,9 +668,15 @@ def render_welcome_message():
 
 def render_sidebar_logo():
     """Renderiza o logo do sidebar com ícone de tubos de ensaio"""
-    logo_html = f"""
-    <div class="sidebar-logo">
-        <svg viewBox="0 0 60 70" width="45" height="52" class="sidebar-logo-icon">
+    logo_html = """
+    <div style="
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 1.5rem 1rem;
+        margin-bottom: 0.5rem;
+    ">
+        <svg viewBox="0 0 60 70" width="45" height="52">
             <path d="M20 5 L40 5 L40 25 L55 60 Q57 65 52 68 L8 68 Q3 65 5 60 L20 25 Z" 
                   fill="#4CAF50" stroke="#8BC34A" stroke-width="2"/>
             <rect x="18" y="2" width="24" height="6" rx="2" fill="#4CAF50" stroke="#8BC34A" stroke-width="1"/>
@@ -679,9 +685,9 @@ def render_sidebar_logo():
             <circle cx="30" cy="55" r="2" fill="#FFD54F"/>
             <circle cx="22" cy="52" r="1.5" fill="#FFD54F"/>
         </svg>
-        <div class="sidebar-logo-text">
-            <span class="lab-name">LABORATÓRIO</span>
-            <span class="lab-brand">BIODIAGNÓSTICO</span>
+        <div style="display: flex; flex-direction: column;">
+            <span style="color: rgba(255,255,255,0.9); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; font-weight: 500; line-height: 1;">LABORATÓRIO</span>
+            <span style="color: white; font-size: 18px; font-weight: bold; letter-spacing: 0.05em; line-height: 1.2;">BIODIAGNÓSTICO</span>
         </div>
     </div>
     """
