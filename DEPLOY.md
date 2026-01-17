@@ -1,165 +1,70 @@
-# 🚀 Guia de Deploy - Streamlit Community Cloud
+# 🚀 Guia de Deploy - Reflex (React + Tailwind)
 
-Este guia mostra como fazer deploy do app no **Streamlit Community Cloud** (gratuito e fácil).
+Como sua aplicação agora é construída com **Reflex**, o processo de deploy é diferente do Streamlit. Uma aplicação Reflex consiste em duas partes:
+1. **Frontend**: Arquivos estáticos (HTML/CSS/JS) compilados (React).
+2. **Backend**: Servidor Python (FastAPI).
 
-## 📋 Pré-requisitos
+Existem duas formas principais de fazer o deploy:
 
-1. Conta no **GitHub** (gratuita) - [Criar conta](https://github.com/signup)
-2. Conta no **Streamlit Community Cloud** (gratuita) - [Criar conta](https://share.streamlit.io/)
+## Opção 1: Reflex Cloud (Recomendado - Mais Fácil)
 
-## 🔧 Passo a Passo
+O Reflex possui seu próprio serviço de hospedagem otimizado.
 
-### 1. Preparar o Repositório GitHub
+1. **Instale o CLI do Reflex** (você já tem):
+   ```bash
+   pip install reflex
+   ```
 
-#### Opção A: Se já tem um repositório GitHub
+2. **Faça Login na Reflex Cloud**:
+   ```bash
+   reflex login
+   ```
 
-```bash
-# No diretório do projeto
-git add .
-git commit -m "Preparar para deploy"
-git push origin main
-```
+3. **Faça o Deploy**:
+   Dentro da pasta `biodiagnostico_app/`:
+   ```bash
+   reflex deploy
+   ```
+   Siga as instruções interativas no terminal.
 
-#### Opção B: Criar novo repositório no GitHub
+## Opção 2: Self-Hosting (Docker / Railway / Render)
 
-1. Acesse [GitHub](https://github.com) e faça login
-2. Clique em **"+"** → **"New repository"**
-3. Nome do repositório: `compulab-simus-analyzer` (ou outro nome)
-4. **NÃO** marque "Initialize with README"
-5. Clique em **"Create repository"**
+Se preferir hospedar em sua própria infraestrutura ou serviços como Railway/Render:
 
-6. No terminal, execute:
+### Usando Docker (Padrão de Ouro)
 
-```bash
-# Se ainda não inicializou git
-git init
-git add .
-git commit -m "Primeiro commit - app de análise COMPULAB vs SIMUS"
+1. **Crie um Dockerfile** na raiz de `biodiagnostico_app/`.
+   (Eu posso criar isso para você se desejar).
 
-# Adicionar repositório remoto (substitua SEU_USUARIO pelo seu username)
-git remote add origin https://github.com/SEU_USUARIO/compulab-simus-analyzer.git
+2. **Construa e Rode**:
+   ```bash
+   docker build -t biodiagnostico .
+   docker run -p 3000:3000 -p 8000:8000 biodiagnostico
+   ```
 
-# Renomear branch para main (se necessário)
-git branch -M main
+### Usando Railway (Excelente Custo-Benefício)
 
-# Fazer push
-git push -u origin main
-```
+1. Crie um repositório no GitHub com o conteúdo da pasta `biodiagnostico_app`.
+2. Conecte sua conta do Railway ao GitHub.
+3. O Railway detectará o projeto Python/Nixpacks.
+4. Configure as variáveis de ambiente necessárias.
+5. Comando de start: `reflex run --env prod`
 
-### 2. Criar Arquivo de Configuração (Opcional)
+## 🛠️ Gerando a Build de Produção Localmente
 
-Crie um arquivo `.streamlit/config.toml` para configurações personalizadas:
+Antes de fazer deploy, é uma boa prática testar a build de produção localmente para garantir que não há erros de compilação.
 
-```bash
-# Criar diretório .streamlit (se não existir)
-mkdir -p .streamlit
-```
+1. **Vá para a pasta do app**:
+   ```bash
+   cd biodiagnostico_app
+   ```
 
-Crie o arquivo `.streamlit/config.toml`:
-
-```toml
-[theme]
-primaryColor = "#FF4B4B"
-backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#F0F2F6"
-textColor = "#262730"
-font = "sans serif"
-
-[server]
-headless = true
-port = 8501
-```
-
-### 3. Deploy no Streamlit Community Cloud
-
-1. **Acesse**: [share.streamlit.io](https://share.streamlit.io/)
-2. **Faça login** com sua conta GitHub
-3. **Clique em**: **"New app"**
-4. **Preencha**:
-   - **Repository**: Seu repositório GitHub (ex: `seu-usuario/compulab-simus-analyzer`)
-   - **Branch**: `main` (ou `master`)
-   - **Main file path**: `app.py`
-   - **App URL** (opcional): Escolha uma URL personalizada
-5. **Clique em**: **"Deploy!"**
-
-### 4. Aguardar o Deploy
-
-O Streamlit irá:
-- Instalar as dependências do `requirements.txt`
-- Iniciar o app
-- Gerar uma URL pública (ex: `https://seu-app.streamlit.app`)
-
-⏱️ **Tempo**: 2-5 minutos na primeira vez
-
-## ✅ Verificação
-
-Após o deploy, verifique:
-
-1. ✅ O app carrega sem erros
-2. ✅ Pode fazer upload de PDFs
-3. ✅ A análise funciona corretamente
-4. ✅ Os gráficos são exibidos
-
-## 🔄 Atualizar o App
-
-Para atualizar o app depois de fazer mudanças:
-
-```bash
-git add .
-git commit -m "Descrição das mudanças"
-git push origin main
-```
-
-O Streamlit **atualiza automaticamente** em alguns segundos!
-
-## 🐛 Troubleshooting
-
-### Erro: "ModuleNotFoundError"
-
-**Solução**: Verifique se todas as dependências estão no `requirements.txt`:
-
-```bash
-pip freeze > requirements.txt
-# Depois revise e remova dependências desnecessárias
-```
-
-### Erro: "FileNotFoundError"
-
-**Solução**: Não use arquivos locais. O app deve funcionar apenas com uploads.
-
-### Erro no Deploy
-
-**Solução**: 
-1. Verifique os logs no Streamlit Cloud
-2. Certifique-se que `app.py` está na raiz do repositório
-3. Verifique se `requirements.txt` está correto
-
-## 📝 Estrutura Final do Repositório
-
-```
-seu-repositorio/
-├── app.py                    # ← Arquivo principal
-├── requirements.txt          # ← Dependências
-├── README.md                # ← Documentação
-├── .gitignore              # ← Arquivos ignorados
-└── .streamlit/             # ← Configurações (opcional)
-    └── config.toml
-```
-
-## 🔒 Privacidade
-
-- **Apps gratuitos** são públicos por padrão
-- Para apps privados, considere usar Streamlit Cloud for Teams (pago)
-
-## 🌐 URLs e Compartilhamento
-
-Após o deploy, você terá:
-- **URL pública**: `https://seu-app.streamlit.app`
-- Pode compartilhar com qualquer pessoa
-- Sem necessidade de instalação para usuários
+2. **Exporte o projeto**:
+   ```bash
+   reflex export
+   ```
+   Isso criará uma pasta `.zip` (ou pasta de build) contendo o frontend compilado e o backend, pronto para ser enviado para um servidor.
 
 ---
 
-**Pronto!** Seu app estará online e acessível! 🎉
-
-
+**Precisa de ajuda com o Dockerfile ou configuração do Railway?** Basta pedir!

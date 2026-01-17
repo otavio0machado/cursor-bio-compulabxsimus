@@ -1,4 +1,9 @@
-# 📊 Análise de Faturamento - COMPULAB vs SIMUS
+# 📊 Biodiagnóstico - Sistema de Administração (Versão Oficial)
+
+**NOVA VERSÃO:** Este projeto agora utiliza **Reflex (React + Tailwind)** para uma interface moderna e responsiva.
+
+A versão antiga (Streamlit) foi descontinuada e movida para `legacy_streamlit_version/`.
+
 
 Aplicativo web para análise comparativa mensal de faturamento entre o sistema COMPULAB (Laboratório Biodiagnóstico) e o SIMUS.
 
@@ -28,11 +33,17 @@ pip install -r requirements.txt
 ```
 
 ## 🎯 Como Usar
-
-1. Inicie o aplicativo:
-```bash
-streamlit run app.py
-```
+ 
+ 1. Inicie o aplicativo:
+ ```bash
+ ./run_app.bat
+ ```
+ 
+ Ou manualmente:
+ ```bash
+ cd biodiagnostico_app
+ reflex run
+ ```
 
 2. O aplicativo abrirá automaticamente no seu navegador (geralmente em `http://localhost:8501`)
 

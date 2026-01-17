@@ -1,19 +1,12 @@
 @echo off
-echo ========================================
-echo  Analise de Faturamento - COMPULAB vs SIMUS
-echo ========================================
+echo ==================================================
+echo  Iniciando Biodiagnostico App (Versao Oficial)
+echo  Tecnologia: Reflex (React + Tailwind + Python)
+echo ==================================================
 echo.
-echo Verificando instalacao...
-py -m pip show streamlit >nul 2>&1
-if errorlevel 1 (
-    echo Streamlit nao encontrado. Instalando dependencias...
-    py -m pip install -r requirements.txt
-    echo.
-)
+echo Iniciando o servidor...
+echo Aguarde enquanto o ambiente e preparado.
 echo.
-echo Iniciando aplicativo...
-echo O navegador abrira automaticamente em alguns segundos...
-echo.
-py -m streamlit run app.py
+cd biodiagnostico_app
+py -m reflex run
 pause
-
