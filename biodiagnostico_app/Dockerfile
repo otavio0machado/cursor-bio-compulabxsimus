@@ -3,13 +3,15 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies including nginx
+# Install system dependencies including nginx and curl (required for reflex init)
 RUN apt-get update && apt-get install -y \
     nodejs \
     npm \
     git \
     unzip \
     nginx \
+    curl \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy local code to the container
@@ -36,3 +38,4 @@ EXPOSE 8000
 
 # Command to run the application
 CMD ["./start.sh"]
+
