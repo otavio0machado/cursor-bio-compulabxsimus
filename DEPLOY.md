@@ -29,6 +29,9 @@ Para que os uploads funcionem em produção, precisamos de uma conta no Cloudina
 | Variável | Valor |
 |----------|-------|
 | `API_URL` | `https://[SEU-DOMINIO-RAILWAY].up.railway.app` (sem barra no final) |
+| `SUPABASE_URL` | URL do projeto Supabase (Settings > API) |
+| `SUPABASE_KEY` | Chave `anon public` do Supabase |
+| `GEMINI_API_KEY` | (Opcional) Chave API do Google Gemini para IA |
 | `CLOUDINARY_CLOUD_NAME` | *(Seu Cloud Name)* |
 | `CLOUDINARY_API_KEY` | *(Sua API Key)* |
 | `CLOUDINARY_API_SECRET` | *(Seu API Secret)* |
