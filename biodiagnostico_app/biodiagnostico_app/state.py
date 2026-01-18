@@ -527,13 +527,15 @@ class State(rx.State):
             self.login_error = "E-mail ou senha incorretos"
             self.is_authenticated = False
     
-    def logout(self):
+    async def logout(self):
         """Realiza logout do sistema"""
+        # Delay para fechar Menu e evitar warning 'aria-hidden'
+        await asyncio.sleep(0.2)
         self.is_authenticated = False
         self.login_email = ""
         self.login_password = ""
         self.login_error = ""
-        self.current_page = "conversor"
+        self.current_page = "dashboard" # Resetar para home/dashboard por padrão
     
     def set_page(self, page: str):
         """Navega para uma página"""
