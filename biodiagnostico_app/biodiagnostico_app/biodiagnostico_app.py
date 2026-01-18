@@ -295,8 +295,12 @@ def authenticated_layout() -> rx.Component:
 
 
 def index() -> rx.Component:
-    """Página principal - acesso direto ao conteúdo (sem login)"""
-    return authenticated_layout()
+    """Página principal - Login obrigatório para acesso interno"""
+    return rx.cond(
+        State.is_authenticated,
+        authenticated_layout(),
+        login_page()
+    )
 
 
 # Configurar aplicação
