@@ -1,6 +1,6 @@
 """
 Biodiagnóstico Lab - Sistema de Administração
-Design oficial baseado na identidade visual do laboratório
+Design oficial baseado na identidade visual do laboratório - Premium SaaS Edition
 """
 import reflex as rx
 from .state import State
@@ -11,7 +11,7 @@ from .pages.proin import proin_page
 
 
 def login_page() -> rx.Component:
-    """Página de login com design moderno"""
+    """Página de login com design moderno e premium"""
     return rx.box(
         rx.hstack(
             # Lado esquerdo - Formulário de Login
@@ -21,43 +21,58 @@ def login_page() -> rx.Component:
                     rx.hstack(
                         rx.box(
                             rx.icon("flask-conical", size=32, color="white"),
-                            class_name="bg-gradient-to-br from-[#4CAF50] to-[#66BB6A] p-3 rounded-xl"
+                            class_name="bg-gradient-to-br from-[#4CAF50] to-[#1B5E20] p-3.5 rounded-2xl shadow-lg shadow-green-900/20"
                         ),
                         rx.vstack(
-                            rx.text("Laboratório", class_name="text-2xl font-bold text-gray-800 leading-tight"),
-                            rx.text("Biodiagnóstico", class_name="text-2xl font-bold text-gray-800 leading-tight"),
-                            spacing="0",
+                            rx.text("LABORATÓRIO", class_name="text-xs font-bold text-gray-400 tracking-[0.2em] leading-none"),
+                            rx.text("BIODIAGNÓSTICO", class_name="text-2xl font-bold text-[#1B5E20] leading-tight"),
+                            spacing="1",
                             align="start",
                         ),
                         spacing="4",
                         align="center",
                     ),
                     
+                    rx.text(
+                        "Bem-vindo de volta",
+                        class_name="text-4xl font-bold text-gray-900 mt-12 mb-2"
+                    ),
+                    rx.text(
+                        "Acesse o portal administrativo para gerenciar suas análises.",
+                        class_name="text-gray-500 mb-8"
+                    ),
+
                     # Formulário
                     rx.box(
                         rx.vstack(
                             # E-mail
                             rx.box(
-                                rx.text("E-mail", class_name="text-sm font-semibold text-gray-700 mb-2"),
+                                rx.text("E-mail Corporativo", class_name="text-sm font-semibold text-gray-700 mb-2 ml-1"),
                                 rx.input(
-                                    placeholder="seu@email.com",
+                                    placeholder="seu@biodiagnostico.com.br",
                                     value=State.login_email,
                                     on_change=State.set_login_email,
                                     type="email",
-                                    class_name="w-full px-4 py-3 rounded-lg border border-gray-200 bg-gray-50 focus:bg-white focus:border-[#4CAF50] focus:ring-2 focus:ring-green-200 transition-all"
+                                    class_name="w-full px-5 py-4 rounded-xl border border-gray-200 bg-gray-50/50 focus:bg-white focus:border-[#4CAF50] focus:ring-4 focus:ring-green-500/10 transition-all text-sm font-medium shadow-sm outline-none"
                                 ),
                                 width="100%",
                             ),
                             
                             # Senha
                             rx.box(
-                                rx.text("Senha", class_name="text-sm font-semibold text-gray-700 mb-2"),
+                                rx.hstack(
+                                    rx.text("Senha", class_name="text-sm font-semibold text-gray-700 ml-1"),
+                                    rx.spacer(),
+                                    rx.text("Esqueceu a senha?", class_name="text-xs font-medium text-[#4CAF50] hover:text-[#1B5E20] cursor-pointer"),
+                                    width="100%",
+                                    class_name="mb-2"
+                                ),
                                 rx.input(
-                                    placeholder="Digite sua senha",
+                                    placeholder="••••••••",
                                     value=State.login_password,
                                     on_change=State.set_login_password,
                                     type="password",
-                                    class_name="w-full px-4 py-3 rounded-lg border border-gray-200 bg-gray-50 focus:bg-white focus:border-[#4CAF50] focus:ring-2 focus:ring-green-200 transition-all"
+                                    class_name="w-full px-5 py-4 rounded-xl border border-gray-200 bg-gray-50/50 focus:bg-white focus:border-[#4CAF50] focus:ring-4 focus:ring-green-500/10 transition-all text-sm font-medium shadow-sm outline-none"
                                 ),
                                 width="100%",
                             ),
@@ -66,22 +81,27 @@ def login_page() -> rx.Component:
                             rx.cond(
                                 State.login_error != "",
                                 rx.box(
-                                    rx.text(State.login_error, class_name="text-red-700 text-sm"),
-                                    class_name="bg-red-50 border border-red-200 rounded-lg p-3 w-full"
+                                    rx.hstack(
+                                        rx.icon("alert-circle", size=16, class_name="text-red-600"),
+                                        rx.text(State.login_error, class_name="text-red-700 text-sm font-medium"),
+                                        spacing="2",
+                                        align="center",
+                                    ),
+                                    class_name="bg-red-50 border border-red-100 rounded-xl p-3 w-full animate-shake"
                                 ),
                             ),
                             
                             # Botão de Login
                             rx.button(
-                                "Login",
+                                "Acessar Portal",
                                 on_click=State.attempt_login,
-                                class_name="w-full bg-[#4CAF50] hover:bg-[#43A047] text-white font-semibold py-3.5 px-6 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg mt-4"
+                                class_name="w-full bg-[#1B5E20] hover:bg-[#2E7D32] text-white font-semibold py-4 rounded-xl transition-all duration-300 shadow-lg shadow-green-900/20 hover:shadow-xl hover:translate-y-[-1px] mt-2 text-sm tracking-wide"
                             ),
                             
                             spacing="5",
                             width="100%",
                         ),
-                        class_name="mt-12 w-full max-w-md"
+                        class_name="w-full max-w-md"
                     ),
                     
                     spacing="0",
@@ -89,55 +109,75 @@ def login_page() -> rx.Component:
                     width="100%",
                     class_name="max-w-md mx-auto"
                 ),
-                class_name="w-1/2 bg-white flex flex-col justify-center px-16 py-12"
+                class_name="w-full lg:w-1/2 bg-white flex flex-col justify-center px-8 lg:px-24 py-12 relative z-10"
             ),
             
-            # Lado direito - Seção de boas-vindas
+            # Lado direito - Seção de boas-vindas / Visual
             rx.box(
+                rx.box(
+                    class_name="absolute inset-0 bg-[#1B5E20] opacity-95 z-0"
+                ),
+                rx.box(
+                    class_name="absolute inset-0 bg-[url('https://source.unsplash.com/random/1920x1080/?laboratory,science')] bg-cover bg-center mix-blend-overlay opacity-30 z-0"
+                ),
+                rx.box(
+                    class_name="absolute inset-0 bg-gradient-to-t from-[#0e3310] via-transparent to-transparent z-0 opacity-80"
+                ),
+
                 rx.vstack(
-                    rx.box(height="100px"),  # Spacer
+                    rx.box(flex="1"),  # Spacer top
                     
-                    # Badge de certificação
-                    rx.hstack(
-                        rx.box(
-                            rx.icon("gem", size=24, color="#FCD34D"),
-                            class_name="w-16 h-16 bg-blue-500 rounded-lg flex items-center justify-center"
-                        ),
+                    # Conteúdo flutuante
+                    rx.box(
                         rx.vstack(
-                            rx.text("PNCQ CERTIFICATION DIAMOND", class_name="text-sm font-semibold uppercase tracking-wide opacity-90"),
-                            rx.text("QUALIDADE APROVADA", class_name="text-xs opacity-75 mt-1"),
-                            spacing="0",
-                            align="start",
+                            rx.box(
+                                rx.icon("microscope", size=48, class_name="text-[#4CAF50]"),
+                                class_name="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/10 mb-6 inline-block"
+                            ),
+                            rx.text("Tecnologia de Ponta", class_name="text-[#4CAF50] font-bold text-sm tracking-widest uppercase mb-2"),
+                            rx.text("Precisão e Excelência em Diagnósticos", class_name="text-5xl font-bold text-white leading-tight mb-6"),
+                            rx.text("Sistema integrado de gestão laboratorial com certificação PNCQ Diamante. Garantia de qualidade e segurança em cada análise.", class_name="text-green-100/80 text-lg max-w-xl leading-relaxed"),
+
+                            # Badge de certificação
+                            rx.hstack(
+                                rx.box(
+                                    rx.text("💎", class_name="text-2xl"),
+                                    class_name="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center border border-white/20"
+                                ),
+                                rx.vstack(
+                                    rx.text("PNCQ DIAMANTE", class_name="text-white font-bold text-sm tracking-wide"),
+                                    rx.text("Certificação de Excelência", class_name="text-green-200/70 text-xs"),
+                                    spacing="0",
+                                ),
+                                spacing="3",
+                                align="center",
+                                class_name="mt-12 bg-black/20 backdrop-blur-sm p-3 pr-6 rounded-full border border-white/5"
+                            ),
                         ),
-                        spacing="4",
-                        align="center",
+                        class_name="relative z-10"
                     ),
                     
-                    # Texto de boas-vindas
-                    rx.text("Bem-vindo ao", class_name="text-4xl font-bold leading-tight mt-8"),
-                    rx.text("Portal Administrativo", class_name="text-4xl font-bold leading-tight"),
+                    rx.box(flex="1"),  # Spacer bottom
                     
-                    rx.box(flex="1"),  # Spacer
-                    
-                    # Informações de contato
+                    # Footer infos
                     rx.hstack(
+                        rx.text("© 2025 Biodiagnóstico", class_name="text-white/40 text-xs"),
+                        rx.spacer(),
                         rx.hstack(
-                            rx.icon("phone", size=16),
-                            rx.text("Contato: (11) 5555-1234"),
-                            spacing="2",
+                            rx.text("Privacidade", class_name="text-white/40 text-xs hover:text-white cursor-pointer transition-colors"),
+                            rx.text("Termos", class_name="text-white/40 text-xs hover:text-white cursor-pointer transition-colors"),
+                            spacing="4",
                         ),
-                        rx.text("|", class_name="mx-2"),
-                        rx.text("suporte@biodiagnostico.com.br"),
-                        spacing="2",
-                        class_name="text-sm"
+                        width="100%",
+                        class_name="relative z-10 pt-8 border-t border-white/10"
                     ),
                     
                     spacing="0",
                     align="start",
                     height="100%",
-                    class_name="py-12"
+                    class_name="p-16 lg:p-24"
                 ),
-                class_name="w-1/2 bg-gradient-to-br from-[#1B5E20] to-[#2E7D32] text-white flex flex-col px-16"
+                class_name="hidden lg:flex w-1/2 relative flex-col overflow-hidden"
             ),
             
             spacing="0",
@@ -149,7 +189,7 @@ def login_page() -> rx.Component:
 
 
 def api_config_page() -> rx.Component:
-    """Página de configuração da API"""
+    """Página de configuração da API - Design Premium"""
     return rx.box(
         rx.vstack(
             # Badge de certificação
@@ -158,92 +198,117 @@ def api_config_page() -> rx.Component:
                     rx.text("💎", class_name="text-sm"),
                     rx.text(
                         "Certificação PNCQ Diamante",
-                        class_name="text-[#1B5E20] text-sm font-medium"
+                        class_name="text-[#1B5E20] text-xs font-bold tracking-wide uppercase"
                     ),
                     spacing="2",
                     align="center",
                 ),
-                class_name="bg-white border border-gray-200 px-4 py-2 rounded-full shadow-sm"
+                class_name="bg-white border border-green-100 px-4 py-1.5 rounded-full shadow-sm mb-6"
             ),
             
             # Título
             rx.text(
                 "Configuração API Gemini",
-                class_name="text-[#1B5E20] text-5xl font-bold mt-6"
+                class_name="text-[#1B5E20] text-4xl font-bold tracking-tight"
             ),
             
             rx.text(
-                "Configure sua chave de API para análise por Inteligência Artificial",
-                class_name="text-gray-600 text-lg mt-2"
+                "Configure sua chave de API para habilitar a análise inteligente por IA",
+                class_name="text-gray-500 text-lg mt-2 font-medium"
             ),
             
             # Card de configuração
             rx.box(
                 rx.vstack(
-                    rx.text(
-                        "🔑 API Key do Google Gemini",
-                        class_name="text-[#1B5E20] font-semibold text-lg"
+                    rx.hstack(
+                        rx.box(
+                            rx.text("🔑", class_name="text-2xl"),
+                            class_name="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center"
+                        ),
+                        rx.vstack(
+                            rx.text(
+                                "API Key do Google Gemini",
+                                class_name="text-[#1B5E20] font-bold text-lg"
+                            ),
+                            rx.text(
+                                "Necessário para processamento de linguagem natural",
+                                class_name="text-gray-500 text-xs"
+                            ),
+                            spacing="0",
+                        ),
+                        spacing="3",
+                        align="center",
+                        class_name="mb-4 w-full"
                     ),
+
                     rx.input(
-                        placeholder="Cole sua API Key aqui...",
+                        placeholder="Cole sua API Key aqui (ex: AIzaSy...)",
                         type="password",
                         value=State.gemini_api_key,
                         on_change=State.set_api_key,
-                        class_name="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-[#4CAF50] focus:ring-2 focus:ring-green-200 transition-all text-lg"
+                        class_name="w-full px-5 py-4 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-[#4CAF50] focus:ring-4 focus:ring-green-100 transition-all text-sm font-medium outline-none"
                     ),
+
                     rx.cond(
                         State.gemini_api_key != "",
                         rx.box(
                             rx.hstack(
-                                rx.text("✅"),
-                                rx.text("API Key configurada!"),
+                                rx.icon("check-circle-2", size=18),
+                                rx.text("API Key configurada e pronta para uso", class_name="font-medium"),
                                 spacing="2",
+                                align="center",
                             ),
-                            class_name="bg-green-50 border border-green-200 text-green-700 rounded-lg p-3 w-full"
+                            class_name="bg-green-50 border border-green-200 text-green-700 rounded-xl p-3 w-full text-sm mt-2"
                         ),
                     ),
-                    spacing="4",
+                    spacing="2",
                     width="100%",
                 ),
-                class_name="bg-white border border-gray-200 rounded-2xl p-6 mt-8 max-w-xl w-full shadow-sm"
+                class_name="bg-white border border-gray-100 rounded-3xl p-8 mt-8 max-w-2xl w-full shadow-xl shadow-green-900/5"
             ),
             
             # Instruções
             rx.box(
                 rx.vstack(
                     rx.text(
-                        "📋 Como obter sua API Key:",
-                        class_name="text-[#1B5E20] font-semibold text-lg"
+                        "Como obter sua chave de acesso",
+                        class_name="text-[#1B5E20] font-bold text-lg mb-4"
                     ),
-                    rx.ordered_list(
-                        rx.list_item(
-                            rx.hstack(
-                                rx.text("1. Acesse"),
-                                rx.link(
-                                    "Google AI Studio",
-                                    href="https://makersuite.google.com/app/apikey",
-                                    is_external=True,
-                                    class_name="text-[#4CAF50] hover:underline font-medium"
-                                ),
-                                spacing="1",
-                            )
+                    rx.vstack(
+                        rx.hstack(
+                            rx.box(rx.text("1", class_name="text-white font-bold text-xs"), class_name="w-6 h-6 bg-[#4CAF50] rounded-full flex items-center justify-center shrink-0"),
+                            rx.hstack(rx.text("Acesse o", class_name="text-gray-600"), rx.link("Google AI Studio", href="https://makersuite.google.com/app/apikey", is_external=True, class_name="text-[#4CAF50] font-semibold hover:underline"), spacing="1"),
+                            align="center",
                         ),
-                        rx.list_item("2. Faça login com sua conta Google"),
-                        rx.list_item("3. Clique em 'Create API Key'"),
-                        rx.list_item("4. Copie a chave gerada e cole acima"),
-                        class_name="text-gray-700 space-y-2 ml-4 list-decimal"
+                        rx.hstack(
+                            rx.box(rx.text("2", class_name="text-white font-bold text-xs"), class_name="w-6 h-6 bg-[#4CAF50] rounded-full flex items-center justify-center shrink-0"),
+                            rx.text("Faça login com sua conta Google", class_name="text-gray-600"),
+                            align="center",
+                        ),
+                        rx.hstack(
+                            rx.box(rx.text("3", class_name="text-white font-bold text-xs"), class_name="w-6 h-6 bg-[#4CAF50] rounded-full flex items-center justify-center shrink-0"),
+                            rx.text("Clique no botão 'Create API Key'", class_name="text-gray-600"),
+                            align="center",
+                        ),
+                        rx.hstack(
+                            rx.box(rx.text("4", class_name="text-white font-bold text-xs"), class_name="w-6 h-6 bg-[#4CAF50] rounded-full flex items-center justify-center shrink-0"),
+                            rx.text("Copie a chave gerada e cole no campo acima", class_name="text-gray-600"),
+                            align="center",
+                        ),
+                        spacing="3",
+                        align="start",
                     ),
-                    spacing="3",
+                    spacing="0",
                     width="100%",
                     align="start",
                 ),
-                class_name="bg-gray-50 border border-gray-200 rounded-2xl p-6 mt-6 max-w-xl w-full"
+                class_name="bg-gray-50/50 border border-gray-200 rounded-3xl p-8 mt-6 max-w-2xl w-full"
             ),
             
             spacing="0",
             align="center",
             width="100%",
-            class_name="py-8"
+            class_name="py-12 px-4"
         ),
         width="100%",
     )
@@ -262,9 +327,9 @@ def main_content() -> rx.Component:
 
 
 def authenticated_layout() -> rx.Component:
-    """Layout quando autenticado"""
+    """Layout quando autenticado - Suporte a Sidebar Flutuante"""
     return rx.box(
-        # Sidebar (desktop)
+        # Sidebar (desktop) - Componente flutuante
         rx.box(
             sidebar(),
             class_name="hidden md:block"
@@ -281,18 +346,21 @@ def authenticated_layout() -> rx.Component:
                 
                 spacing="0",
                 width="100%",
-                padding_x="8",
-                padding_y="4",
+                # Padding extra no bottom para scroll
+                class_name="pb-12"
             ),
-            class_name="md:ml-64 min-h-screen bg-[#F5F5F5]"
+            # Ajuste de margem esquerda para acomodar sidebar flutuante (64 + 4 + 4)
+            # A sidebar tem w-64 (16rem) e left-4 (1rem). Total 17rem. Vamos dar 18rem ou 19rem de margem.
+            # md:ml-[19rem] garante espaço.
+            class_name="md:ml-[19rem] min-h-screen bg-[#F8FAFC] px-6 py-6 transition-all duration-300"
         ),
         
-        class_name="font-sans"
+        class_name="font-sans bg-[#F8FAFC]"
     )
 
 
 def index() -> rx.Component:
-    """Página principal - acesso direto ao conteúdo (sem login)"""
+    """Página principal"""
     return authenticated_layout()
 
 
@@ -304,8 +372,15 @@ app = rx.App(
         radius="large",
     ),
     stylesheets=[
-        "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap",
+        "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700&display=swap",
     ],
+    style={
+        "font_family": "Inter, sans-serif",
+        "::selection": {
+            "background_color": "#4CAF50",
+            "color": "white",
+        },
+    }
 )
 
 app.add_page(index, route="/", title="Biodiagnóstico - Sistema de Administração")
