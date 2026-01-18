@@ -1,7 +1,7 @@
 { pkgs }: {
   deps = [
     pkgs.python311
-    pkgs.nodejs-18_x
+    pkgs.nodejs-20_x
     pkgs.sqlite
     pkgs.lsof
     pkgs.nettools
