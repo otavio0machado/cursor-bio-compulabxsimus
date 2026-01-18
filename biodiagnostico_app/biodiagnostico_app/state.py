@@ -29,7 +29,7 @@ class AnalysisResult(BaseModel):
     total_value: float = 0.0
 
 
-class QCRecord(rx.Base):
+class QCRecord(BaseModel):
     """Registro de Controle de Qualidade"""
     id: str = ""
     date: str = ""
@@ -50,7 +50,7 @@ class QCRecord(rx.Base):
 
 
 
-class ReagentLot(rx.Base):
+class ReagentLot(BaseModel):
     """Lote de Reagente"""
     id: str = ""
     name: str = ""
@@ -63,7 +63,7 @@ class ReagentLot(rx.Base):
     days_left: int = 0
 
 
-class MaintenanceRecord(rx.Base):
+class MaintenanceRecord(BaseModel):
     """Registro de Manutenção"""
     id: str = ""
     equipment: str = ""
@@ -75,7 +75,7 @@ class MaintenanceRecord(rx.Base):
     created_at: str = ""
 
 
-class LeveyJenningsPoint(rx.Base):
+class LeveyJenningsPoint(BaseModel):
     """Ponto do gráfico Levey-Jennings"""
     date: str = ""
     value: float = 0.0

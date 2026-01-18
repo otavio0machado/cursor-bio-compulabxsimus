@@ -9,6 +9,7 @@ from .pages.conversor import conversor_page
 from .pages.analise import analise_page
 from .pages.proin import proin_page
 from .pages.dashboard import dashboard_page
+from .styles import Color, INPUT_STYLE, BUTTON_PRIMARY_STYLE
 
 
 
