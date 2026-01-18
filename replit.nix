@@ -9,6 +9,8 @@
     pkgs.openssl
     pkgs.zlib
     pkgs.glibcLocales
+    pkgs.unzip
+    pkgs.zip
   ];
   env = {
     PYTHONBIN = "${pkgs.python311}/bin/python3.11";
