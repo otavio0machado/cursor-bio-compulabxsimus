@@ -329,7 +329,7 @@ def registro_qc_tab() -> rx.Component:
                         ui.input(
                             value=State.qc_calculated_cv + "%",
                             read_only=True,
-                            class_name="bg-gray-50 text-gray-500 cursor-not-allowed"
+                            class_name="bg-gray-50 text-black font-medium cursor-not-allowed"
                         )
                     ),
                     columns="4",
