@@ -1,14 +1,13 @@
 { pkgs }: {
   deps = [
     pkgs.python311
-    pkgs.nodejs-18_x
+    pkgs.nodejs-20_x
+    pkgs.unzip
+    pkgs.zip
     pkgs.sqlite
-    pkgs.lsof
-    pkgs.nettools
-    pkgs.procps
+    pkgs.libffi
     pkgs.openssl
-    pkgs.zlib
-    pkgs.glibcLocales
+    pkgs.jq
   ];
   env = {
     PYTHONBIN = "${pkgs.python311}/bin/python3.11";
