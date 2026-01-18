@@ -329,8 +329,22 @@ def registro_qc_tab() -> rx.Component:
                         ui.input(
                             value=State.qc_calculated_cv + "%",
                             read_only=True,
-                            class_name="bg-amber-100 !text-slate-900 font-bold cursor-not-allowed opacity-100",
-                            color=Color.TEXT_PRIMARY
+                            class_name="font-bold cursor-not-allowed",
+                            style={
+                                "color": "#F59E0B !important", 
+                                "-webkit-text-fill-color": "#F59E0B !important", 
+                                "opacity": "1 !important"
+                            },
+                            _disabled={
+                                "color": "#F59E0B !important", 
+                                "-webkit-text-fill-color": "#F59E0B !important",
+                                "opacity": "1 !important"
+                            },
+                            _read_only={
+                                "color": "#F59E0B !important", 
+                                "-webkit-text-fill-color": "#F59E0B !important",
+                                "opacity": "1 !important"
+                            }
                         )
                     ),
                     columns="4",

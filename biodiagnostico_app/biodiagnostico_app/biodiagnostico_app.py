@@ -20,19 +20,12 @@ def login_page() -> rx.Component:
         rx.box(
             rx.vstack(
                 # Logo
-                rx.hstack(
-                    rx.box(
-                        rx.icon("flask-conical", size=32, color="white"),
-                        class_name="bg-gradient-to-br from-[#4CAF50] to-[#66BB6A] p-3 rounded-xl"
-                    ),
-                    rx.vstack(
-                        rx.text("Laboratório", class_name="text-2xl font-bold", color=Color.TEXT_PRIMARY, line_height="1.2"),
-                        rx.text("Biodiagnóstico", class_name="text-2xl font-bold", color=Color.TEXT_PRIMARY, line_height="1.2"),
-                        spacing="0",
-                        align="start",
-                    ),
-                    spacing="4",
-                    align="center",
+                rx.image(
+                    src="/logo_lab.jpg",
+                    width="auto",
+                    height="100px",
+                    object_fit="contain",
+                    margin_bottom="1rem"
                 ),
                 
                 # Formulário
@@ -89,11 +82,11 @@ def login_page() -> rx.Component:
                         spacing="5",
                         width="100%",
                     ),
-                    class_name="mt-12 w-full max-w-md"
+                    class_name="mt-8 w-full max-w-md"
                 ),
                 
                 spacing="0",
-                align="start",
+                align="center",
                 width="100%",
                 class_name="max-w-md mx-auto"
             ),
@@ -110,29 +103,13 @@ def login_page() -> rx.Component:
         # Lado direito - Seção de boas-vindas
         rx.box(
             rx.vstack(
-                rx.box(height="100px", display=["none", "none", "block"]),  # Spacer desktop
-                
-                # Badge de certificação
-                rx.hstack(
-                    rx.box(
-                        rx.icon("gem", size=24, color="#FCD34D"),
-                        class_name="w-16 h-16 bg-blue-500 rounded-lg flex items-center justify-center"
-                    ),
-                    rx.vstack(
-                        rx.text("PNCQ CERTIFICATION DIAMOND", font_size="0.875rem", font_weight="600", letter_spacing="0.05em", opacity="0.9"),
-                        rx.text("QUALIDADE APROVADA", font_size="0.75rem", opacity="0.75", margin_top="0.25rem"),
-                        spacing="0",
-                        align="start",
-                    ),
-                    spacing="4",
-                    align="center",
-                ),
+                rx.box(flex="1"), # Spacer top
                 
                 # Texto de boas-vindas
-                rx.text("Bem-vindo ao", font_size=["2rem", "2.5rem"], font_weight="bold", line_height="1.2", margin_top="2rem"),
-                rx.text("Portal Administrativo", font_size=["2rem", "2.5rem"], font_weight="bold", line_height="1.2"),
+                rx.text("Bem-vindo ao", font_size=["2rem", "3rem"], font_weight="bold", line_height="1.2"),
+                rx.text("Portal Administrativo", font_size=["2rem", "3rem"], font_weight="bold", line_height="1.2"),
                 
-                rx.box(flex="1"),  # Spacer
+                rx.box(flex="1"),  # Spacer bottom
                 
                 # Informações de contato
                 rx.hstack(
@@ -149,7 +126,7 @@ def login_page() -> rx.Component:
                 ),
                 
                 spacing="0",
-                align="start",
+                align="center",
                 height="100%",
                 padding_y="3rem"
             ),
