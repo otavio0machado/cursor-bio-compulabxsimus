@@ -88,7 +88,7 @@ def dashboard_tab() -> rx.Component:
                         # Manutenções
                         rx.box(
                             rx.hstack(
-                                rx.box(rx.icon("wrench", size=20, color="orange"), class_name="bg-amber-100 p-2 rounded-lg"),
+                                rx.box(rx.icon("wrench", size=28, color="orange"), class_name="bg-amber-100 p-3 rounded-xl"),
                                 rx.vstack(
                                     ui.text("Manutenções Pendentes", size="label"),
                                     ui.text("Equipamentos aguardando revisão", size="small"),
@@ -97,19 +97,19 @@ def dashboard_tab() -> rx.Component:
                                 rx.spacer(),
                                 rx.text(
                                     State.dashboard_pending_maintenances,
-                                    font_size="1.5rem",
+                                    font_size="2.5rem",
                                     font_weight="bold",
                                     color=rx.cond(State.has_pending_maintenances, Color.WARNING, Color.SUCCESS)
                                 ),
                                 width="100%",
                                 align="center",
                             ),
-                            class_name="p-4 w-full flex-1 flex items-center bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
+                            class_name="p-6 w-full flex-1 flex items-center bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
                         ),
                         # Lotes Vencendo
                         rx.box(
                             rx.hstack(
-                                rx.box(rx.icon("clock", size=20, color="red"), class_name="bg-red-100 p-2 rounded-lg"),
+                                rx.box(rx.icon("clock", size=28, color="red"), class_name="bg-red-100 p-3 rounded-xl"),
                                 rx.vstack(
                                     ui.text("Lotes Vencendo", size="label"),
                                     ui.text("Próximos 30 dias", size="small"),
@@ -118,21 +118,22 @@ def dashboard_tab() -> rx.Component:
                                 rx.spacer(),
                                 rx.text(
                                     State.dashboard_expiring_lots,
-                                    font_size="1.5rem",
+                                    font_size="2.5rem",
                                     font_weight="bold",
                                     color=rx.cond(State.has_expiring_lots, Color.ERROR, Color.SUCCESS)
                                 ),
                                 width="100%",
                                 align="center",
                             ),
-                            class_name="p-4 w-full flex-1 flex items-center bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
+                            class_name="p-6 w-full flex-1 flex items-center bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
                         ),
                         spacing="4",
                         width="100%",
                         height="100%",
                     ),
                     padding="1.5rem",
-                    height="100%"
+                    height="100%",
+                    min_height="250px"
                 ),
                 width="100%",
                 height="100%",
@@ -166,10 +167,10 @@ def dashboard_tab() -> rx.Component:
                             ),
                             spacing="1",
                         ),
-                        rx.center(
+                            rx.center(
                             rx.vstack(
-                                rx.icon("sparkles", size=32, color="lightgray"),
-                                ui.text("Tudo certo!", size="body", color="gray"),
+                                rx.icon("sparkles", size=48, color="lightgray"),
+                                ui.text("Tudo certo!", size="body", font_size="1.25rem", color="gray"),
                                 spacing="2",
                                 align="center",
                             ),
@@ -179,7 +180,7 @@ def dashboard_tab() -> rx.Component:
                         )
                     ),
                     height="100%",
-                    min_height="160px",
+                    min_height="250px",
                     padding="1.5rem",
                     class_name="flex flex-col"
                 ),

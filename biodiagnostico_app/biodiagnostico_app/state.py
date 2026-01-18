@@ -215,6 +215,68 @@ class State(rx.State):
     qc_success_message: str = ""
     qc_error_message: str = ""
     
+    async def load_data_from_db(self):
+        """Carrega dados do Supabase para o estado local"""
+        if not supabase:
+            print("Supabase não configurado. Usando armazenamento em memória.")
+            return
+
+        try:
+            # Carregar QC Records
+            qc_data = await QCService.get_qc_records(limit=100)
+            self.qc_records = [
+                QCRecord(
+                    id=str(r.get("id", "")),
+                    date=r.get("date", ""),
+                    exam_name=r.get("exam_name", ""),
+                    level=r.get("level", ""),
+                    lot_number=r.get("lot_number", ""),
+                    value=float(r.get("value", 0)),
+                    target_value=float(r.get("target_value", 0)),
+                    target_sd=float(r.get("target_sd", 0)),
+                    cv=float(r.get("cv", 0)) if r.get("cv") is not None else 0.0,
+                    equipment=r.get("equipment_name", ""),
+                    analyst=r.get("analyst_name", ""),
+                    status=r.get("status", "")
+                ) for r in qc_data
+            ]
+            
+            # Carregar Reagentes
+            reagent_data = await ReagentService.get_active_lots()
+            self.reagent_lots = [
+                ReagentLot(
+                    id=str(r.get("id", "")),
+                    name=r.get("name", ""),
+                    lot_number=r.get("lot_number", ""),
+                    expiry_date=r.get("expiry_date", ""),
+                    quantity=r.get("quantity", ""),
+                    manufacturer=r.get("manufacturer", ""),
+                    storage_temp=r.get("storage_temp", ""),
+                    created_at=r.get("created_at", ""),
+                    days_left=0 # Calculado na property
+                ) for r in reagent_data
+            ]
+            
+            # Carregar Manutenções
+            maint_data = await MaintenanceService.get_recent_maintenances()
+            self.maintenance_records = [
+                MaintenanceRecord(
+                    id=str(r.get("id", "")),
+                    equipment=r.get("equipment_name", ""),
+                    type=r.get("type", ""),
+                    date=r.get("date", ""),
+                    next_date=r.get("next_date", ""),
+                    technician=r.get("technician_name", ""),
+                    notes=r.get("notes", ""),
+                    created_at=r.get("created_at", "")
+                ) for r in maint_data
+            ]
+            
+        except Exception as e:
+            print(f"Erro ao carregar dados do Supabase: {e}")
+            # Não falhar silenciosamente, talvez setar msg erro global?
+
+    
     # Gestão de Reagentes/Lotes
     reagent_lots: List[ReagentLot] = []
     reagent_name: str = ""
@@ -1718,10 +1780,18 @@ class State(rx.State):
             self.is_saving_qc = False
 
     
-    def delete_qc_record(self, record_id: str):
+    async def delete_qc_record(self, record_id: str):
         """Remove um registro de CQ"""
-        self.qc_records = [r for r in self.qc_records if r.id != record_id]
-        self.qc_success_message = "Registro removido"
+        if supabase:
+            success = await QCService.delete_qc_record(record_id)
+            if success:
+                await self.load_data_from_db()
+                self.qc_success_message = "Registro removido do banco"
+            else:
+                self.qc_error_message = "Falha ao remover registro"
+        else:
+            self.qc_records = [r for r in self.qc_records if r.id != record_id]
+            self.qc_success_message = "Registro removido"
     
     # Gestão de Reagentes
     def set_reagent_name(self, value: str):
@@ -1759,18 +1829,31 @@ class State(rx.State):
                 self.reagent_error_message = "Informe a data de validade"
                 return
             
-            lot = ReagentLot(
-                id=str(len(self.reagent_lots) + 1),
-                name=self.reagent_name,
-                lot_number=self.reagent_lot_number,
-                expiry_date=self.reagent_expiry_date,
-                quantity=self.reagent_quantity,
-                manufacturer=self.reagent_manufacturer,
-                storage_temp=self.reagent_storage_temp,
-                created_at=datetime.now().strftime("%Y-%m-%d %H:%M")
-            )
-            
-            self.reagent_lots = [lot] + self.reagent_lots
+            if supabase:
+                lot_data = {
+                    "name": self.reagent_name,
+                    "lot_number": self.reagent_lot_number,
+                    "expiry_date": self.reagent_expiry_date,
+                    "quantity": self.reagent_quantity,
+                    "manufacturer": self.reagent_manufacturer,
+                    "storage_temp": self.reagent_storage_temp
+                }
+                await ReagentService.create_reagent_lot(lot_data)
+                await self.load_data_from_db()
+                self.reagent_success_message = "Lote cadastrado no Supabase!"
+            else:
+                lot = ReagentLot(
+                    id=str(len(self.reagent_lots) + 1),
+                    name=self.reagent_name,
+                    lot_number=self.reagent_lot_number,
+                    expiry_date=self.reagent_expiry_date,
+                    quantity=self.reagent_quantity,
+                    manufacturer=self.reagent_manufacturer,
+                    storage_temp=self.reagent_storage_temp,
+                    created_at=datetime.now().strftime("%Y-%m-%d %H:%M")
+                )
+                self.reagent_lots = [lot] + self.reagent_lots
+                self.reagent_success_message = "Lote cadastrado (local)!"
             
             # Limpar formulário
             self.reagent_name = ""
@@ -1780,17 +1863,21 @@ class State(rx.State):
             self.reagent_manufacturer = ""
             self.reagent_storage_temp = ""
             
-            self.reagent_success_message = "Lote cadastrado com sucesso!"
-            
         except Exception as e:
             self.reagent_error_message = f"Erro ao salvar: {str(e)}"
         finally:
             self.is_saving_reagent = False
     
-    def delete_reagent_lot(self, lot_id: str):
+    async def delete_reagent_lot(self, lot_id: str):
         """Remove um lote de reagente"""
-        self.reagent_lots = [r for r in self.reagent_lots if r.id != lot_id]
-        self.reagent_success_message = "Lote removido"
+        if supabase:
+            success = await ReagentService.delete_reagent_lot(lot_id)
+            if success:
+                await self.load_data_from_db()
+                self.reagent_success_message = "Lote removido/inativado"
+        else:
+            self.reagent_lots = [r for r in self.reagent_lots if r.id != lot_id]
+            self.reagent_success_message = "Lote removido"
     
     # Manutenções
     def set_maintenance_equipment(self, value: str):
@@ -1825,18 +1912,31 @@ class State(rx.State):
                 self.maintenance_error_message = "Informe o tipo de manutenção"
                 return
             
-            record = MaintenanceRecord(
-                id=str(len(self.maintenance_records) + 1),
-                equipment=self.maintenance_equipment,
-                type=self.maintenance_type,
-                date=self.maintenance_date or datetime.now().strftime("%Y-%m-%d"),
-                next_date=self.maintenance_next_date,
-                technician=self.maintenance_technician,
-                notes=self.maintenance_notes,
-                created_at=datetime.now().strftime("%Y-%m-%d %H:%M")
-            )
-            
-            self.maintenance_records = [record] + self.maintenance_records
+            if supabase:
+                record_data = {
+                    "equipment": self.maintenance_equipment,
+                    "type": self.maintenance_type,
+                    "date": self.maintenance_date or datetime.now().strftime("%Y-%m-%d"),
+                    "next_date": self.maintenance_next_date,
+                    "technician": self.maintenance_technician,
+                    "notes": self.maintenance_notes
+                }
+                await MaintenanceService.create_maintenance_record(record_data)
+                await self.load_data_from_db()
+                self.maintenance_success_message = "Manutenção registrada no Supabase!"
+            else:
+                record = MaintenanceRecord(
+                    id=str(len(self.maintenance_records) + 1),
+                    equipment=self.maintenance_equipment,
+                    type=self.maintenance_type,
+                    date=self.maintenance_date or datetime.now().strftime("%Y-%m-%d"),
+                    next_date=self.maintenance_next_date,
+                    technician=self.maintenance_technician,
+                    notes=self.maintenance_notes,
+                    created_at=datetime.now().strftime("%Y-%m-%d %H:%M")
+                )
+                self.maintenance_records = [record] + self.maintenance_records
+                self.maintenance_success_message = "Manutenção registrada (local)!"
             
             # Limpar formulário
             self.maintenance_equipment = ""
@@ -1846,17 +1946,23 @@ class State(rx.State):
             self.maintenance_technician = ""
             self.maintenance_notes = ""
             
-            self.maintenance_success_message = "Manutenção registrada!"
-            
         except Exception as e:
             self.maintenance_error_message = f"Erro ao salvar: {str(e)}"
         finally:
             self.is_saving_maintenance = False
     
-    def delete_maintenance_record(self, record_id: str):
+    async def delete_maintenance_record(self, record_id: str):
         """Remove um registro de manutenção"""
-        self.maintenance_records = [r for r in self.maintenance_records if r.id != record_id]
-        self.maintenance_success_message = "Registro removido"
+        if supabase:
+            success = await MaintenanceService.delete_maintenance_record(record_id)
+            if success:
+                await self.load_data_from_db()
+                self.maintenance_success_message = "Registro removido do banco"
+            else:
+                self.maintenance_error_message = "Falha ao remover registro"
+        else:
+            self.maintenance_records = [r for r in self.maintenance_records if r.id != record_id]
+            self.maintenance_success_message = "Registro removido"
     
     def set_levey_jennings_exam(self, value: str):
         self.levey_jennings_exam = value

@@ -312,4 +312,4 @@ app = rx.App(
     ],
 )
 
-app.add_page(index, route="/", title="Biodiagnóstico - Sistema de Administração")
+app.add_page(index, route="/", title="Biodiagnóstico - Sistema de Administração", on_load=State.load_data_from_db)
