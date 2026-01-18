@@ -1,5 +1,6 @@
 """
 Chart components for Biodiagnóstico App
+Design Premium SaaS
 """
 import reflex as rx
 from ..state import State
@@ -12,37 +13,40 @@ def divergences_chart() -> rx.Component:
         rx.box(
             rx.vstack(
                 rx.hstack(
-                    rx.text("📊", class_name="text-2xl"),
+                    rx.box(
+                        rx.text("📊", class_name="text-xl"),
+                        class_name="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center"
+                    ),
                     rx.text(
                         "Visualização de Divergências",
-                        class_name="text-green-800 font-bold text-lg"
+                        class_name="text-[#1B5E20] font-bold text-lg"
                     ),
                     spacing="3",
                     align="center",
                 ),
                 rx.text(
-                    "Gráfico interativo das principais divergências",
-                    class_name="text-gray-600"
+                    "Distribuição das divergências encontradas na análise",
+                    class_name="text-gray-500 text-sm ml-11"
                 ),
-                # Placeholder para gráfico - pode usar rx.recharts ou plotly
+                # Placeholder para gráfico
                 rx.box(
                     rx.center(
                         rx.vstack(
-                            rx.text("📈", class_name="text-6xl text-gray-300"),
+                            rx.icon("bar-chart-2", size=48, class_name="text-gray-300"),
                             rx.text(
-                                "Gráfico de barras das divergências",
-                                class_name="text-gray-400"
+                                "Gráfico Interativo",
+                                class_name="text-gray-400 font-medium"
                             ),
                             spacing="2",
                         ),
                         class_name="h-64"
                     ),
-                    class_name="bg-gray-50 rounded-xl border-2 border-dashed border-gray-200"
+                    class_name="bg-gray-50 rounded-2xl border border-dashed border-gray-200 mt-4"
                 ),
-                spacing="4",
+                spacing="2",
                 width="100%",
             ),
-            class_name="bg-white p-6 rounded-2xl shadow-lg border border-green-100 mt-6"
+            class_name="bg-white p-6 rounded-3xl shadow-lg shadow-gray-100 border border-gray-100 mt-6"
         ),
     )
 
@@ -54,69 +58,84 @@ def summary_pie_chart() -> rx.Component:
         rx.box(
             rx.vstack(
                 rx.hstack(
-                    rx.text("🥧", class_name="text-2xl"),
+                    rx.box(
+                        rx.text("🥧", class_name="text-xl"),
+                        class_name="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center"
+                    ),
                     rx.text(
                         "Composição da Diferença",
-                        class_name="text-green-800 font-bold text-lg"
+                        class_name="text-[#1B5E20] font-bold text-lg"
                     ),
                     spacing="3",
                     align="center",
                 ),
-                # Barras horizontais simples como alternativa
+
+                # Visualização em barras modernas
                 rx.vstack(
                     # Pacientes faltantes
                     rx.box(
-                        rx.hstack(
-                            rx.text("Pacientes Faltantes", class_name="text-sm text-gray-600 w-40"),
+                        rx.vstack(
+                            rx.hstack(
+                                rx.text("Pacientes Faltantes", class_name="text-xs font-medium text-gray-500 uppercase tracking-wide"),
+                                rx.spacer(),
+                                rx.text(State.formatted_missing_patients_total, class_name="text-sm font-bold text-gray-700"),
+                                width="100%",
+                            ),
                             rx.box(
-                                class_name="h-6 bg-green-500 rounded-r-full transition-all w-1/3",
+                                class_name="h-2 bg-gray-100 rounded-full w-full overflow-hidden",
+                                children=[
+                                    rx.box(class_name="h-full bg-orange-400 rounded-full w-1/3") # Placeholder width
+                                ]
                             ),
-                            rx.text(
-                                State.formatted_missing_patients_total,
-                                class_name="text-sm text-gray-700 ml-2 w-32"
-                            ),
-                            align="center",
+                            spacing="1",
                             width="100%",
                         ),
                     ),
                     # Exames faltantes
                     rx.box(
-                        rx.hstack(
-                            rx.text("Exames Faltantes", class_name="text-sm text-gray-600 w-40"),
+                        rx.vstack(
+                            rx.hstack(
+                                rx.text("Exames Faltantes", class_name="text-xs font-medium text-gray-500 uppercase tracking-wide"),
+                                rx.spacer(),
+                                rx.text(State.formatted_missing_exams_total, class_name="text-sm font-bold text-gray-700"),
+                                width="100%",
+                            ),
                             rx.box(
-                                class_name="h-6 bg-lime-500 rounded-r-full transition-all w-1/3",
+                                class_name="h-2 bg-gray-100 rounded-full w-full overflow-hidden",
+                                children=[
+                                    rx.box(class_name="h-full bg-red-400 rounded-full w-1/3") # Placeholder width
+                                ]
                             ),
-                            rx.text(
-                                State.formatted_missing_exams_total,
-                                class_name="text-sm text-gray-700 ml-2 w-32"
-                            ),
-                            align="center",
+                            spacing="1",
                             width="100%",
                         ),
                     ),
                     # Divergências
                     rx.box(
-                        rx.hstack(
-                            rx.text("Divergências", class_name="text-sm text-gray-600 w-40"),
+                        rx.vstack(
+                            rx.hstack(
+                                rx.text("Divergências de Valor", class_name="text-xs font-medium text-gray-500 uppercase tracking-wide"),
+                                rx.spacer(),
+                                rx.text(State.formatted_divergences_total, class_name="text-sm font-bold text-gray-700"),
+                                width="100%",
+                            ),
                             rx.box(
-                                class_name="h-6 bg-yellow-500 rounded-r-full transition-all w-1/3",
+                                class_name="h-2 bg-gray-100 rounded-full w-full overflow-hidden",
+                                children=[
+                                    rx.box(class_name="h-full bg-blue-400 rounded-full w-1/3") # Placeholder width
+                                ]
                             ),
-                            rx.text(
-                                State.formatted_divergences_total,
-                                class_name="text-sm text-gray-700 ml-2 w-32"
-                            ),
-                            align="center",
+                            spacing="1",
                             width="100%",
                         ),
                     ),
-                    spacing="3",
+                    spacing="6",
                     width="100%",
-                    class_name="bg-gray-50 p-4 rounded-xl"
+                    class_name="bg-gray-50/50 p-6 rounded-2xl mt-4 border border-gray-100"
                 ),
-                spacing="4",
+                spacing="2",
                 width="100%",
             ),
-            class_name="bg-white p-6 rounded-2xl shadow-lg border border-green-100 mt-6"
+            class_name="bg-white p-6 rounded-3xl shadow-lg shadow-gray-100 border border-gray-100 mt-6"
         ),
     )
-
