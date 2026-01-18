@@ -14,6 +14,10 @@ import tempfile
 import os
 import shutil
 from .services import cloudinary_service
+from .services.supabase_client import supabase
+from .services.qc_service import QCService
+from .services.reagent_service import ReagentService
+from .services.maintenance_service import MaintenanceService
 
 class AnalysisResult(BaseModel):
     """Resultado de uma análise individual"""
