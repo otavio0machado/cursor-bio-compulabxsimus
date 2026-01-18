@@ -13,139 +13,157 @@ from .pages.dashboard import dashboard_page
 
 
 def login_page() -> rx.Component:
-    """Página de login com design moderno"""
-    return rx.box(
-        rx.hstack(
-            # Lado esquerdo - Formulário de Login
-            rx.box(
-                rx.vstack(
-                    # Logo
-                    rx.hstack(
-                        rx.box(
-                            rx.icon("flask-conical", size=32, color="white"),
-                            class_name="bg-gradient-to-br from-[#4CAF50] to-[#66BB6A] p-3 rounded-xl"
-                        ),
-                        rx.vstack(
-                            rx.text("Laboratório", class_name="text-2xl font-bold text-gray-800 leading-tight"),
-                            rx.text("Biodiagnóstico", class_name="text-2xl font-bold text-gray-800 leading-tight"),
-                            spacing="0",
-                            align="start",
-                        ),
-                        spacing="4",
-                        align="center",
-                    ),
-                    
-                    # Formulário
+    """Página de login com design moderno e padronizado"""
+    return rx.flex(
+        # Lado esquerdo - Formulário de Login
+        rx.box(
+            rx.vstack(
+                # Logo
+                rx.hstack(
                     rx.box(
-                        rx.vstack(
-                            # E-mail
-                            rx.box(
-                                rx.text("E-mail", class_name="text-sm font-semibold text-gray-700 mb-2"),
-                                rx.input(
-                                    placeholder="seu@email.com",
-                                    value=State.login_email,
-                                    on_change=State.set_login_email,
-                                    type="email",
-                                    class_name="w-full px-4 py-3 rounded-lg border border-gray-200 bg-gray-50 focus:bg-white focus:border-[#4CAF50] focus:ring-2 focus:ring-green-200 transition-all"
-                                ),
-                                width="100%",
+                        rx.icon("flask-conical", size=32, color="white"),
+                        class_name="bg-gradient-to-br from-[#4CAF50] to-[#66BB6A] p-3 rounded-xl"
+                    ),
+                    rx.vstack(
+                        rx.text("Laboratório", class_name="text-2xl font-bold", color=Color.TEXT_PRIMARY, line_height="1.2"),
+                        rx.text("Biodiagnóstico", class_name="text-2xl font-bold", color=Color.TEXT_PRIMARY, line_height="1.2"),
+                        spacing="0",
+                        align="start",
+                    ),
+                    spacing="4",
+                    align="center",
+                ),
+                
+                # Formulário
+                rx.box(
+                    rx.vstack(
+                        # E-mail
+                        rx.box(
+                            rx.text("E-mail", font_size="0.875rem", font_weight="600", color=Color.TEXT_PRIMARY, margin_bottom="0.5rem"),
+                            rx.input(
+                                placeholder="seu@email.com",
+                                value=State.login_email,
+                                on_change=State.set_login_email,
+                                type="email",
+                                **INPUT_STYLE
                             ),
-                            
-                            # Senha
-                            rx.box(
-                                rx.text("Senha", class_name="text-sm font-semibold text-gray-700 mb-2"),
-                                rx.input(
-                                    placeholder="Digite sua senha",
-                                    value=State.login_password,
-                                    on_change=State.set_login_password,
-                                    type="password",
-                                    class_name="w-full px-4 py-3 rounded-lg border border-gray-200 bg-gray-50 focus:bg-white focus:border-[#4CAF50] focus:ring-2 focus:ring-green-200 transition-all"
-                                ),
-                                width="100%",
-                            ),
-                            
-                            # Mensagem de erro
-                            rx.cond(
-                                State.login_error != "",
-                                rx.box(
-                                    rx.text(State.login_error, class_name="text-red-700 text-sm"),
-                                    class_name="bg-red-50 border border-red-200 rounded-lg p-3 w-full"
-                                ),
-                            ),
-                            
-                            # Botão de Login
-                            rx.button(
-                                "Login",
-                                on_click=State.attempt_login,
-                                class_name="w-full bg-[#4CAF50] hover:bg-[#43A047] text-white font-semibold py-3.5 px-6 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg mt-4"
-                            ),
-                            
-                            spacing="5",
                             width="100%",
                         ),
-                        class_name="mt-12 w-full max-w-md"
-                    ),
-                    
-                    spacing="0",
-                    align="start",
-                    width="100%",
-                    class_name="max-w-md mx-auto"
-                ),
-                class_name="w-1/2 bg-white flex flex-col justify-center px-16 py-12"
-            ),
-            
-            # Lado direito - Seção de boas-vindas
-            rx.box(
-                rx.vstack(
-                    rx.box(height="100px"),  # Spacer
-                    
-                    # Badge de certificação
-                    rx.hstack(
+                        
+                        # Senha
                         rx.box(
-                            rx.icon("gem", size=24, color="#FCD34D"),
-                            class_name="w-16 h-16 bg-blue-500 rounded-lg flex items-center justify-center"
+                            rx.text("Senha", font_size="0.875rem", font_weight="600", color=Color.TEXT_PRIMARY, margin_bottom="0.5rem"),
+                            rx.input(
+                                placeholder="Digite sua senha",
+                                value=State.login_password,
+                                on_change=State.set_login_password,
+                                type="password",
+                                **INPUT_STYLE
+                            ),
+                            width="100%",
                         ),
-                        rx.vstack(
-                            rx.text("PNCQ CERTIFICATION DIAMOND", class_name="text-sm font-semibold uppercase tracking-wide opacity-90"),
-                            rx.text("QUALIDADE APROVADA", class_name="text-xs opacity-75 mt-1"),
-                            spacing="0",
-                            align="start",
+                        
+                        # Mensagem de erro
+                        rx.cond(
+                            State.login_error != "",
+                            rx.box(
+                                rx.text(State.login_error, color=Color.ERROR, font_size="0.875rem"),
+                                bg=Color.ERROR_BG,
+                                border=f"1px solid {Color.ERROR}40",
+                                border_radius="8px",
+                                padding="0.75rem",
+                                width="100%"
+                            ),
                         ),
-                        spacing="4",
-                        align="center",
+                        
+                        # Botão de Login
+                        rx.button(
+                            "Login",
+                            on_click=State.attempt_login,
+                            width="100%",
+                            margin_top="1rem",
+                            **BUTTON_PRIMARY_STYLE
+                        ),
+                        
+                        spacing="5",
+                        width="100%",
                     ),
-                    
-                    # Texto de boas-vindas
-                    rx.text("Bem-vindo ao", class_name="text-4xl font-bold leading-tight mt-8"),
-                    rx.text("Portal Administrativo", class_name="text-4xl font-bold leading-tight"),
-                    
-                    rx.box(flex="1"),  # Spacer
-                    
-                    # Informações de contato
-                    rx.hstack(
-                        rx.hstack(
-                            rx.icon("phone", size=16),
-                            rx.text("Contato: (11) 5555-1234"),
-                            spacing="2",
-                        ),
-                        rx.text("|", class_name="mx-2"),
-                        rx.text("suporte@biodiagnostico.com.br"),
-                        spacing="2",
-                        class_name="text-sm"
-                    ),
-                    
-                    spacing="0",
-                    align="start",
-                    height="100%",
-                    class_name="py-12"
+                    class_name="mt-12 w-full max-w-md"
                 ),
-                class_name="w-1/2 bg-gradient-to-br from-[#1B5E20] to-[#2E7D32] text-white flex flex-col px-16"
+                
+                spacing="0",
+                align="start",
+                width="100%",
+                class_name="max-w-md mx-auto"
             ),
-            
-            spacing="0",
-            width="100%",
-            height="100vh",
+            width=["100%", "100%", "50%"],
+            bg="white",
+            display="flex",
+            flex_direction="column",
+            justify_content="center",
+            padding_x=["2rem", "4rem"],
+            padding_y="3rem",
+            min_height=["auto", "auto", "100vh"]
         ),
+        
+        # Lado direito - Seção de boas-vindas
+        rx.box(
+            rx.vstack(
+                rx.box(height="100px", display=["none", "none", "block"]),  # Spacer desktop
+                
+                # Badge de certificação
+                rx.hstack(
+                    rx.box(
+                        rx.icon("gem", size=24, color="#FCD34D"),
+                        class_name="w-16 h-16 bg-blue-500 rounded-lg flex items-center justify-center"
+                    ),
+                    rx.vstack(
+                        rx.text("PNCQ CERTIFICATION DIAMOND", font_size="0.875rem", font_weight="600", letter_spacing="0.05em", opacity="0.9"),
+                        rx.text("QUALIDADE APROVADA", font_size="0.75rem", opacity="0.75", margin_top="0.25rem"),
+                        spacing="0",
+                        align="start",
+                    ),
+                    spacing="4",
+                    align="center",
+                ),
+                
+                # Texto de boas-vindas
+                rx.text("Bem-vindo ao", font_size=["2rem", "2.5rem"], font_weight="bold", line_height="1.2", margin_top="2rem"),
+                rx.text("Portal Administrativo", font_size=["2rem", "2.5rem"], font_weight="bold", line_height="1.2"),
+                
+                rx.box(flex="1"),  # Spacer
+                
+                # Informações de contato
+                rx.hstack(
+                    rx.hstack(
+                        rx.icon("phone", size=16),
+                        rx.text("Contato: (11) 5555-1234"),
+                        spacing="2",
+                    ),
+                    rx.text("|", margin_x="0.5rem"),
+                    rx.text("suporte@biodiagnostico.com.br"),
+                    spacing="2",
+                    font_size="0.875rem",
+                    opacity="0.9"
+                ),
+                
+                spacing="0",
+                align="start",
+                height="100%",
+                padding_y="3rem"
+            ),
+            width=["100%", "100%", "50%"],
+            bg="linear-gradient(135deg, #1B5E20 0%, #2E7D32 100%)",
+            color="white",
+            display=["none", "none", "flex"], # Escondido em mobile muito pequeno se desejar, ou manter. O usuário pediu width responsivo.
+            flex_direction="column",
+            padding_x=["2rem", "4rem"],
+            min_height="100vh"
+        ),
+        
+        width="100%",
+        min_height="100vh",
+        flex_direction=["column", "column", "row"], # Stack em mobile, row em desktop
         class_name="font-sans"
     )
 
