@@ -36,6 +36,7 @@ class QCRecord(rx.Base):
     exam_name: str = ""
     level: str = ""
     lot_number: str = ""
+    value: float = 0.0  # Single value for simplified form
     value1: float = 0.0
     value2: float = 0.0
     mean: float = 0.0
@@ -46,6 +47,7 @@ class QCRecord(rx.Base):
     equipment: str = ""
     analyst: str = ""
     status: str = ""
+
 
 
 class ReagentLot(rx.Base):
@@ -96,7 +98,7 @@ class State(rx.State):
     _valid_password: str = "eva123"
     
     # Navegação
-    current_page: str = "conversor"
+    current_page: str = "dashboard"
     
     # Arquivos
     compulab_file_name: str = ""
@@ -201,6 +203,7 @@ class State(rx.State):
     qc_exam_name: str = ""
     qc_level: str = "Normal"  # Normal, Patológico
     qc_lot_number: str = ""
+    qc_value: str = ""  # Valor da medição (single value for simplified form)
     qc_value1: str = ""
     qc_value2: str = ""
     qc_target_value: str = ""
@@ -361,6 +364,82 @@ class State(rx.State):
     def is_large_file_processing(self) -> bool:
         """Verifica se está processando um arquivo grande"""
         return self.is_analyzing and self.processing_total > 0
+    
+    @rx.var
+    def qc_calculated_cv(self) -> str:
+        """Calcula o CV% automaticamente baseado no valor, alvo e desvio padrão"""
+        try:
+            if not self.qc_value or not self.qc_target_value or not self.qc_target_sd:
+                return "0.00"
+            
+            value = float(self.qc_value.replace(",", "."))
+            target = float(self.qc_target_value.replace(",", "."))
+            sd = float(self.qc_target_sd.replace(",", "."))
+            
+            if sd <= 0 or target <= 0:
+                return "0.00"
+            
+            # CV% = (SD / Target) * 100
+            cv = (sd / target) * 100
+            return f"{cv:.2f}"
+        except (ValueError, ZeroDivisionError):
+            return "0.00"
+    
+    @rx.var
+    def unique_exam_names(self) -> List[str]:
+        """Retorna lista única de nomes de exames para o dropdown"""
+        # Lista de exames comuns em laboratório (padronizada)
+        common_exams = [
+            "GLICOSE",
+            "HEMOGRAMA",
+            "CREATININA",
+            "UREIA",
+            "ACIDO URICO",
+            "COLESTEROL TOTAL",
+            "COLESTEROL HDL",
+            "COLESTEROL LDL",
+            "TRIGLICERIDEOS",
+            "HEMOGLOBINA GLICOSILADA A1C",
+            "TIREOTROFINA (TSH)",
+            "TIROXINA LIVRE (T4 LIVRE)",
+            "VITAMINA D25",
+            "VITAMINA B12",
+            "FERRITINA",
+            "FERRO SERICO",
+            "SODIO",
+            "POTASSIO",
+            "CALCIO",
+            "MAGNESIO",
+            "GOT",
+            "GPT",
+            "GAMA GT",
+            "FOSFATASE ALCALINA",
+            "BILIRRUBINAS",
+            "PROTEINA C REATIVA",
+            "V. S. G.",
+            "TEMPO DE PROTROMBINA",
+            "EXAME QUALITATIVO DE URINA",
+            "UROCULTURA",
+            "INSULINA",
+            "CORTISOL",
+            "PROLACTINA",
+            "ESTRADIOL",
+            "PROGESTERONA",
+            "TESTOSTERONA TOTAL",
+            "HORMONIO FOLICULO ESTIMULANTE FSH",
+            "HORMONIO LUTEINIZANTE LH",
+            "ANTIGENO PROSTATICO ESPECIFICO",
+        ]
+        
+        # Adicionar exames dos registros existentes
+        recorded_exams = set()
+        for record in self.qc_records:
+            if record.exam_name:
+                recorded_exams.add(record.exam_name)
+        
+        # Combinar e ordenar
+        all_exams = set(common_exams) | recorded_exams
+        return sorted(list(all_exams))
     
     def set_login_email(self, email: str):
         """Define o email de login"""
@@ -1543,6 +1622,10 @@ class State(rx.State):
     def set_qc_value2(self, value: str):
         self.qc_value2 = value
     
+    def set_qc_value(self, value: str):
+        """Setter for single measurement value"""
+        self.qc_value = value
+    
     def set_qc_target_value(self, value: str):
         self.qc_target_value = value
     
@@ -1569,19 +1652,26 @@ class State(rx.State):
             if not self.qc_exam_name:
                 self.qc_error_message = "Informe o nome do exame"
                 return
-            if not self.qc_value1 or not self.qc_value2:
-                self.qc_error_message = "Informe os valores das medições"
+            if not self.qc_value:
+                self.qc_error_message = "Informe o valor da medição"
+                return
+            if not self.qc_target_value or not self.qc_target_sd:
+                self.qc_error_message = "Informe o valor alvo e o desvio padrão"
+                return
+            if not self.qc_date:
+                self.qc_error_message = "Informe a data/hora"
                 return
             
             try:
-                v1 = float(self.qc_value1.replace(",", "."))
-                v2 = float(self.qc_value2.replace(",", "."))
+                value = float(self.qc_value.replace(",", "."))
+                target = float(self.qc_target_value.replace(",", "."))
+                sd = float(self.qc_target_sd.replace(",", "."))
             except:
-                self.qc_error_message = "Valores de medição inválidos"
+                self.qc_error_message = "Valores inválidos"
                 return
             
-            # Calcular CV
-            mean, sd, cv = self.calculate_cv(v1, v2)
+            # Calcular CV% = (SD / Target) * 100
+            cv = (sd / target) * 100 if target > 0 else 0.0
             
             # Status baseado no CV
             status = "OK" if cv <= 5.0 else "Atenção"
@@ -1589,17 +1679,18 @@ class State(rx.State):
             # Criar registro
             record = QCRecord(
                 id=str(len(self.qc_records) + 1),
-                date=self.qc_date or datetime.now().strftime("%Y-%m-%d %H:%M"),
+                date=self.qc_date,
                 exam_name=self.qc_exam_name,
                 level=self.qc_level,
                 lot_number=self.qc_lot_number,
-                value1=v1,
-                value2=v2,
-                mean=mean,
+                value=value,
+                value1=value,  # Compatibilidade
+                value2=0.0,
+                mean=value,
                 sd=sd,
-                cv=cv,
-                target_value=float(self.qc_target_value.replace(",", ".")) if self.qc_target_value else 0,
-                target_sd=float(self.qc_target_sd.replace(",", ".")) if self.qc_target_sd else 0,
+                cv=round(cv, 2),
+                target_value=target,
+                target_sd=sd,
                 equipment=self.qc_equipment,
                 analyst=self.qc_analyst,
                 status=status
@@ -1610,6 +1701,7 @@ class State(rx.State):
             # Limpar formulário
             self.qc_exam_name = ""
             self.qc_lot_number = ""
+            self.qc_value = ""
             self.qc_value1 = ""
             self.qc_value2 = ""
             self.qc_target_value = ""
@@ -1618,12 +1710,13 @@ class State(rx.State):
             self.qc_analyst = ""
             self.qc_date = ""
             
-            self.qc_success_message = f"Registro salvo! CV: {cv}% - {status}"
+            self.qc_success_message = f"Registro salvo! CV: {cv:.2f}% - {status}"
             
         except Exception as e:
             self.qc_error_message = f"Erro ao salvar: {str(e)}"
         finally:
             self.is_saving_qc = False
+
     
     def delete_qc_record(self, record_id: str):
         """Remove um registro de CQ"""

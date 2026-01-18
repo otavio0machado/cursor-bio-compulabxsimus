@@ -5,6 +5,8 @@ Design moderno com upload aprimorado
 import reflex as rx
 from ..state import State
 from ..components.file_upload import compact_upload_card, upload_progress_indicator, large_file_progress_indicator
+from ..components import ui
+from ..styles import Color
 
 
 def metric_card(title: str, value: str, icon: str, subtitle: str = "", color: str = "green") -> rx.Component:
@@ -26,7 +28,7 @@ def metric_card(title: str, value: str, icon: str, subtitle: str = "", color: st
         rx.vstack(
             rx.hstack(
                 rx.box(
-                    rx.text(icon, class_name="text-xl"),
+                    rx.icon(icon, size=20, color=Color.DEEP),
                     class_name="w-10 h-10 flex items-center justify-center bg-white rounded-lg shadow-sm"
                 ),
                 rx.text(title, class_name="text-gray-500 text-sm font-medium"),
@@ -58,7 +60,7 @@ def breakdown_item(icon: str, label: str, value: str, color: str = "gray") -> rx
     
     return rx.box(
         rx.vstack(
-            rx.text(icon, class_name="text-2xl"),
+            rx.icon(icon, size=28, color=Color.DEEP),
             rx.text(label, class_name="text-gray-500 text-xs font-medium text-center"),
             rx.text(value, class_name=f"{text_colors.get(color, 'text-gray-600')} font-bold text-sm"),
             spacing="1",
@@ -94,32 +96,10 @@ def analise_page() -> rx.Component:
     
     return rx.box(
         rx.vstack(
-            # Badge de certificação
+            # Animated Header
             rx.box(
-                rx.hstack(
-                    rx.text("💎", class_name="text-sm"),
-                    rx.text(
-                        "Certificação PNCQ Diamante",
-                        class_name="text-[#1B5E20] text-sm font-medium"
-                    ),
-                    spacing="2",
-                    align="center",
-                ),
-                class_name="bg-white border border-gray-200 px-4 py-2 rounded-full shadow-sm"
-            ),
-            
-            # Título
-            rx.vstack(
-                rx.text(
-                    "Análise COMPULAB × SIMUS",
-                    class_name="text-[#1B5E20] text-3xl md:text-5xl font-bold mt-6 text-center"
-                ),
-                rx.text(
-                    "Compare o faturamento entre os sistemas e identifique divergências",
-                    class_name="text-gray-500 text-lg mt-2 text-center"
-                ),
-                spacing="0",
-                align="center",
+                ui.animated_heading("Análise COMPULAB × SIMUS", level=1),
+                class_name="py-12 w-full flex justify-center"
             ),
             
             # Upload section
@@ -256,7 +236,7 @@ def analise_page() -> rx.Component:
                     rx.box(
                         rx.vstack(
                             rx.hstack(
-                                rx.text("📊", class_name="text-xl"),
+                                rx.icon("bar-chart-2", size=20, color=Color.DEEP),
                                 rx.text(
                                     "Resumo da Análise",
                                     class_name="text-[#1B5E20] font-semibold text-lg"
@@ -265,10 +245,10 @@ def analise_page() -> rx.Component:
                                 align="center",
                             ),
                             rx.grid(
-                                metric_card("COMPULAB Total", State.formatted_compulab_total, "💰", f"{State.compulab_count} pacientes", "green"),
-                                metric_card("SIMUS Total", State.formatted_simus_total, "💸", f"{State.simus_count} pacientes", "blue"),
-                                metric_card("Diferença", State.formatted_difference, "📉", "COMPULAB - SIMUS", "orange"),
-                                metric_card("Exames Faltantes", f"{State.missing_exams_count}", "⚠️", "no SIMUS", "red"),
+                                metric_card("COMPULAB Total", State.formatted_compulab_total, "dollar-sign", f"{State.compulab_count} pacientes", "green"),
+                                metric_card("SIMUS Total", State.formatted_simus_total, "wallet", f"{State.simus_count} pacientes", "blue"),
+                                metric_card("Diferença", State.formatted_difference, "trending-down", "COMPULAB - SIMUS", "orange"),
+                                metric_card("Exames Faltantes", f"{State.missing_exams_count}", "triangle-alert", "no SIMUS", "red"),
                                 columns="4",
                                 spacing="4",
                                 width="100%",
@@ -283,7 +263,7 @@ def analise_page() -> rx.Component:
                     rx.box(
                         rx.vstack(
                             rx.hstack(
-                                rx.text("🧭", class_name="text-xl"),
+                                rx.icon("compass", size=20, color=Color.DEEP),
                                 rx.text(
                                     "Por que existe essa diferença?",
                                     class_name="text-[#1B5E20] font-semibold text-lg"
@@ -292,9 +272,9 @@ def analise_page() -> rx.Component:
                                 align="center",
                             ),
                             rx.hstack(
-                                breakdown_item("👤", "Pacientes Faltantes", State.formatted_missing_patients_total, "orange"),
-                                breakdown_item("📝", "Exames Faltantes", State.formatted_missing_exams_total, "red"),
-                                breakdown_item("💸", "Divergências de Valor", State.formatted_divergences_total, "blue"),
+                                breakdown_item("user-x", "Pacientes Faltantes", State.formatted_missing_patients_total, "orange"),
+                                breakdown_item("file-x", "Exames Faltantes", State.formatted_missing_exams_total, "red"),
+                                breakdown_item("diff", "Divergências de Valor", State.formatted_divergences_total, "blue"),
                                 spacing="4",
                                 width="100%",
                                 class_name="mt-4"
@@ -309,7 +289,7 @@ def analise_page() -> rx.Component:
                         rx.tabs.list(
                             rx.tabs.trigger(
                                 rx.hstack(
-                                    rx.text("⚠️"),
+                                    rx.icon("triangle-alert", size=16),
                                     rx.text(f"Exames Faltantes ({State.missing_exams_count})"),
                                     spacing="2",
                                 ),
@@ -318,7 +298,7 @@ def analise_page() -> rx.Component:
                             ),
                             rx.tabs.trigger(
                                 rx.hstack(
-                                    rx.text("💰"),
+                                    rx.icon("dollar-sign", size=16),
                                     rx.text(f"Divergências ({State.divergences_count})"),
                                     spacing="2",
                                 ),
@@ -327,7 +307,7 @@ def analise_page() -> rx.Component:
                             ),
                             rx.tabs.trigger(
                                 rx.hstack(
-                                    rx.text("🤖"),
+                                    rx.icon("bot", size=16),
                                     rx.text("Análise IA"),
                                     spacing="2",
                                 ),
@@ -355,7 +335,7 @@ def analise_page() -> rx.Component:
                                 ),
                                 rx.box(
                                     rx.hstack(
-                                        rx.text("✅", class_name="text-xl"),
+                                        rx.icon("circle-check", size=20, color="#10B981"),
                                         rx.text("Todos os exames estão registrados no SIMUS!", class_name="text-green-700"),
                                         spacing="2",
                                         align="center",
@@ -386,7 +366,7 @@ def analise_page() -> rx.Component:
                                 ),
                                 rx.box(
                                     rx.hstack(
-                                        rx.text("✅", class_name="text-xl"),
+                                        rx.icon("circle-check", size=20, color="#10B981"),
                                         rx.text("Não há divergências de valores entre os sistemas!", class_name="text-green-700"),
                                         spacing="2",
                                         align="center",
@@ -403,7 +383,7 @@ def analise_page() -> rx.Component:
                                     rx.box(
                                         rx.vstack(
                                             rx.hstack(
-                                                rx.text("⚠️", class_name="text-xl"),
+                                                rx.icon("triangle-alert", size=20, color="#F97316"),
                                                 rx.text("API Key não configurada", class_name="text-orange-700 font-semibold"),
                                                 spacing="2",
                                                 align="center",
@@ -426,7 +406,7 @@ def analise_page() -> rx.Component:
                                                     spacing="2",
                                                 ),
                                                 rx.hstack(
-                                                    rx.text("🤖"),
+                                                    rx.icon("bot", size=16, color="white"),
                                                     rx.text("Gerar Análise por IA"),
                                                     spacing="2",
                                                 ),
@@ -462,7 +442,7 @@ def analise_page() -> rx.Component:
                             rx.link(
                                 rx.button(
                                     rx.hstack(
-                                        rx.text("📥"),
+                                        rx.icon("download", size=16, color="white"),
                                         rx.text("Download PDF"),
                                         spacing="2",
                                     ),
@@ -478,12 +458,12 @@ def analise_page() -> rx.Component:
                             rx.cond(
                                 State.analysis_pdf != "",
                                 rx.hstack(
-                                    rx.text("📄"),
+                                    rx.icon("file-text", size=16, color="white"),
                                     rx.text("Gerar Novo PDF"),
                                     spacing="2",
                                 ),
                                 rx.hstack(
-                                    rx.text("📄"),
+                                    rx.icon("file-text", size=16, color="white"),
                                     rx.text("Gerar PDF"),
                                     spacing="2",
                                 ),
@@ -493,7 +473,7 @@ def analise_page() -> rx.Component:
                         ),
                         rx.button(
                             rx.hstack(
-                                rx.text("🔄"),
+                                rx.icon("refresh-cw", size=16),
                                 rx.text("Nova Análise"),
                                 spacing="2",
                             ),

@@ -9,294 +9,239 @@ Funcionalidades:
 """
 import reflex as rx
 from ..state import State
-
+from ..styles import Color, Design, Typography
+from ..components import ui
 
 def tab_button(label: str, icon: str, tab_id: str) -> rx.Component:
-    """Botão de aba do ProIn"""
-    return rx.box(
+    """Botão de aba do ProIn - Estilo Premium Padronizado"""
+    is_active = State.proin_current_tab == tab_id
+    
+    return rx.button(
         rx.hstack(
-            rx.text(icon, class_name="text-lg"),
-            rx.text(label, class_name="text-sm font-medium hidden lg:inline"),
+            rx.icon(icon, size=18),
+            rx.text(label, font_size="0.875rem", font_weight="500"),
             spacing="2",
             align="center",
         ),
         on_click=lambda: State.set_proin_tab(tab_id),
-        class_name=rx.cond(
-            State.proin_current_tab == tab_id,
-            "px-4 py-2.5 bg-[#1B5E20] text-white rounded-lg cursor-pointer transition-all shadow-md",
-            "px-4 py-2.5 bg-white text-[#1B5E20] border border-gray-200 rounded-lg cursor-pointer hover:bg-green-50 transition-all"
-        ),
+        bg=rx.cond(is_active, Color.PRIMARY_LIGHT, "transparent"),
+        color=rx.cond(is_active, Color.DEEP, Color.TEXT_SECONDARY),
+        border_radius="9999px",
+        padding_x="1.25rem",
+        padding_y="0.625rem",
+        _hover={
+            "bg": rx.cond(is_active, Color.PRIMARY_LIGHT, "#F3F4F6"),
+            "color": Color.DEEP,
+        },
+        class_name="transition-all duration-200 border border-transparent" + 
+                   rx.cond(is_active, f" border-{Color.PRIMARY}/20 shadow-sm", "")
     )
-
-
-def alert_card_static(icon: str, title: str, value, color: str, subtitle: str = "") -> rx.Component:
-    """Card de alerta/estatística com cor estática"""
-    bg_colors = {
-        "green": "bg-green-50 border-green-200",
-        "red": "bg-red-50 border-red-200",
-        "amber": "bg-amber-50 border-amber-200",
-        "blue": "bg-blue-50 border-blue-200"
-    }
-    text_colors = {
-        "green": "text-green-700",
-        "red": "text-red-700",
-        "amber": "text-amber-700",
-        "blue": "text-blue-700"
-    }
-    
-    return rx.box(
-        rx.vstack(
-            rx.text(icon, class_name="text-3xl"),
-            rx.text(value, class_name=f"text-3xl font-bold {text_colors.get(color, 'text-gray-700')}"),
-            rx.text(title, class_name="text-sm font-medium text-gray-600"),
-            rx.cond(
-                subtitle != "",
-                rx.text(subtitle, class_name="text-xs text-gray-400"),
-            ),
-            spacing="1",
-            align="center",
-        ),
-        class_name=f"p-4 rounded-xl border {bg_colors.get(color, 'bg-gray-50 border-gray-200')} flex-1 min-w-[140px]"
-    )
-
-
-def alert_card_dynamic(icon: str, title: str, value, condition, color_true: str, color_false: str, subtitle: str = "") -> rx.Component:
-    """Card de alerta/estatística com cor dinâmica baseada em condição"""
-    bg_classes = {
-        "green": "bg-green-50 border-green-200",
-        "red": "bg-red-50 border-red-200",
-        "amber": "bg-amber-50 border-amber-200",
-        "blue": "bg-blue-50 border-blue-200"
-    }
-    text_classes = {
-        "green": "text-green-700",
-        "red": "text-red-700",
-        "amber": "text-amber-700",
-        "blue": "text-blue-700"
-    }
-    
-    return rx.box(
-        rx.vstack(
-            rx.text(icon, class_name="text-3xl"),
-            rx.text(
-                value, 
-                class_name=rx.cond(
-                    condition,
-                    f"text-3xl font-bold {text_classes.get(color_true, 'text-gray-700')}",
-                    f"text-3xl font-bold {text_classes.get(color_false, 'text-gray-700')}"
-                )
-            ),
-            rx.text(title, class_name="text-sm font-medium text-gray-600"),
-            rx.cond(
-                subtitle != "",
-                rx.text(subtitle, class_name="text-xs text-gray-400"),
-            ),
-            spacing="1",
-            align="center",
-        ),
-        class_name=rx.cond(
-            condition,
-            f"p-4 rounded-xl border {bg_classes.get(color_true, 'bg-gray-50 border-gray-200')} flex-1 min-w-[140px]",
-            f"p-4 rounded-xl border {bg_classes.get(color_false, 'bg-gray-50 border-gray-200')} flex-1 min-w-[140px]"
-        )
-    )
-
 
 def dashboard_tab() -> rx.Component:
     """Aba Dashboard - Visão geral"""
     return rx.vstack(
-        # Título
-        rx.hstack(
-            rx.text("📊", class_name="text-2xl"),
-            rx.text("Dashboard - Visão Geral", class_name="text-xl font-bold text-[#1B5E20]"),
-            spacing="2",
-            align="center",
+        # Header
+        ui.page_header(
+            "Visão Geral do Laboratório",
+            "Monitoramento de qualidade e pendências"
         ),
         
-        # Cards de estatísticas
-        rx.box(
-            rx.hstack(
-                alert_card_static(
-                    "📋",
-                    "Registros Hoje",
-                    State.dashboard_total_today,
-                    "blue"
-                ),
-                alert_card_static(
-                    "📆",
-                    "Registros do Mês",
-                    State.dashboard_total_month,
-                    "green"
-                ),
-                alert_card_static(
-                    "✅",
-                    "Taxa de Aprovação",
-                    State.dashboard_approval_rate.to_string() + "%",
-                    "green",
-                    "CV ≤ 5%"
-                ),
-                alert_card_dynamic(
-                    "⚠️",
-                    "Alertas CV > 5%",
-                    State.dashboard_alerts_count,
-                    State.has_alerts,
-                    "red",
-                    "green"
-                ),
-                spacing="4",
-                wrap="wrap",
-                width="100%",
+        # Grid de KPI Cards
+        rx.grid(
+            ui.stat_card(
+                "Registros Hoje",
+                State.dashboard_total_today,
+                "clipboard-list",
+                "info"
             ),
-            class_name="w-full"
-        ),
-        
-        # Segunda linha de cards
-        rx.box(
-            rx.hstack(
-                alert_card_dynamic(
-                    "🔧",
-                    "Manutenções Pendentes",
-                    State.dashboard_pending_maintenances,
-                    State.has_pending_maintenances,
-                    "amber",
-                    "green"
-                ),
-                alert_card_dynamic(
-                    "⏰",
-                    "Lotes Vencendo",
-                    State.dashboard_expiring_lots,
-                    State.has_expiring_lots,
-                    "red",
-                    "green",
-                    "Próximos 30 dias"
-                ),
-                spacing="4",
-                wrap="wrap",
-                width="100%",
+            ui.stat_card(
+                "Registros do Mês",
+                State.dashboard_total_month,
+                "calendar",
+                "success"
             ),
-            class_name="w-full"
+            ui.stat_card(
+                "Taxa de Aprovação",
+                State.dashboard_approval_rate.to_string() + "%",
+                "circle-check",
+                "success",
+                "CV ≤ 5%"
+            ),
+            rx.cond(
+                State.has_alerts,
+                ui.stat_card("Alertas CV > 5%", State.dashboard_alerts_count, "triangle-alert", "error"),
+                ui.stat_card("Sem Alertas", "0", "sparkles", "success")
+            ),
+            columns="4",
+            spacing="4",
+            width="100%",
+            class_name="mb-8"
         ),
         
-        # Alertas Ativos
-        rx.cond(
-            State.qc_records_with_alerts.length() > 0,
-            rx.box(
-                rx.vstack(
-                    rx.hstack(
-                        rx.text("🚨", class_name="text-xl"),
-                        rx.text("Alertas de Controle de Qualidade", class_name="font-bold text-red-700"),
-                        spacing="2",
-                    ),
-                    rx.foreach(
-                        State.qc_records_with_alerts[:5],
-                        lambda r: rx.box(
+        # Grid Secundário (Pendências e Alertas)
+        rx.grid(
+            # Coluna 1: Pendências
+            rx.vstack(
+                ui.heading("Pendências & Alertas", level=3),
+                ui.card(
+                    rx.vstack(
+                        # Manutenções
+                        rx.box(
                             rx.hstack(
-                                rx.text(r["exam_name"], class_name="font-medium flex-1"),
-                                rx.badge(
-                                    "CV: " + r["cv"].to_string() + "%",
-                                    class_name="bg-red-100 text-red-700"
+                                rx.box(rx.icon("wrench", size=20, color="orange"), class_name="bg-amber-100 p-2 rounded-lg"),
+                                rx.vstack(
+                                    ui.text("Manutenções Pendentes", size="label"),
+                                    ui.text("Equipamentos aguardando revisão", size="small"),
+                                    spacing="0",
                                 ),
-                                rx.text(r["date"], class_name="text-gray-500 text-sm"),
-                                justify="between",
+                                rx.spacer(),
+                                rx.text(
+                                    State.dashboard_pending_maintenances,
+                                    font_size="1.5rem",
+                                    font_weight="bold",
+                                    color=rx.cond(State.has_pending_maintenances, Color.WARNING, Color.SUCCESS)
+                                ),
                                 width="100%",
+                                align="center",
                             ),
-                            class_name="py-2 border-b border-red-100"
+                            class_name="p-4 w-full flex-1 flex items-center bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
+                        ),
+                        # Lotes Vencendo
+                        rx.box(
+                            rx.hstack(
+                                rx.box(rx.icon("clock", size=20, color="red"), class_name="bg-red-100 p-2 rounded-lg"),
+                                rx.vstack(
+                                    ui.text("Lotes Vencendo", size="label"),
+                                    ui.text("Próximos 30 dias", size="small"),
+                                    spacing="0",
+                                ),
+                                rx.spacer(),
+                                rx.text(
+                                    State.dashboard_expiring_lots,
+                                    font_size="1.5rem",
+                                    font_weight="bold",
+                                    color=rx.cond(State.has_expiring_lots, Color.ERROR, Color.SUCCESS)
+                                ),
+                                width="100%",
+                                align="center",
+                            ),
+                            class_name="p-4 w-full flex-1 flex items-center bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
+                        ),
+                        spacing="4",
+                        width="100%",
+                        height="100%",
+                    ),
+                    padding="1.5rem",
+                    height="100%"
+                ),
+                width="100%",
+                height="100%",
+            ),
+            
+            # Coluna 2: Últimos Alertas
+            rx.vstack(
+                ui.heading("Alertas Recentes", level=3),
+                ui.card(
+                    rx.cond(
+                        State.qc_records_with_alerts.length() > 0,
+                        rx.vstack(
+                            rx.foreach(
+                                State.qc_records_with_alerts[:4],
+                                lambda r: rx.hstack(
+                                    rx.box(class_name="w-2 h-2 rounded-full bg-red-500"),
+                                    rx.vstack(
+                                        ui.text(r["exam_name"], size="label"),
+                                        ui.text(r["date"], size="small"),
+                                        spacing="0",
+                                    ),
+                                    rx.spacer(),
+                                    ui.status_badge(
+                                        "CV: " + r["cv"].to_string() + "%",
+                                        status="error"
+                                    ),
+                                    width="100%",
+                                    align="center",
+                                    class_name="p-2 hover:bg-red-50 rounded-lg transition-colors"
+                                )
+                            ),
+                            spacing="1",
+                        ),
+                        rx.center(
+                            rx.vstack(
+                                rx.icon("sparkles", size=32, color="lightgray"),
+                                ui.text("Tudo certo!", size="body", color="gray"),
+                                spacing="2",
+                                align="center",
+                            ),
+                            height="100%",
+                            width="100%",
+                            class_name="flex-1 bg-gray-50 rounded-xl"
                         )
                     ),
-                    spacing="2",
-                    width="100%",
+                    height="100%",
+                    min_height="160px",
+                    padding="1.5rem",
+                    class_name="flex flex-col"
                 ),
-                class_name="bg-red-50 border border-red-200 rounded-xl p-4 w-full"
+                width="100%",
             ),
+            
+            columns="2",
+            spacing="6",
+            width="100%",
         ),
-        
-        # Lotes Vencendo
-        rx.cond(
-            State.lots_expiring_soon.length() > 0,
-            rx.box(
-                rx.vstack(
-                    rx.hstack(
-                        rx.text("⏰", class_name="text-xl"),
-                        rx.text("Lotes Próximos da Validade", class_name="font-bold text-amber-700"),
-                        spacing="2",
-                    ),
-                    rx.foreach(
-                        State.lots_expiring_soon[:5],
-                        lambda lot: rx.box(
-                            rx.hstack(
-                                rx.text(lot["name"], class_name="font-medium flex-1"),
-                                rx.text(lot["lot_number"], class_name="text-gray-500 text-sm"),
-                                rx.badge(
-                                    lot["days_left"].to_string() + " dias",
-                                    class_name="bg-amber-100 text-amber-700"
-                                ),
-                                justify="between",
-                                width="100%",
-                            ),
-                            class_name="py-2 border-b border-amber-100"
-                        )
-                    ),
-                    spacing="2",
-                    width="100%",
-                ),
-                class_name="bg-amber-50 border border-amber-200 rounded-xl p-4 w-full"
-            ),
-        ),
-        
-        # Últimos registros
+
+        # Tabela Recente
         rx.box(
             rx.vstack(
                 rx.hstack(
-                    rx.text("📝", class_name="text-xl"),
-                    rx.text("Últimos Registros de CQ", class_name="font-bold text-[#1B5E20]"),
+                    rx.icon("file-text", size=20, color=Color.TEXT_SECONDARY),
+                    ui.heading("Últimos Registros", level=3),
                     spacing="2",
+                    align="center",
+                    class_name="mb-2"
                 ),
-                rx.cond(
-                    State.qc_records.length() > 0,
-                    rx.box(
-                        rx.foreach(
-                            State.qc_records[:5],
-                            lambda r: rx.box(
-                                rx.hstack(
-                                    rx.vstack(
-                                        rx.text(r["exam_name"], class_name="font-medium"),
-                                        rx.text(r["date"], class_name="text-xs text-gray-400"),
-                                        spacing="0",
-                                        align="start",
-                                    ),
-                                    rx.spacer(),
-                                    rx.vstack(
+                rx.box(
+                    rx.table.root(
+                        rx.table.header(
+                            rx.table.row(
+                                rx.table.column_header_cell("Exame", class_name="text-xs text-gray-500 uppercase"),
+                                rx.table.column_header_cell("Data", class_name="text-xs text-gray-500 uppercase"),
+                                rx.table.column_header_cell("CV%", class_name="text-xs text-gray-500 uppercase"),
+                                rx.table.column_header_cell("Status", class_name="text-xs text-gray-500 uppercase text-right"),
+                            )
+                        ),
+                        rx.table.body(
+                            rx.foreach(
+                                State.qc_records[:5],
+                                lambda r: rx.table.row(
+                                    rx.table.cell(ui.text(r["exam_name"], size="body", font_weight="500")),
+                                    rx.table.cell(ui.text(r["date"], size="small")),
+                                    rx.table.cell(
                                         rx.text(
-                                            "CV: " + r["cv"].to_string() + "%",
-                                            class_name="font-bold"
-                                        ),
-                                        rx.badge(
-                                            r["status"],
-                                            class_name=rx.cond(
-                                                r["status"] == "OK",
-                                                "bg-green-100 text-green-700",
-                                                "bg-red-100 text-red-700"
-                                            )
-                                        ),
-                                        spacing="1",
-                                        align="end",
+                                            r["cv"].to_string() + "%",
+                                            class_name=rx.cond(r["status"] == "OK", "text-green-600 font-medium", "text-red-600 font-bold")
+                                        )
                                     ),
-                                    width="100%",
-                                ),
-                                class_name="py-3 border-b border-gray-100 last:border-0"
+                                    rx.table.cell(
+                                        ui.status_badge(
+                                            r["status"],
+                                            status=rx.cond(r["status"] == "OK", "success", "error")
+                                        ),
+                                        align="right"
+                                    ),
+                                )
                             )
                         ),
                         class_name="w-full"
                     ),
-                    rx.text("Nenhum registro encontrado", class_name="text-gray-400 py-4 text-center")
+                    class_name="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden"
                 ),
-                spacing="3",
-                width="100%",
             ),
-            class_name="bg-white border border-gray-200 rounded-xl p-4 w-full"
+            class_name="w-full mt-6"
         ),
         
-        spacing="4",
+        spacing="0",
         width="100%",
     )
 
@@ -304,141 +249,86 @@ def dashboard_tab() -> rx.Component:
 def registro_qc_tab() -> rx.Component:
     """Aba de Registro de Controle de Qualidade"""
     return rx.vstack(
-        # Título
-        rx.hstack(
-            rx.text("📝", class_name="text-2xl"),
-            rx.text("Registro de Controle de Qualidade", class_name="text-xl font-bold text-[#1B5E20]"),
-            spacing="2",
-            align="center",
+        ui.page_header(
+            "Registro de CQ",
+            "Insira os dados diários para cálculo automático do CV%"
         ),
         
-        rx.text(
-            "Registre os dados diários de CQ. O sistema calcula automaticamente o CV%.",
-            class_name="text-gray-500 text-sm"
-        ),
-        
-        # Formulário
-        rx.box(
+        ui.card(
             rx.vstack(
+                ui.text("Dados da Amostra", size="label", color=Color.PRIMARY, class_name="mb-4 uppercase tracking-wider"),
+                
                 rx.grid(
-                    # Exame
-                    rx.box(
-                        rx.vstack(
-                            rx.text("Nome do Exame *", class_name="text-sm font-medium text-gray-700"),
-                            rx.input(
-                                placeholder="Ex: Glicose, Hemoglobina...",
-                                value=State.qc_exam_name,
-                                on_change=State.set_qc_exam_name,
-                                class_name="w-full"
-                            ),
-                            spacing="1",
-                            width="100%",
+                    ui.form_field(
+                        "Nome do Exame (Obrigatório)",
+                        ui.select(
+                            State.unique_exam_names,
+                            placeholder="Selecione o Exame",
+                            value=State.qc_exam_name,
+                            on_change=State.set_qc_exam_name,
+                        ),
+                        required=True
+                    ),
+                    ui.form_field(
+                        "Número do Lote (Opcional)",
+                        ui.input(
+                            placeholder="LOT...",
+                            value=State.qc_lot_number,
+                            on_change=State.set_qc_lot_number,
                         )
                     ),
-                    # Nível
-                    rx.box(
-                        rx.vstack(
-                            rx.text("Nível", class_name="text-sm font-medium text-gray-700"),
-                            rx.select(
-                                ["Normal", "Patológico"],
-                                value=State.qc_level,
-                                on_change=State.set_qc_level,
-                                class_name="w-full"
-                            ),
-                            spacing="1",
-                            width="100%",
-                        )
+                    ui.form_field(
+                        "Data/Hora (Obrigatório)",
+                        ui.input(
+                            type="datetime-local",
+                            value=State.qc_date,
+                            on_change=State.set_qc_date,
+                        ),
+                        required=True
                     ),
-                    # Lote
-                    rx.box(
-                        rx.vstack(
-                            rx.text("Número do Lote", class_name="text-sm font-medium text-gray-700"),
-                            rx.input(
-                                placeholder="Ex: LOT123456",
-                                value=State.qc_lot_number,
-                                on_change=State.set_qc_lot_number,
-                                class_name="w-full"
-                            ),
-                            spacing="1",
-                            width="100%",
-                        )
-                    ),
-                    # Data
-                    rx.box(
-                        rx.vstack(
-                            rx.text("Data/Hora", class_name="text-sm font-medium text-gray-700"),
-                            rx.input(
-                                type="datetime-local",
-                                value=State.qc_date,
-                                on_change=State.set_qc_date,
-                                class_name="w-full"
-                            ),
-                            spacing="1",
-                            width="100%",
-                        )
-                    ),
-                    columns="2",
+                    columns="3",
                     spacing="4",
                     width="100%",
                 ),
                 
-                rx.divider(class_name="my-2"),
+                rx.divider(class_name="my-6 border-gray-100"),
+                
+                ui.text("Resultados & Metas", size="label", color=Color.PRIMARY, class_name="mb-4 uppercase tracking-wider"),
                 
                 rx.grid(
-                    # Valor 1
-                    rx.box(
-                        rx.vstack(
-                            rx.text("Medição 1 *", class_name="text-sm font-medium text-gray-700"),
-                            rx.input(
-                                placeholder="Ex: 98.5",
-                                value=State.qc_value1,
-                                on_change=State.set_qc_value1,
-                                class_name="w-full"
-                            ),
-                            spacing="1",
-                            width="100%",
-                        )
+                    ui.form_field(
+                        "Medição (Obrigatório)",
+                        ui.input(
+                            placeholder="0.00",
+                            value=State.qc_value,
+                            on_change=State.set_qc_value,
+                        ),
+                        required=True
                     ),
-                    # Valor 2
-                    rx.box(
-                        rx.vstack(
-                            rx.text("Medição 2 *", class_name="text-sm font-medium text-gray-700"),
-                            rx.input(
-                                placeholder="Ex: 99.2",
-                                value=State.qc_value2,
-                                on_change=State.set_qc_value2,
-                                class_name="w-full"
-                            ),
-                            spacing="1",
-                            width="100%",
-                        )
+                    ui.form_field(
+                        "Valor Alvo (Obrigatório)",
+                        ui.input(
+                            placeholder="0.00",
+                            value=State.qc_target_value,
+                            on_change=State.set_qc_target_value,
+                        ),
+                        required=True
                     ),
-                    # Valor Alvo
-                    rx.box(
-                        rx.vstack(
-                            rx.text("Valor Alvo (Bula)", class_name="text-sm font-medium text-gray-700"),
-                            rx.input(
-                                placeholder="Ex: 100",
-                                value=State.qc_target_value,
-                                on_change=State.set_qc_target_value,
-                                class_name="w-full"
-                            ),
-                            spacing="1",
-                            width="100%",
-                        )
+                    ui.form_field(
+                        "Desvio Padrão (Obrigatório)",
+                        ui.input(
+                            placeholder="0.00",
+                            value=State.qc_target_sd,
+                            on_change=State.set_qc_target_sd,
+                        ),
+                        required=True
                     ),
-                    # DP Alvo
-                    rx.box(
-                        rx.vstack(
-                            rx.text("DP Alvo (Bula)", class_name="text-sm font-medium text-gray-700"),
-                            rx.input(
-                                placeholder="Ex: 5",
-                                value=State.qc_target_sd,
-                                on_change=State.set_qc_target_sd,
-                                class_name="w-full"
-                            ),
-                            spacing="1",
-                            width="100%",
+                    ui.form_field(
+                        "CV% (Automático)",
+                        ui.input(
+                            value=State.qc_calculated_cv + "%",
+                            read_only=True,
+                            class_name="bg-gray-50 text-gray-500 cursor-not-allowed"
                         )
                     ),
                     columns="4",
@@ -446,33 +336,23 @@ def registro_qc_tab() -> rx.Component:
                     width="100%",
                 ),
                 
+                rx.divider(class_name="my-6 border-gray-100"),
+                
                 rx.grid(
-                    # Equipamento
-                    rx.box(
-                        rx.vstack(
-                            rx.text("Equipamento", class_name="text-sm font-medium text-gray-700"),
-                            rx.input(
-                                placeholder="Ex: Analisador Bioquímico",
-                                value=State.qc_equipment,
-                                on_change=State.set_qc_equipment,
-                                class_name="w-full"
-                            ),
-                            spacing="1",
-                            width="100%",
+                    ui.form_field(
+                        "Equipamento (Opcional)",
+                        ui.input(
+                            placeholder="Ex: Cobas c111",
+                            value=State.qc_equipment,
+                            on_change=State.set_qc_equipment,
                         )
                     ),
-                    # Analista
-                    rx.box(
-                        rx.vstack(
-                            rx.text("Analista", class_name="text-sm font-medium text-gray-700"),
-                            rx.input(
-                                placeholder="Seu nome",
-                                value=State.qc_analyst,
-                                on_change=State.set_qc_analyst,
-                                class_name="w-full"
-                            ),
-                            spacing="1",
-                            width="100%",
+                    ui.form_field(
+                        "Analista Responsável (Opcional)",
+                        ui.input(
+                            placeholder="Nome do analista",
+                            value=State.qc_analyst,
+                            on_change=State.set_qc_analyst,
                         )
                     ),
                     columns="2",
@@ -480,809 +360,505 @@ def registro_qc_tab() -> rx.Component:
                     width="100%",
                 ),
                 
-                # Botão salvar
-                rx.button(
-                    rx.cond(
-                        State.is_saving_qc,
-                        rx.hstack(rx.spinner(size="1"), rx.text("Salvando..."), spacing="2"),
-                        rx.hstack(rx.text("💾"), rx.text("Salvar Registro"), spacing="2"),
+                rx.box(
+                    ui.button(
+                        "Salvar Registro",
+                        icon="save",
+                        is_loading=State.is_saving_qc,
+                        on_click=State.save_qc_record,
+                        width="100%",
+                        class_name="mt-6"
                     ),
-                    on_click=State.save_qc_record,
-                    disabled=State.is_saving_qc,
-                    class_name="bg-[#1B5E20] text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-[#2E7D32] transition-all w-full mt-4"
                 ),
                 
-                # Mensagens
+                # Feedback Messages
                 rx.cond(
                     State.qc_success_message != "",
                     rx.box(
-                        rx.text(f"✅ {State.qc_success_message}", class_name="text-green-700"),
-                        class_name="bg-green-50 border border-green-200 rounded-lg p-3 w-full"
+                        rx.hstack(
+                            rx.icon("circle-check", size=24, color="green"),
+                            ui.text(State.qc_success_message, font_weight="500", color="green"),
+                            spacing="3",
+                            align="center"
+                        ),
+                        class_name="mt-4 bg-green-50 text-green-800 p-4 rounded-xl border border-green-100"
                     ),
                 ),
                 rx.cond(
                     State.qc_error_message != "",
                     rx.box(
-                        rx.text(f"❌ {State.qc_error_message}", class_name="text-red-700"),
-                        class_name="bg-red-50 border border-red-200 rounded-lg p-3 w-full"
+                        rx.hstack(
+                            rx.icon("circle-x", size=24, color="red"),
+                            ui.text(State.qc_error_message, font_weight="500", color="red"),
+                            spacing="3",
+                            align="center"
+                        ),
+                        class_name="mt-4 bg-red-50 text-red-800 p-4 rounded-xl border border-red-100"
                     ),
                 ),
-                
-                spacing="4",
-                width="100%",
             ),
-            class_name="bg-white border border-gray-200 rounded-xl p-6 w-full"
+            class_name="max-w-4xl mx-auto"
         ),
         
-        # Histórico de registros
+        # Histórico Table Section
         rx.box(
             rx.vstack(
-                rx.text("📋 Histórico de Registros", class_name="font-bold text-[#1B5E20]"),
+                ui.heading("Histórico Recente", level=3, class_name="mb-2"),
                 rx.cond(
                     State.qc_records.length() > 0,
                     rx.box(
                         rx.table.root(
                             rx.table.header(
                                 rx.table.row(
-                                    rx.table.column_header_cell("Data", class_name="bg-[#1B5E20] text-white"),
-                                    rx.table.column_header_cell("Exame", class_name="bg-[#1B5E20] text-white"),
-                                    rx.table.column_header_cell("Média", class_name="bg-[#1B5E20] text-white"),
-                                    rx.table.column_header_cell("CV%", class_name="bg-[#1B5E20] text-white"),
-                                    rx.table.column_header_cell("Status", class_name="bg-[#1B5E20] text-white"),
-                                    rx.table.column_header_cell("Ações", class_name="bg-[#1B5E20] text-white"),
+                                    rx.table.column_header_cell("Data"),
+                                    rx.table.column_header_cell("Exame"),
+                                    rx.table.column_header_cell("Valor"),
+                                    rx.table.column_header_cell("CV%"),
+                                    rx.table.column_header_cell("Status"),
+                                    rx.table.column_header_cell(""),
                                 )
                             ),
                             rx.table.body(
                                 rx.foreach(
                                     State.qc_records,
                                     lambda r: rx.table.row(
-                                        rx.table.cell(r["date"][:16]),
-                                        rx.table.cell(r["exam_name"]),
-                                        rx.table.cell(r["mean"]),
+                                        rx.table.cell(r["date"][:16], class_name="text-sm text-gray-600"),
+                                        rx.table.cell(r["exam_name"], font_weight="500"),
+                                        rx.table.cell(r["value"]),
                                         rx.table.cell(
                                             rx.text(
                                                 r["cv"].to_string() + "%",
-                                                class_name=rx.cond(
-                                                    r["status"] == "OK",
-                                                    "text-green-600 font-bold",
-                                                    "text-red-600 font-bold"
-                                                )
+                                                class_name=rx.cond(r["status"] == "OK", "text-green-600 font-bold", "text-red-600 font-bold")
                                             )
                                         ),
                                         rx.table.cell(
-                                            rx.badge(
+                                            ui.status_badge(
                                                 r["status"],
-                                                class_name=rx.cond(
-                                                    r["status"] == "OK",
-                                                    "bg-green-100 text-green-700",
-                                                    "bg-red-100 text-red-700"
-                                                )
+                                                status=rx.cond(r["status"] == "OK", "success", "error")
                                             )
                                         ),
                                         rx.table.cell(
                                             rx.button(
-                                                "🗑️",
-                                                on_click=lambda rid=r["id"]: State.delete_qc_record(rid),
-                                                class_name="bg-red-50 text-red-600 px-2 py-1 rounded hover:bg-red-100",
+                                                rx.icon("trash-2", size=14, color="red"),
+                                                on_click=lambda: State.delete_qc_record(r["id"]),
+                                                variant="ghost",
+                                                color_scheme="red",
                                                 size="1"
-                                            )
+                                            ),
+                                            align="right"
                                         ),
                                     )
                                 )
                             ),
-                            width="100%",
                         ),
-                        class_name="w-full overflow-x-auto"
+                        class_name="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden"
                     ),
-                    rx.text("Nenhum registro cadastrado", class_name="text-gray-400 py-4")
+                    rx.center(
+                        ui.text("Nenhum registro encontrado.", size="body", color="gray"),
+                        class_name="bg-white rounded-xl border border-gray-100 p-4"
+                    )
                 ),
-                spacing="3",
-                width="100%",
+                width="100%"
             ),
-            class_name="bg-white border border-gray-200 rounded-xl p-4 w-full"
+            class_name="w-full mt-8 max-w-4xl mx-auto"
         ),
         
-        spacing="4",
         width="100%",
+        padding_bottom="3rem"
     )
-
 
 def reagentes_tab() -> rx.Component:
     """Aba de Gestão de Reagentes"""
     return rx.vstack(
-        # Título
-        rx.hstack(
-            rx.text("🧪", class_name="text-2xl"),
-            rx.text("Gestão de Reagentes e Lotes", class_name="text-xl font-bold text-[#1B5E20]"),
-            spacing="2",
-            align="center",
+        ui.page_header(
+            "Gestão de Reagentes",
+            "Controle de lotes, validade e fabricantes"
         ),
         
-        # Formulário de cadastro
-        rx.box(
-            rx.vstack(
-                rx.text("Cadastrar Novo Lote", class_name="font-semibold text-[#1B5E20]"),
-                rx.grid(
-                    rx.box(
-                        rx.vstack(
-                            rx.text("Nome do Reagente *", class_name="text-sm font-medium text-gray-700"),
-                            rx.input(
-                                placeholder="Ex: Controle Glicose Nível I",
-                                value=State.reagent_name,
-                                on_change=State.set_reagent_name,
-                                class_name="w-full"
-                            ),
-                            spacing="1",
-                            width="100%",
-                        )
+        rx.grid(
+            # Coluna Esquerda: Formulário
+            ui.card(
+                rx.vstack(
+                    ui.text("Novo Lote", size="label", color=Color.PRIMARY, class_name="mb-2 uppercase text-xs tracking-wider"),
+                    
+                    ui.form_field(
+                        "Nome do Reagente",
+                        ui.input(value=State.reagent_name, on_change=State.set_reagent_name),
+                        True
                     ),
-                    rx.box(
-                        rx.vstack(
-                            rx.text("Número do Lote *", class_name="text-sm font-medium text-gray-700"),
-                            rx.input(
-                                placeholder="Ex: LOT2024001",
-                                value=State.reagent_lot_number,
-                                on_change=State.set_reagent_lot_number,
-                                class_name="w-full"
-                            ),
-                            spacing="1",
-                            width="100%",
-                        )
+                    ui.form_field(
+                        "Lote",
+                        ui.input(value=State.reagent_lot_number, on_change=State.set_reagent_lot_number),
+                        True
                     ),
-                    rx.box(
-                        rx.vstack(
-                            rx.text("Data de Validade *", class_name="text-sm font-medium text-gray-700"),
-                            rx.input(
-                                type="date",
-                                value=State.reagent_expiry_date,
-                                on_change=State.set_reagent_expiry_date,
-                                class_name="w-full"
-                            ),
-                            spacing="1",
-                            width="100%",
-                        )
+                    ui.form_field(
+                        "Validade",
+                        ui.input(type="date", value=State.reagent_expiry_date, on_change=State.set_reagent_expiry_date),
+                        True
                     ),
-                    rx.box(
-                        rx.vstack(
-                            rx.text("Quantidade", class_name="text-sm font-medium text-gray-700"),
-                            rx.input(
-                                placeholder="Ex: 10 frascos",
-                                value=State.reagent_quantity,
-                                on_change=State.set_reagent_quantity,
-                                class_name="w-full"
-                            ),
-                            spacing="1",
-                            width="100%",
-                        )
+                    rx.grid(
+                        ui.form_field("Qtde.", ui.input(value=State.reagent_quantity, on_change=State.set_reagent_quantity)),
+                        ui.form_field("Temp.", ui.input(value=State.reagent_storage_temp, on_change=State.set_reagent_storage_temp)),
+                        columns="2",
+                        spacing="2",
+                        width="100%"
                     ),
-                    rx.box(
-                        rx.vstack(
-                            rx.text("Fabricante", class_name="text-sm font-medium text-gray-700"),
-                            rx.input(
-                                placeholder="Ex: Labtest",
-                                value=State.reagent_manufacturer,
-                                on_change=State.set_reagent_manufacturer,
-                                class_name="w-full"
-                            ),
-                            spacing="1",
-                            width="100%",
-                        )
+                    ui.form_field("Fabricante", ui.input(value=State.reagent_manufacturer, on_change=State.set_reagent_manufacturer)),
+                    
+                    ui.button(
+                        "Cadastrar Lote",
+                        icon="plus",
+                        is_loading=State.is_saving_reagent,
+                        on_click=State.save_reagent_lot,
+                        width="100%",
+                        class_name="mt-4"
                     ),
-                    rx.box(
-                        rx.vstack(
-                            rx.text("Temp. Armazenamento", class_name="text-sm font-medium text-gray-700"),
-                            rx.input(
-                                placeholder="Ex: 2-8°C",
-                                value=State.reagent_storage_temp,
-                                on_change=State.set_reagent_storage_temp,
-                                class_name="w-full"
-                            ),
-                            spacing="1",
-                            width="100%",
-                        )
-                    ),
-                    columns="3",
-                    spacing="4",
-                    width="100%",
-                ),
-                rx.button(
+                    
+                    # Mensagens Feedback
                     rx.cond(
-                        State.is_saving_reagent,
-                        rx.hstack(rx.spinner(size="1"), rx.text("Salvando..."), spacing="2"),
-                        rx.hstack(rx.text("💾"), rx.text("Cadastrar Lote"), spacing="2"),
-                    ),
-                    on_click=State.save_reagent_lot,
-                    disabled=State.is_saving_reagent,
-                    class_name="bg-[#1B5E20] text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-[#2E7D32] transition-all mt-4"
-                ),
-                rx.cond(
-                    State.reagent_success_message != "",
-                    rx.box(
-                        rx.text(f"✅ {State.reagent_success_message}", class_name="text-green-700"),
-                        class_name="bg-green-50 border border-green-200 rounded-lg p-3 w-full"
+                        State.reagent_success_message != "",
+                        ui.text(State.reagent_success_message, color="green", size="small")
                     ),
                 ),
-                rx.cond(
-                    State.reagent_error_message != "",
-                    rx.box(
-                        rx.text(f"❌ {State.reagent_error_message}", class_name="text-red-700"),
-                        class_name="bg-red-50 border border-red-200 rounded-lg p-3 w-full"
-                    ),
-                ),
-                spacing="3",
-                width="100%",
+                class_name="h-fit"
             ),
-            class_name="bg-white border border-gray-200 rounded-xl p-6 w-full"
-        ),
-        
-        # Lista de lotes
-        rx.box(
+            
+            # Coluna Direita: Listagem e Manutenção
             rx.vstack(
-                rx.text("📦 Lotes Cadastrados", class_name="font-bold text-[#1B5E20]"),
-                rx.cond(
-                    State.reagent_lots.length() > 0,
-                    rx.box(
-                        rx.foreach(
-                            State.reagent_lots,
-                            lambda lot: rx.box(
-                                rx.hstack(
-                                    rx.vstack(
-                                        rx.text(lot["name"], class_name="font-medium"),
-                                        rx.text("Lote: " + lot["lot_number"].to_string(), class_name="text-sm text-gray-500"),
-                                        spacing="0",
-                                        align="start",
-                                    ),
-                                    rx.spacer(),
-                                    rx.vstack(
-                                        rx.text("Validade: " + lot["expiry_date"].to_string(), class_name="text-sm"),
-                                        rx.text(lot["manufacturer"], class_name="text-xs text-gray-400"),
-                                        spacing="0",
-                                        align="end",
-                                    ),
-                                    rx.button(
-                                        "🗑️",
-                                        on_click=lambda lid=lot["id"]: State.delete_reagent_lot(lid),
-                                        class_name="bg-red-50 text-red-600 px-2 py-1 rounded hover:bg-red-100 ml-2",
-                                        size="1"
-                                    ),
-                                    width="100%",
+                # Lista de Lotes
+                ui.card(
+                    rx.vstack(
+                        ui.heading("Lotes Ativos", level=3, class_name="mb-2"),
+                        rx.cond(
+                            State.reagent_lots.length() > 0,
+                            rx.vstack(
+                                rx.foreach(
+                                    State.reagent_lots,
+                                    lambda lot: rx.hstack(
+                                        rx.box(
+                                            rx.icon("package", size=24, color=Color.TEXT_SECONDARY),
+                                            class_name="bg-gray-50 p-2 rounded-lg"
+                                        ),
+                                        rx.vstack(
+                                            ui.text(lot["name"], font_weight="500"),
+                                            ui.text(lot["lot_number"], size="small"),
+                                            spacing="0"
+                                        ),
+                                        rx.spacer(),
+                                        ui.status_badge(lot["expiry_date"], status="warning"),
+                                        rx.button("×", on_click=lambda: State.delete_reagent_lot(lot["id"]), size="1", variant="ghost", color_scheme="red"),
+                                        width="100%",
+                                        align="center",
+                                        class_name="p-3 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors"
+                                    )
                                 ),
-                                class_name="py-3 border-b border-gray-100 last:border-0"
-                            )
+                                spacing="2"
+                            ),
+                            ui.text("Nenhum lote cadastrado.", size="small", color="gray")
                         ),
-                        class_name="w-full"
                     ),
-                    rx.text("Nenhum lote cadastrado", class_name="text-gray-400 py-4")
+                    width="100%"
                 ),
-                spacing="3",
-                width="100%",
-            ),
-            class_name="bg-white border border-gray-200 rounded-xl p-4 w-full"
-        ),
-        
-        # Manutenções de Equipamentos
-        rx.box(
-            rx.vstack(
-                rx.text("🔧 Diário de Manutenções", class_name="font-bold text-[#1B5E20]"),
-                rx.grid(
-                    rx.box(
-                        rx.vstack(
-                            rx.text("Equipamento *", class_name="text-sm font-medium text-gray-700"),
-                            rx.input(
-                                placeholder="Ex: Analisador XYZ",
-                                value=State.maintenance_equipment,
-                                on_change=State.set_maintenance_equipment,
-                                class_name="w-full"
-                            ),
-                            spacing="1",
-                            width="100%",
-                        )
-                    ),
-                    rx.box(
-                        rx.vstack(
-                            rx.text("Tipo de Manutenção *", class_name="text-sm font-medium text-gray-700"),
-                            rx.select(
-                                ["Preventiva", "Corretiva", "Calibração", "Limpeza", "Verificação"],
-                                value=State.maintenance_type,
-                                on_change=State.set_maintenance_type,
-                                class_name="w-full"
-                            ),
-                            spacing="1",
-                            width="100%",
-                        )
-                    ),
-                    rx.box(
-                        rx.vstack(
-                            rx.text("Data", class_name="text-sm font-medium text-gray-700"),
-                            rx.input(
-                                type="date",
-                                value=State.maintenance_date,
-                                on_change=State.set_maintenance_date,
-                                class_name="w-full"
-                            ),
-                            spacing="1",
-                            width="100%",
-                        )
-                    ),
-                    rx.box(
-                        rx.vstack(
-                            rx.text("Próxima Manutenção", class_name="text-sm font-medium text-gray-700"),
-                            rx.input(
-                                type="date",
-                                value=State.maintenance_next_date,
-                                on_change=State.set_maintenance_next_date,
-                                class_name="w-full"
-                            ),
-                            spacing="1",
-                            width="100%",
-                        )
-                    ),
-                    columns="4",
-                    spacing="4",
-                    width="100%",
-                ),
-                rx.grid(
-                    rx.box(
-                        rx.vstack(
-                            rx.text("Técnico Responsável", class_name="text-sm font-medium text-gray-700"),
-                            rx.input(
-                                placeholder="Nome do técnico",
-                                value=State.maintenance_technician,
-                                on_change=State.set_maintenance_technician,
-                                class_name="w-full"
-                            ),
-                            spacing="1",
-                            width="100%",
-                        )
-                    ),
-                    rx.box(
-                        rx.vstack(
-                            rx.text("Observações", class_name="text-sm font-medium text-gray-700"),
-                            rx.input(
-                                placeholder="Notas sobre a manutenção...",
-                                value=State.maintenance_notes,
-                                on_change=State.set_maintenance_notes,
-                                class_name="w-full"
-                            ),
-                            spacing="1",
-                            width="100%",
-                        )
-                    ),
-                    columns="2",
-                    spacing="4",
-                    width="100%",
-                ),
-                rx.button(
-                    rx.cond(
-                        State.is_saving_maintenance,
-                        rx.hstack(rx.spinner(size="1"), rx.text("Salvando..."), spacing="2"),
-                        rx.hstack(rx.text("💾"), rx.text("Registrar Manutenção"), spacing="2"),
-                    ),
-                    on_click=State.save_maintenance_record,
-                    disabled=State.is_saving_maintenance,
-                    class_name="bg-[#1B5E20] text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-[#2E7D32] transition-all mt-4"
-                ),
-                rx.cond(
-                    State.maintenance_success_message != "",
-                    rx.box(
-                        rx.text(f"✅ {State.maintenance_success_message}", class_name="text-green-700"),
-                        class_name="bg-green-50 border border-green-200 rounded-lg p-3 w-full"
-                    ),
-                ),
-                # Lista de manutenções
-                rx.cond(
-                    State.maintenance_records.length() > 0,
-                    rx.box(
-                        rx.foreach(
-                            State.maintenance_records,
-                            lambda m: rx.box(
-                                rx.hstack(
-                                    rx.vstack(
-                                        rx.text(m["equipment"], class_name="font-medium"),
-                                        rx.badge(m["type"], class_name="bg-blue-100 text-blue-700"),
-                                        spacing="1",
-                                        align="start",
-                                    ),
-                                    rx.spacer(),
-                                    rx.vstack(
-                                        rx.text("Data: " + m["date"].to_string(), class_name="text-sm"),
-                                        rx.text("Próxima: " + m["next_date"].to_string(), class_name="text-xs text-amber-600"),
-                                        spacing="0",
-                                        align="end",
-                                    ),
-                                    rx.button(
-                                        "🗑️",
-                                        on_click=lambda mid=m["id"]: State.delete_maintenance_record(mid),
-                                        class_name="bg-red-50 text-red-600 px-2 py-1 rounded hover:bg-red-100 ml-2",
-                                        size="1"
-                                    ),
-                                    width="100%",
-                                ),
-                                class_name="py-3 border-b border-gray-100 last:border-0"
-                            )
+                
+                # Diário de Manutenção
+                ui.card(
+                    rx.vstack(
+                        ui.heading("Diário de Manutenção", level=3, class_name="mb-2"),
+                        rx.grid(
+                            ui.input(placeholder="Equipamento...", value=State.maintenance_equipment, on_change=State.set_maintenance_equipment),
+                            ui.select(["Preventiva", "Corretiva", "Calibração"], value=State.maintenance_type, on_change=State.set_maintenance_type),
+                            columns="2",
+                            spacing="2",
+                            width="100%"
                         ),
-                        class_name="w-full mt-4"
+                        rx.grid(
+                            ui.input(type="date", value=State.maintenance_date, on_change=State.set_maintenance_date),
+                            ui.input(type="date", placeholder="Próxima...", value=State.maintenance_next_date, on_change=State.set_maintenance_next_date),
+                            columns="2",
+                            spacing="2",
+                            width="100%"
+                        ),
+                        ui.text_area(placeholder="Observações...", value=State.maintenance_notes, on_change=State.set_maintenance_notes),
+                        ui.button("Registrar Manutenção", "wrench", on_click=State.save_maintenance_record, width="100%", variant="secondary"),
+                        
+                        rx.cond(State.maintenance_success_message != "", ui.text(State.maintenance_success_message, color="green", size="small")),
                     ),
+                    width="100%"
                 ),
-                spacing="3",
-                width="100%",
+                spacing="6",
+                width="100%"
             ),
-            class_name="bg-white border border-gray-200 rounded-xl p-6 w-full"
-        ),
-        
-        spacing="4",
-        width="100%",
+            columns="2",
+            spacing="6",
+            width="100%"
+        )
     )
-
 
 def relatorios_tab() -> rx.Component:
     """Aba de Relatórios - Gráfico Levey-Jennings"""
     return rx.vstack(
-        # Título
-        rx.hstack(
-            rx.text("📈", class_name="text-2xl"),
-            rx.text("Relatórios Técnicos - Gráfico Levey-Jennings", class_name="text-xl font-bold text-[#1B5E20]"),
-            spacing="2",
-            align="center",
+        ui.page_header(
+            "Análise Levey-Jennings",
+            "Visualização de tendências e desvios padrão"
         ),
         
-        rx.text(
-            "O gráfico Levey-Jennings é essencial para auditorias, mostrando a variação dos resultados em relação aos Desvios Padrão.",
-            class_name="text-gray-500 text-sm"
-        ),
-        
-        # Seletores
-        rx.box(
+        # Controls
+        ui.card(
             rx.hstack(
                 rx.box(
-                    rx.vstack(
-                        rx.text("Selecione o Exame", class_name="text-sm font-medium text-gray-700"),
-                        rx.select(
-                            State.unique_exam_names,
-                            value=State.levey_jennings_exam,
-                            on_change=State.set_levey_jennings_exam,
-                            placeholder="Escolha um exame...",
-                            class_name="w-full min-w-[200px]"
-                        ),
-                        spacing="1",
-                    )
+                    ui.text("Exame", size="label"),
+                    ui.select(
+                        State.unique_exam_names,
+                        value=State.levey_jennings_exam,
+                        on_change=State.set_levey_jennings_exam,
+                        placeholder="Selecione...",
+                    ),
                 ),
                 rx.box(
-                    rx.vstack(
-                        rx.text("Período (dias)", class_name="text-sm font-medium text-gray-700"),
-                        rx.select(
-                            ["7", "15", "30", "60", "90"],
-                            value=State.levey_jennings_period,
-                            on_change=State.set_levey_jennings_period,
-                            class_name="w-full"
-                        ),
-                        spacing="1",
-                    )
+                    ui.text("Período", size="label"),
+                    ui.select(
+                        ["7", "15", "30", "60", "90"],
+                        value=State.levey_jennings_period,
+                        on_change=State.set_levey_jennings_period,
+                    ),
                 ),
                 spacing="4",
+                align="end",
+                justify="center",
+                width="100%"
             ),
-            class_name="bg-white border border-gray-200 rounded-xl p-4 w-full"
+            class_name="mb-6 max-w-2xl mx-auto"
         ),
         
-        # Gráfico (representação visual simplificada)
+        # Chart Area
         rx.cond(
             State.levey_jennings_data.length() > 0,
-            rx.box(
+            ui.card(
                 rx.vstack(
-                    rx.text("📊 Gráfico de Controle", class_name="font-bold text-[#1B5E20]"),
-                    
-                    # Legenda
                     rx.hstack(
-                        rx.hstack(
-                            rx.box(class_name="w-3 h-3 bg-green-500 rounded"),
-                            rx.text("±1 DP", class_name="text-xs"),
-                            spacing="1",
-                        ),
-                        rx.hstack(
-                            rx.box(class_name="w-3 h-3 bg-amber-500 rounded"),
-                            rx.text("±2 DP", class_name="text-xs"),
-                            spacing="1",
-                        ),
-                        rx.hstack(
-                            rx.box(class_name="w-3 h-3 bg-red-500 rounded"),
-                            rx.text("±3 DP", class_name="text-xs"),
-                            spacing="1",
-                        ),
-                        spacing="4",
+                        rx.badge("±1 DP", color_scheme="green", variant="solid"),
+                        rx.badge("±2 DP", color_scheme="amber", variant="solid"),
+                        rx.badge("±3 DP", color_scheme="red", variant="solid"),
+                        spacing="2",
+                        justify="end",
+                        width="100%"
                     ),
                     
-                    # Área do gráfico representativa
+                    # Mock Chart Visualization
                     rx.box(
                         rx.vstack(
-                            # Limites superiores
-                            rx.box(class_name="w-full h-[1px] bg-red-300"),
-                            rx.box(class_name="w-full h-[1px] bg-amber-300 mt-4"),
-                            rx.box(class_name="w-full h-[1px] bg-green-300 mt-4"),
-                            # Linha média
-                            rx.box(class_name="w-full h-[2px] bg-[#1B5E20] mt-4"),
-                            # Limites inferiores
-                            rx.box(class_name="w-full h-[1px] bg-green-300 mt-4"),
-                            rx.box(class_name="w-full h-[1px] bg-amber-300 mt-4"),
-                            rx.box(class_name="w-full h-[1px] bg-red-300 mt-4"),
+                            rx.box(class_name="w-full h-8 bg-red-50 border-b border-red-200"),
+                            rx.box(class_name="w-full h-8 bg-amber-50 border-b border-amber-200"),
+                            rx.box(class_name="w-full h-8 bg-green-50 border-b border-green-200"),
+                            rx.box(class_name="w-full h-2 bg-green-200"), # Target
+                            rx.box(class_name="w-full h-8 bg-green-50 border-t border-green-200"),
+                            rx.box(class_name="w-full h-8 bg-amber-50 border-t border-amber-200"),
+                            rx.box(class_name="w-full h-8 bg-red-50 border-t border-red-200"),
                             
-                            # Pontos de dados
                             rx.hstack(
                                 rx.foreach(
                                     State.levey_jennings_data,
                                     lambda d: rx.tooltip(
                                         rx.box(
-                                            class_name="w-2 h-2 bg-blue-500 rounded-full"
+                                            class_name="w-3 h-3 rounded-full bg-blue-600 border-2 border-white shadow-sm hover:scale-150 transition-transform cursor-pointer"
                                         ),
-                                        content=d["date"].to_string() + ": " + d["value"].to_string()
+                                        content=f"{d['date']}: {d['value']}"
                                     )
                                 ),
-                                spacing="2",
                                 justify="center",
-                                class_name="absolute inset-x-0 top-1/2 transform -translate-y-1/2"
+                                align="center",
+                                class_name="absolute inset-0 w-full h-full"
                             ),
-                            
                             position="relative",
-                            class_name="h-[200px]"
+                            class_name="w-full border border-gray-200 rounded-lg overflow-hidden mt-4"
                         ),
-                        class_name="bg-gray-50 rounded-lg p-4 w-full"
+                        class_name="w-full p-4"
                     ),
                     
-                    # Tabela de dados
-                    rx.box(
-                        rx.table.root(
-                            rx.table.header(
-                                rx.table.row(
-                                    rx.table.column_header_cell("Data", class_name="bg-[#1B5E20] text-white"),
-                                    rx.table.column_header_cell("Valor", class_name="bg-[#1B5E20] text-white"),
-                                    rx.table.column_header_cell("Alvo", class_name="bg-[#1B5E20] text-white"),
-                                    rx.table.column_header_cell("CV%", class_name="bg-[#1B5E20] text-white"),
-                                )
-                            ),
-                            rx.table.body(
-                                rx.foreach(
-                                    State.levey_jennings_data,
-                                    lambda d: rx.table.row(
-                                        rx.table.cell(d["date"]),
-                                        rx.table.cell(d["value"]),
-                                        rx.table.cell(d["target"]),
-                                        rx.table.cell(
-                                            rx.text(
-                                                d["cv"].to_string() + "%",
-                                                class_name="text-gray-700 font-bold"
-                                            )
-                                        ),
-                                    )
-                                )
-                            ),
-                            width="100%",
+                    # Data Table
+                    rx.table.root(
+                        rx.table.header(
+                            rx.table.row(
+                                rx.table.column_header_cell("Data"),
+                                rx.table.column_header_cell("Valor"),
+                                rx.table.column_header_cell("Target"),
+                                rx.table.column_header_cell("CV%"),
+                            )
                         ),
-                        class_name="w-full overflow-x-auto mt-4"
-                    ),
-                    
-                    spacing="3",
-                    width="100%",
+                        rx.table.body(
+                            rx.foreach(
+                                State.levey_jennings_data,
+                                lambda d: rx.table.row(
+                                    rx.table.cell(d["date"]),
+                                    rx.table.cell(d["value"]),
+                                    rx.table.cell(d["target"]),
+                                    rx.table.cell(d["cv"].to_string() + "%", class_name="font-bold"),
+                                )
+                            )
+                        ),
+                        class_name="mt-6 w-full"
+                    )
                 ),
-                class_name="bg-white border border-gray-200 rounded-xl p-6 w-full"
             ),
-            rx.box(
-                rx.text("Selecione um exame para visualizar o gráfico Levey-Jennings", class_name="text-gray-400 text-center py-8"),
-                class_name="bg-white border border-gray-200 rounded-xl p-6 w-full"
+            rx.center(
+                rx.vstack(
+                    rx.text("📊", font_size="3rem"),
+                    ui.text("Selecione um exame para visualizar o gráfico", color="gray"),
+                    spacing="2",
+                    align="center"
+                ),
+                class_name="bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 p-12 w-full"
             )
         ),
         
-        spacing="4",
-        width="100%",
+        width="100%"
     )
-
 
 def importar_tab() -> rx.Component:
     """Aba de Importação de Planilhas"""
-    excel_svg = """
-        <svg viewBox="0 0 80 100" width="80" height="100">
-            <rect x="10" y="5" width="60" height="85" rx="4" fill="#FFFFFF" stroke="#1B5E20" stroke-width="2"/>
-            <path d="M55 5 L55 20 L70 20" fill="#E8F5E9" stroke="#1B5E20" stroke-width="2"/>
-            <rect x="20" y="35" width="40" height="30" rx="3" fill="#1B5E20"/>
-            <text x="28" y="56" fill="white" font-size="16" font-weight="bold">XLS</text>
-            <line x1="25" y1="75" x2="55" y2="75" stroke="#4CAF50" stroke-width="2"/>
-            <line x1="25" y1="82" x2="45" y2="82" stroke="#4CAF50" stroke-width="2"/>
-        </svg>
-    """
-    
     return rx.vstack(
-        # Título
-        rx.hstack(
-            rx.text("📥", class_name="text-2xl"),
-            rx.text("Importação Inteligente de Planilhas", class_name="text-xl font-bold text-[#1B5E20]"),
-            spacing="2",
-            align="center",
+        ui.page_header(
+            "Importação Inteligente",
+            "Migre dados de planilhas Excel (xlsx/xls) automaticamente"
         ),
         
-        rx.text(
-            "Importe sua planilha antiga (como 'pro in 5 otavio.xlsx') e traga os dados para o sistema automaticamente.",
-            class_name="text-gray-500 text-sm"
-        ),
-        
-        # Upload area
-        rx.box(
-            rx.upload(
-                rx.vstack(
-                    rx.cond(
-                        State.excel_file_name != "",
-                        rx.vstack(
-                            rx.text("✅", class_name="text-4xl text-green-600"),
-                            rx.text("Planilha Carregada", class_name="text-[#1B5E20] font-bold text-lg"),
-                            rx.text(State.excel_file_name, class_name="text-green-600 text-sm truncate max-w-[200px]"),
-                            spacing="2",
-                            align="center",
+        ui.card(
+            rx.vstack(
+                rx.upload(
+                    rx.vstack(
+                        rx.cond(
+                            State.excel_file_name != "",
+                            rx.vstack(
+                                rx.icon("check", size=48, color="green"),
+                                ui.heading("Arquivo Carregado!", level=3, color="green"),
+                                ui.text(State.excel_file_name, size="small"),
+                                spacing="2",
+                                align="center"
+                            ),
+                            rx.vstack(
+                                rx.icon("file-spreadsheet", size=48, class_name="opacity-50"),
+                                ui.text("Arraste sua planilha aqui", font_weight="600"),
+                                ui.text("Suporta .xlsx e .xls", size="small"),
+                                class_name="group-hover:scale-105 transition-transform",
+                                spacing="2",
+                                align="center"
+                            )
                         ),
-                        rx.vstack(
-                            rx.html(excel_svg),
-                            rx.text("Planilha Excel", class_name="text-[#1B5E20] font-bold text-lg mt-2"),
-                            rx.text("Arraste ou clique para enviar .xlsx/.xls", class_name="text-gray-500 text-sm"),
-                            spacing="1",
-                            align="center",
-                        ),
+                        justify="center",
+                        align="center",
+                        class_name="h-full w-full"
                     ),
-                    justify="center",
-                    align="center",
-                    class_name="w-full h-full min-h-[200px] py-8"
+                    id="excel_upload",
+                    accept={
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
+                        "application/vnd.ms-excel": [".xls"]
+                    },
+                    max_files=1,
+                    on_drop=State.handle_excel_upload(rx.upload_files(upload_id="excel_upload")),
+                    class_name="w-full h-64 border-2 border-dashed border-gray-300 rounded-2xl bg-gray-50 hover:bg-green-50 hover:border-green-300 transition-all cursor-pointer p-8 relative"
                 ),
-                id="excel_upload",
-                accept={
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
-                    "application/vnd.ms-excel": [".xls"]
-                },
-                max_files=1,
-                on_drop=State.handle_excel_upload(rx.upload_files(upload_id="excel_upload")),
-                class_name="w-full h-full cursor-pointer"
-            ),
-            class_name="border-2 border-dashed border-[#4CAF50] rounded-2xl hover:border-[#1B5E20] hover:bg-green-50/30 transition-all max-w-xl mx-auto"
-        ),
-        
-        # Botões de ação
-        rx.hstack(
-            rx.button(
+                
+                # Action Buttons
+                rx.hstack(
+                    ui.button(
+                        "Analisar Dados",
+                        "search",
+                        on_click=State.analyze_excel,
+                        disabled=~State.has_excel_file | State.is_analyzing_excel,
+                        variant="ghost",
+                        is_loading=State.is_analyzing_excel
+                    ),
+                    ui.button(
+                        "Importar para o Sistema",
+                        "upload",
+                        on_click=State.import_excel_to_qc,
+                        disabled=~State.excel_analyzed | State.is_analyzing_excel,
+                        variant="primary"
+                    ),
+                    spacing="4",
+                    class_name="mt-6 justify-center w-full"
+                ),
+
+                # Mensagens Feedback
                 rx.cond(
-                    State.is_analyzing_excel,
-                    rx.hstack(rx.spinner(size="1"), rx.text("Analisando..."), spacing="2"),
-                    rx.hstack(rx.text("🔍"), rx.text("Analisar Planilha"), spacing="2"),
+                    State.excel_success_message != "",
+                    rx.callout(
+                        State.excel_success_message,
+                        icon="circle-check",
+                        color_scheme="green",
+                        class_name="mt-4 max-w-2xl mx-auto"
+                    )
                 ),
-                on_click=State.analyze_excel,
-                disabled=~State.has_excel_file | State.is_analyzing_excel,
-                class_name="bg-white border-2 border-[#1B5E20] text-[#1B5E20] px-6 py-2.5 rounded-lg font-semibold hover:bg-green-50 transition-all disabled:opacity-50"
             ),
-            rx.button(
-                rx.hstack(rx.text("📥"), rx.text("Importar para CQ"), spacing="2"),
-                on_click=State.import_excel_to_qc,
-                disabled=~State.excel_analyzed | State.is_analyzing_excel,
-                class_name="bg-[#1B5E20] text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-[#2E7D32] transition-all disabled:opacity-50"
-            ),
-            spacing="4",
-            justify="center",
+            class_name="max-w-2xl mx-auto w-full"
         ),
         
-        # Mensagens
-        rx.cond(
-            State.excel_success_message != "",
-            rx.box(
-                rx.text(f"✅ {State.excel_success_message}", class_name="text-green-700"),
-                class_name="bg-green-50 border border-green-200 rounded-lg p-3 w-full max-w-xl mx-auto"
-            ),
-        ),
-        rx.cond(
-            State.excel_error_message != "",
-            rx.box(
-                rx.text(f"❌ {State.excel_error_message}", class_name="text-red-700"),
-                class_name="bg-red-50 border border-red-200 rounded-lg p-3 w-full max-w-xl mx-auto"
-            ),
-        ),
-        
-        # Preview dos dados
+        # Preview
         rx.cond(
             State.excel_analyzed,
-            rx.box(
-                rx.vstack(
-                    rx.hstack(
-                        rx.text("👁️", class_name="text-xl"),
-                        rx.text("Preview da Planilha", class_name="font-bold text-[#1B5E20]"),
-                        rx.spacer(),
-                        rx.text(f"{State.excel_total_rows} linhas × {State.excel_total_columns} colunas", class_name="text-gray-500 text-sm"),
-                        width="100%",
-                    ),
-                    rx.cond(
-                        State.excel_preview.length() > 0,
-                        rx.box(
-                            rx.table.root(
-                                rx.table.header(
-                                    rx.table.row(
-                                        rx.foreach(
-                                            State.excel_headers,
-                                            lambda header: rx.table.column_header_cell(
-                                                header,
-                                                class_name="bg-[#1B5E20] text-white font-semibold px-3 py-2 text-xs"
-                                            )
-                                        )
-                                    )
-                                ),
-                                rx.table.body(
-                                    rx.foreach(
-                                        State.excel_preview,
-                                        lambda row: rx.table.row(
-                                            rx.foreach(
-                                                row,
-                                                lambda cell: rx.table.cell(
-                                                    cell,
-                                                    class_name="px-3 py-2 border-b border-gray-100 text-xs"
-                                                )
-                                            )
-                                        )
-                                    )
-                                ),
-                                width="100%",
-                            ),
-                            class_name="w-full overflow-x-auto"
+            ui.card(
+                ui.heading("Pré-visualização dos Dados", level=3, class_name="mb-4"),
+                rx.scroll_area(
+                    rx.table.root(
+                        rx.table.header(
+                            rx.table.row(
+                                rx.foreach(
+                                    State.excel_headers,
+                                    lambda h: rx.table.column_header_cell(h)
+                                )
+                            )
                         ),
-                        rx.text("Nenhum dado disponível", class_name="text-gray-400 py-4")
+                        rx.table.body(
+                            rx.foreach(
+                                State.excel_preview,
+                                lambda row: rx.table.row(
+                                    rx.foreach(row, lambda cell: rx.table.cell(cell))
+                                )
+                            )
+                        ),
+                        width="100%"
                     ),
-                    spacing="3",
-                    width="100%",
+                    type="always",
+                    scrollbars="both",
+                    style={"height": 400}
                 ),
-                class_name="bg-white border border-gray-200 rounded-xl p-4 w-full"
-            ),
+                class_name="mt-8"
+            )
         ),
         
-        spacing="4",
         width="100%",
         align="center",
+        padding_bottom="2rem"
     )
-
 
 def proin_page() -> rx.Component:
     """Página principal do ProIn QC"""
     
     return rx.box(
         rx.vstack(
-            # Header
+            # Premium Header
+            rx.box(
+                ui.animated_heading("Controle de Qualidade", level=1),
+                class_name="py-12 w-full flex justify-center"
+            ),
+            
+            # Navigation Tabs
             rx.box(
                 rx.hstack(
-                    rx.text("🔬", class_name="text-sm"),
-                    rx.text(
-                        "ProIn QC - Sistema de Controle de Qualidade",
-                        class_name="text-[#1B5E20] text-sm font-medium"
-                    ),
-                    spacing="2",
-                    align="center",
-                ),
-                class_name="bg-white border border-gray-200 px-4 py-2 rounded-full shadow-sm"
-            ),
-            
-            # Título
-            rx.text(
-                "Controle de Qualidade",
-                class_name="text-[#1B5E20] text-4xl font-bold mt-4"
-            ),
-            
-            rx.text(
-                "Sistema completo para gestão de qualidade laboratorial",
-                class_name="text-gray-600 text-lg"
-            ),
-            
-            # Abas de navegação
-            rx.box(
-                rx.hstack(
-                    tab_button("Dashboard", "📊", "dashboard"),
-                    tab_button("Registro CQ", "📝", "registro"),
-                    tab_button("Reagentes", "🧪", "reagentes"),
-                    tab_button("Relatórios", "📈", "relatorios"),
-                    tab_button("Importar", "📥", "importar"),
+                    tab_button("Dashboard", "layout-dashboard", "dashboard"),
+                    tab_button("Registro CQ", "file-pen-line", "registro"),
+                    tab_button("Gestão de Reagentes", "flask-conical", "reagentes"),
+                    tab_button("Relatórios", "chart-line", "relatorios"),
+                    tab_button("Importar", "upload", "importar"),
                     spacing="2",
                     wrap="wrap",
                     justify="center",
+                    class_name="p-1 bg-gray-100/50 rounded-full inline-flex border border-gray-200/50 backdrop-blur-sm"
                 ),
-                class_name="w-full mt-6"
+                class_name="w-full mb-8 sticky top-0 z-10 py-4 flex justify-center"
             ),
             
-            # Conteúdo da aba atual
+            # Main Content Area
             rx.box(
                 rx.match(
                     State.proin_current_tab,
@@ -1293,13 +869,12 @@ def proin_page() -> rx.Component:
                     ("importar", importar_tab()),
                     dashboard_tab(),
                 ),
-                class_name="w-full mt-6"
+                class_name="w-full min-h-[500px] animate-in fade-in slide-in-from-bottom-4 duration-500"
             ),
             
-            spacing="0",
-            align="center",
             width="100%",
-            class_name="py-6"
+            max_width="1280px",
+            class_name="mx-auto px-6 pb-12"
         ),
-        width="100%",
+        class_name="flex-1 bg-gray-50/30 w-full"
     )

@@ -5,26 +5,27 @@ Design moderno com upload aprimorado
 import reflex as rx
 from ..state import State
 from ..components.file_upload import file_upload_enhanced, upload_progress_indicator, file_type_badge
+from ..components import ui
+from ..styles import Color
 
 
 def feature_card(icon: str, title: str, description: str) -> rx.Component:
     """Card de funcionalidade"""
-    return rx.box(
+    return ui.card(
         rx.hstack(
             rx.box(
-                rx.text(icon, class_name="text-xl"),
-                class_name="w-10 h-10 flex items-center justify-center bg-green-100 rounded-lg"
+                rx.icon(icon, size=24, color=Color.PRIMARY),
+                class_name="p-3 rounded-xl bg-green-50"
             ),
             rx.vstack(
-                rx.text(title, class_name="text-[#1B5E20] font-semibold text-sm"),
-                rx.text(description, class_name="text-gray-500 text-xs"),
+                ui.text(title, size="label", color=Color.DEEP),
+                ui.text(description, size="small"),
                 spacing="0",
                 align="start",
             ),
             spacing="3",
             align="center",
         ),
-        class_name="bg-white border border-gray-100 rounded-xl p-3 hover:shadow-md transition-all"
     )
 
 
@@ -81,45 +82,24 @@ def conversor_page() -> rx.Component:
     
     return rx.box(
         rx.vstack(
-            # Badge de certificação
+            # Animated Header
             rx.box(
-                rx.hstack(
-                    rx.text("💎", class_name="text-sm"),
-                    rx.text(
-                        "Certificação PNCQ Diamante",
-                        class_name="text-[#1B5E20] text-sm font-medium"
-                    ),
-                    spacing="2",
-                    align="center",
-                ),
-                class_name="bg-white border border-gray-200 px-4 py-2 rounded-full shadow-sm"
-            ),
-            
-            # Título principal
-            rx.vstack(
-                rx.text(
-                    "Conversor PDF → CSV",
-                    class_name="text-[#1B5E20] text-4xl md:text-5xl font-bold mt-6"
-                ),
-                rx.text(
-                    "Transforme seus relatórios em dados estruturados",
-                    class_name="text-gray-500 text-lg mt-2"
-                ),
-                spacing="0",
-                align="center",
+                ui.animated_heading("Conversor PDF → CSV", level=1),
+                class_name="py-12 w-full flex justify-center"
             ),
             
             # Cards de funcionalidades
             rx.grid(
-                feature_card("📄", "Extração Inteligente", "Extrai dados automaticamente dos PDFs"),
-                feature_card("🔄", "Padronização", "Normaliza nomes de exames e pacientes"),
-                feature_card("📊", "CSV Estruturado", "Gera arquivos prontos para análise"),
-                feature_card("⚡", "Processamento Rápido", "Conversão em segundos"),
+                feature_card("file-text", "Extração Inteligente", "Extrai dados automaticamente dos PDFs"),
+                feature_card("refresh-cw", "Padronização", "Normaliza nomes de exames e pacientes"),
+                feature_card("bar-chart-2", "CSV Estruturado", "Gera arquivos prontos para análise"),
+                feature_card("zap", "Processamento Rápido", "Conversão em segundos"),
                 columns="4",
                 spacing="4",
                 width="100%",
-                class_name="mt-8 max-w-4xl hidden md:grid"
+                class_name="max-w-4xl hidden md:grid"
             ),
+
             
             # Container principal de upload
             rx.box(

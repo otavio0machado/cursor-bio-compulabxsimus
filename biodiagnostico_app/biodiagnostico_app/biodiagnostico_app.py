@@ -4,10 +4,12 @@ Design oficial baseado na identidade visual do laboratório
 """
 import reflex as rx
 from .state import State
-from .components.sidebar import sidebar, mobile_nav
+from .components.navbar import navbar, mobile_nav
 from .pages.conversor import conversor_page
 from .pages.analise import analise_page
 from .pages.proin import proin_page
+from .pages.dashboard import dashboard_page
+
 
 
 def login_page() -> rx.Component:
@@ -253,42 +255,43 @@ def main_content() -> rx.Component:
     """Conteúdo principal baseado na página atual"""
     return rx.match(
         State.current_page,
+        ("dashboard", dashboard_page()),
         ("conversor", conversor_page()),
         ("analise", analise_page()),
         ("api", api_config_page()),
         ("proin", proin_page()),
-        conversor_page(),  # default
+        dashboard_page(),  # default
     )
 
 
 def authenticated_layout() -> rx.Component:
-    """Layout quando autenticado"""
+    """Layout com navbar no topo - Design Moderno"""
     return rx.box(
-        # Sidebar (desktop)
-        rx.box(
-            sidebar(),
-            class_name="hidden md:block"
-        ),
-        
-        # Conteúdo principal
-        rx.box(
-            rx.vstack(
-                # Navegação mobile
-                mobile_nav(),
-                
-                # Conteúdo da página
+        rx.vstack(
+            # Navbar no topo
+            navbar(),
+            
+            # Mobile nav (hamburger menu para telas pequenas)
+            mobile_nav(),
+            
+            # Conteúdo principal
+            rx.box(
                 main_content(),
-                
-                spacing="0",
                 width="100%",
-                padding_x="8",
-                padding_y="4",
+                max_width="1400px",
+                margin_x="auto",
+                padding_x=["1rem", "2rem", "3rem"],
+                padding_y="2rem",
             ),
-            class_name="md:ml-64 min-h-screen bg-[#F5F5F5]"
+            
+            spacing="0",
+            width="100%",
+            min_height="100vh",
+            bg="#F8FAFC",
         ),
-        
         class_name="font-sans"
     )
+
 
 
 def index() -> rx.Component:
@@ -305,6 +308,7 @@ app = rx.App(
     ),
     stylesheets=[
         "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap",
+        "/custom.css",
     ],
 )
 
