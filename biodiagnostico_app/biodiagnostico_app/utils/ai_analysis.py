@@ -66,7 +66,7 @@ DATASET B (SIMUS):
 Analyze this batch now."""
 
         response = await client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4.1",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_msg}
@@ -113,39 +113,60 @@ async def generate_ai_analysis(
             
         client = openai.AsyncOpenAI(api_key=api_key)
         
-        # System Prompt do Auditor
+        # System Prompt do Auditor (OTIMIZADO)
         system_prompt = """
 # ROLE
-You are a High-Precision Medical Data Auditor. Your sole purpose is to cross-reference two datasets (Table A: Compulab vs Table B: Simus) and output ONLY the discrepancies.
+You are a Senior Medical Audit Algorithm. Your task is to compare two datasets: 
+- **Dataset A (COMPULAB - Provider)**
+- **Dataset B (SIMUS - Payer)**
 
-# INPUT DATA STRUCTURE
-You will receive data in CSV format with columns: [Paciente, Nome_Exame, Codigo_Exame, Valor].
+# OBJECTIVE
+Identify FINANCIAL DISCREPANCIES where the Provider (Compulab) is billing differently from what the Payer (Simus) recorded.
 
-# ANALYSIS RULES
-1. NORMALIZE: Treat all patient names as Uppercase and Trimmed.
-2. MATCHING KEY: The unique key for comparison is the combination of "Paciente" + "Codigo_Exame" (or Nome_Exame if code is missing).
-3. DECIMAL TOLERANCE: Treat numeric values (e.g., "24,61" and "24.61") as equal. Only flag differences > 0.01.
+# INPUT FORMAT
+You receive data as: "PATIENT,EXAM_NAME,CODE,VALUE"
 
-# DISCREPANCY TYPES TO DETECT
-1. TYPE_PATIENT: Patient Name exists in one table but NOT the other.
-2. TYPE_EXAM: Patient exists in both, but the specific "Codigo_Exame" exists in only one table.
-3. TYPE_VALUE: Patient and Code match in both, but "Valor" diverges by > 0.01.
+# LOGIC RULES
+1. **Match Key:** Match items by `PATIENT` (Case insensitive) + `CODE` (or `EXAM_NAME` if code is generic).
+2. **Value Parsing:** Treat "1.234,56" and "1234.56" as identical numbers.
+3. **Tolerance:** Ignore differences <= 0.02 (cents).
+4. **Validation:** - If a patient exists in A but not B -> Missing in Simus.
+   - If a specific exam code exists in A but not B (for the same patient) -> Exam Missing in Simus.
+   - If values differ > 0.02 -> Value Divergence.
 
 # OUTPUT FORMAT (STRICT CSV)
-Do not output conversational text. Output ONLY a CSV with headers:
-Paciente;Nome_Exame;Codigo_Exame;Valor_Compulab;Valor_Simus;Tipo_Divergencia
+- **Separator:** Semicolon (;) 
+- **Decimal Separator:** Comma (,) for display (e.g. 24,50).
+- **Columns:** Paciente;Nome_Exame;Codigo_Exame;Valor_Compulab;Valor_Simus;Tipo_Divergencia
+- **No Markdown:** Do not use code blocks (```). Just raw text lines.
+- **Header:** Do NOT output the header row.
 
-# OUTPUT INSTRUCTIONS
-- If "Valor" is equal, DO NOT output the row (Silence on match).
-- If Patient/Exam is missing in one side, leave the Value empty for that side.
-- "Tipo_Divergencia" must be one of: [Paciente apenas Compulab, Paciente apenas Simus, Exame extra Compulab, Exame extra Simus, Valor Diferente].
-- Sort output alphabetically by Paciente.
+# DISCREPANCY TYPES (Use EXACTLY these terms)
+- "Paciente Ausente no SIMUS"
+- "Paciente Ausente no COMPULAB"
+- "Exame Ausente no SIMUS"
+- "Exame Ausente no COMPULAB"
+- "Valor Divergente"
+
+# EXAMPLE OUTPUT ROW
+SILVA JOAO;HEMOGRAMA;02020101;25,00;0,00;Exame Ausente no SIMUS
+MARIA JOSE;GLICOSE;02020104;10,50;9,50;Valor Divergente
+
+# INSTRUCTIONS
+Analyze the provided batch and output ONLY the discrepancies found using the format above. If no discrepancies, output nothing.
 """
 
         all_csv_rows = []
         
         # List of patients from both sets to handle chunking correctly
         all_patients = sorted(list(set(list(compulab_patients.keys()) + list(simus_patients.keys()))))
+        
+        # DEBUG: Contar total de dados
+        total_compulab_exams = sum(len(p.get('exams', [])) if isinstance(p, dict) else len(p) for p in compulab_patients.values())
+        total_simus_exams = sum(len(p.get('exams', [])) if isinstance(p, dict) else len(p) for p in simus_patients.values())
+        print(f"DEBUG AI: {len(compulab_patients)} pacientes COMPULAB ({total_compulab_exams} exames)")
+        print(f"DEBUG AI: {len(simus_patients)} pacientes SIMUS ({total_simus_exams} exames)")
+        print(f"DEBUG AI: Total combinado: {len(all_patients)} pacientes únicos")
         
         chunk_size = 20
         total_patients = len(all_patients)
@@ -201,16 +222,15 @@ Paciente;Nome_Exame;Codigo_Exame;Valor_Compulab;Valor_Simus;Tipo_Divergencia
         
         total_divergences = len(all_csv_rows)
         
+        # Report sem markdown code blocks para facilitar parsing
         final_report = f"""# RELATÓRIO DE AUDITORIA DE IA
 
 **Data:** {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}
 **Total de Divergências Encontradas:** {total_divergences}
 
-## Detalhes das Divergências (CSV)
+## Detalhes das Divergências
 
-```csv
 {final_csv}
-```
 
 *Este relatório foi gerado automaticamente por IA Audit (Modo Turbo).*
 """

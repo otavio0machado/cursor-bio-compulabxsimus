@@ -280,83 +280,175 @@ def divergences_table() -> rx.Component:
 
 
 def ai_analysis_section() -> rx.Component:
-    """Seção de análise por IA"""
+    """Seção de análise por IA - Design Premium"""
     return rx.box(
         rx.vstack(
-            rx.hstack(
-                rx.text("🤖", class_name="text-2xl"),
-                rx.text(
-                    "Análise por Inteligência Artificial",
-                    class_name="text-green-800 font-bold text-lg"
+            # Header Premium com Gradiente
+            rx.box(
+                rx.vstack(
+                    rx.hstack(
+                        rx.box(
+                            rx.text("🤖", class_name="text-3xl"),
+                            class_name="bg-white/20 p-3 rounded-xl backdrop-blur-sm"
+                        ),
+                        rx.vstack(
+                            rx.text(
+                                "Auditoria Inteligente",
+                                class_name="text-white font-bold text-xl tracking-tight"
+                            ),
+                            rx.text(
+                                "Análise automatizada por IA OpenAI",
+                                class_name="text-white/80 text-sm"
+                            ),
+                            spacing="0",
+                            align="start",
+                        ),
+                        spacing="4",
+                        align="center",
+                    ),
+                    width="100%",
                 ),
-                spacing="3",
-                align="center",
+                class_name="bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600 p-5 rounded-t-2xl"
             ),
-            rx.cond(
-                State.openai_api_key == "",
-                rx.box(
-                    rx.vstack(
-                        rx.text(
-                            "Configure sua API Key da OpenAI para usar esta funcionalidade",
-                            class_name="text-gray-600"
+            
+            # Corpo do Card
+            rx.box(
+                rx.vstack(
+                    # Features da IA
+                    rx.hstack(
+                        rx.box(
+                            rx.vstack(
+                                rx.text("⚡", class_name="text-2xl"),
+                                rx.text("Análise Paralela", class_name="text-xs font-medium text-gray-700"),
+                                spacing="1",
+                                align="center",
+                            ),
+                            class_name="bg-gray-50 p-3 rounded-xl flex-1 text-center"
                         ),
-                        rx.input(
-                            placeholder="Cole sua API Key da OpenAI aqui...",
-                            type="password",
-                            on_change=State.set_api_key,
-                            class_name="w-full"
+                        rx.box(
+                            rx.vstack(
+                                rx.text("🎯", class_name="text-2xl"),
+                                rx.text("Precisão 0.02", class_name="text-xs font-medium text-gray-700"),
+                                spacing="1",
+                                align="center",
+                            ),
+                            class_name="bg-gray-50 p-3 rounded-xl flex-1 text-center"
                         ),
-                        rx.link(
-                            rx.text("🔑 Obter API Key", class_name="text-lime-600 hover:underline"),
-                            href="https://platform.openai.com/api-keys",
-                            is_external=True,
+                        rx.box(
+                            rx.vstack(
+                                rx.text("📊", class_name="text-2xl"),
+                                rx.text("CSV + PDF", class_name="text-xs font-medium text-gray-700"),
+                                spacing="1",
+                                align="center",
+                            ),
+                            class_name="bg-gray-50 p-3 rounded-xl flex-1 text-center"
                         ),
                         spacing="3",
                         width="100%",
+                        class_name="mb-4"
                     ),
-                    class_name="bg-yellow-50 border border-yellow-200 rounded-lg p-4"
-                ),
-                rx.vstack(
-                    rx.text("✅ API Key configurada!", class_name="text-green-600"),
                     
-                    # Status de Carregamento (fora do botão para evitar Hook Error)
+                    # API Key Config ou Status
                     rx.cond(
-                        State.is_generating_ai,
+                        State.openai_api_key == "",
+                        rx.box(
+                            rx.vstack(
+                                rx.hstack(
+                                    rx.text("🔐", class_name="text-xl"),
+                                    rx.text(
+                                        "Configure sua API Key",
+                                        class_name="text-amber-800 font-semibold"
+                                    ),
+                                    spacing="2",
+                                ),
+                                rx.input(
+                                    placeholder="sk-... (Cole sua API Key da OpenAI)",
+                                    type="password",
+                                    on_change=State.set_api_key,
+                                    class_name="w-full bg-white border-amber-300 focus:border-amber-500 rounded-lg"
+                                ),
+                                rx.link(
+                                    rx.hstack(
+                                        rx.text("🔑"),
+                                        rx.text("Obter API Key grátis", class_name="text-sm"),
+                                        spacing="1",
+                                    ),
+                                    href="https://platform.openai.com/api-keys",
+                                    is_external=True,
+                                    class_name="text-amber-700 hover:text-amber-900 font-medium"
+                                ),
+                                spacing="3",
+                                width="100%",
+                            ),
+                            class_name="bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-xl p-4"
+                        ),
                         rx.vstack(
+                            # Status Conectado
                             rx.hstack(
-                                rx.spinner(size="1", color="lime"),
-                                rx.text(State.ai_loading_text, class_name="text-sm font-medium"),
+                                rx.box(
+                                    rx.text("✓", class_name="text-white text-xs font-bold"),
+                                    class_name="bg-green-500 w-5 h-5 rounded-full flex items-center justify-center"
+                                ),
+                                rx.text("API OpenAI conectada", class_name="text-green-700 font-medium text-sm"),
                                 spacing="2",
                             ),
-                            rx.progress(
-                                value=State.ai_loading_progress,
-                                max=100,
-                                class_name="w-full h-2 rounded-full",
-                                color_scheme="lime"
+                            
+                            # Progress Bar (quando carregando)
+                            rx.cond(
+                                State.is_generating_ai,
+                                rx.box(
+                                    rx.vstack(
+                                        rx.hstack(
+                                            rx.spinner(size="1", color="green"),
+                                            rx.text(State.ai_loading_text, class_name="text-sm font-medium text-gray-700"),
+                                            spacing="2",
+                                        ),
+                                        rx.progress(
+                                            value=State.ai_loading_progress,
+                                            max=100,
+                                            class_name="w-full h-2 rounded-full",
+                                            color_scheme="green"
+                                        ),
+                                        spacing="2",
+                                        width="100%"
+                                    ),
+                                    class_name="bg-green-50 p-3 rounded-lg w-full"
+                                ),
                             ),
-                            spacing="2",
-                            width="100%"
+                            
+                            # Botão Principal
+                            rx.button(
+                                rx.hstack(
+                                    rx.cond(
+                                        State.is_generating_ai,
+                                        rx.spinner(size="1", color="white"),
+                                        rx.text("🚀", class_name="text-lg"),
+                                    ),
+                                    rx.text("Iniciar Auditoria Inteligente"),
+                                    spacing="2",
+                                    align="center",
+                                ),
+                                on_click=State.generate_ai_analysis,
+                                disabled=State.is_generating_ai | ~State.has_analysis,
+                                class_name="bg-gradient-to-r from-emerald-500 to-green-600 text-white px-6 py-4 rounded-xl font-bold text-lg hover:from-emerald-600 hover:to-green-700 hover:shadow-xl transition-all w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                            ),
+                            spacing="4",
+                            width="100%",
                         ),
                     ),
-                    
-                    # Botão Principal
-                    rx.button(
-                        rx.hstack(
-                            rx.text("🤖"),
-                            rx.text("Gerar Análise por IA"),
-                            spacing="2",
-                        ),
-                        on_click=State.generate_ai_analysis,
-                        disabled=State.is_generating_ai | ~State.has_analysis,
-                        class_name="bg-gradient-to-r from-lime-500 to-green-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all w-full"
-                    ),
-                    spacing="3",
+                    spacing="4",
                     width="100%",
                 ),
+                class_name="bg-white p-5 rounded-b-2xl border-x border-b border-gray-100"
             ),
-            rx.cond(
-                State.ai_analysis != "",
-                rx.vstack(
+            spacing="0",
+            width="100%",
+        ),
+        
+        # Results Section
+        rx.cond(
+            State.ai_analysis != "",
+            rx.vstack(
                 rx.vstack(
                     rx.cond(
                         State.ai_analysis_data,
@@ -392,31 +484,55 @@ def ai_analysis_section() -> rx.Component:
                             class_name="bg-white rounded-xl p-6 border border-green-100 mt-4 prose prose-green max-w-none shadow-sm"
                         )
                     ),
-                    rx.cond(
-                         State.analysis_pdf != "",
-                         rx.link(
+                    # Botões de Download (Horizontal)
+                    rx.hstack(
+                        # CSV Download
+                        rx.cond(
+                            State.ai_analysis_csv != "",
+                            rx.link(
+                                rx.button(
+                                    rx.hstack(
+                                        rx.text("📊"),
+                                        rx.text("Baixar CSV"),
+                                        spacing="2",
+                                    ),
+                                    class_name="bg-blue-600 text-white px-4 py-3 rounded-xl font-semibold hover:bg-blue-700 shadow-md transition-all"
+                                ),
+                                href=State.ai_analysis_csv,
+                                download="Auditoria_IA.csv",
+                                is_external=False,
+                            ),
+                        ),
+                        # PDF Download
+                        rx.cond(
+                            State.analysis_pdf != "",
+                            rx.link(
+                                rx.button(
+                                    rx.hstack(
+                                        rx.text("📄"),
+                                        rx.text("Baixar PDF"),
+                                        spacing="2",
+                                    ),
+                                    class_name="bg-green-600 text-white px-4 py-3 rounded-xl font-semibold hover:bg-green-700 shadow-md transition-all"
+                                ),
+                                href=State.analysis_pdf,
+                                download="Relatorio_Auditoria_IA.pdf",
+                                is_external=False,
+                            ),
                             rx.button(
                                 rx.hstack(
-                                    rx.text("📄"),
-                                    rx.text("Baixar Relatório Completo (PDF)"),
+                                    rx.text("⚙️"),
+                                    rx.text("Gerar PDF"),
                                     spacing="2",
                                 ),
-                                class_name="bg-green-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-green-700 shadow-md hover:shadow-lg transition-all w-full mt-4"
-                            ),
-                            href=State.analysis_pdf,
-                            download="Relatorio_Auditoria_IA.pdf",
-                            is_external=False,
-                            class_name="w-full"
-                         ),
-                         rx.button(
-                            rx.hstack(
-                                rx.text("⚙️"),
-                                rx.text("Gerar PDF para Download"),
-                                spacing="2",
-                            ),
-                            on_click=State.generate_pdf_report,
-                            class_name="bg-white text-green-700 border-2 border-green-600 px-6 py-3 rounded-xl font-semibold hover:bg-green-50 transition-all w-full mt-4"
-                         )
+                                on_click=State.generate_pdf_report,
+                                class_name="bg-white text-green-700 border-2 border-green-600 px-4 py-3 rounded-xl font-semibold hover:bg-green-50 transition-all"
+                            )
+                        ),
+                        spacing="4",
+                        width="100%",
+                        justify="center",
+                        class_name="mt-4",
                     ),
                     width="100%",
                 ),
@@ -424,6 +540,8 @@ def ai_analysis_section() -> rx.Component:
             spacing="4",
             width="100%",
         ),
-        class_name="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-2xl mt-6"
+        spacing="6",
+        width="100%",
+        class_name="shadow-xl rounded-2xl overflow-hidden bg-white"
     )
 

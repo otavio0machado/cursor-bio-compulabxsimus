@@ -254,34 +254,42 @@ def generate_analysis_pdf(
     # Análise por IA
     if ai_analysis:
         story.append(Paragraph("Análise por Inteligência Artificial", heading_style))
-        
-        # Tentar extrair CSV da resposta MD
+            
+        # Tentar extrair CSV da resposta (Plain CSV Format - sem code blocks)
         try:
-            import re
             import csv
             from io import StringIO
             
-            # Encontrar bloco de codigo csv
-            # Procura por ```csv ... ``` ou apenas o conteúdo se não tiver blocos
-            csv_pattern = r"```csv\s*(.*?)\s*```"
-            match = re.search(csv_pattern, ai_analysis, re.DOTALL)
+            # Encontrar linhas com ; (formato CSV)
+            lines = ai_analysis.split('\n')
+            csv_lines = []
+            text_intro = []
+            in_csv_section = False
             
-            csv_content = ""
-            text_before = ai_analysis
-            
-            if match:
-                csv_content = match.group(1)
-                # Texto antes do CSV (intro)
-                text_before = ai_analysis.split("```csv")[0].strip()
+            for line in lines:
+                stripped = line.strip()
+                if ';' in stripped and not stripped.startswith('#') and not stripped.startswith('*'):
+                    in_csv_section = True
+                    csv_lines.append(stripped)
+                elif not in_csv_section:
+                    text_intro.append(stripped)
             
             # Se tem texto introdutório, adicionar
-            if text_before:
-                # Limpar markdown básico
-                clean_text = text_before.replace('#', '').replace('*', '')
-                story.append(Paragraph(clean_text, styles['Normal']))
+            intro_text = ' '.join(text_intro).replace('#', '').replace('*', '').strip()
+            if intro_text and len(intro_text) > 10:
+                story.append(Paragraph(intro_text[:500], styles['Normal']))  # Limitar tamanho
                 story.append(Spacer(1, 0.5*cm))
                 
-            if csv_content:
+            if csv_lines:
+                # Detectar se tem header
+                first_line = csv_lines[0]
+                if 'Paciente' in first_line and 'Nome_Exame' in first_line:
+                    csv_content = '\n'.join(csv_lines)
+                else:
+                    # Adicionar header manualmente
+                    header = "Paciente;Nome_Exame;Codigo_Exame;Valor_Compulab;Valor_Simus;Tipo_Divergencia"
+                    csv_content = header + '\n' + '\n'.join(csv_lines)
+                
                 # Parsear CSV
                 f = StringIO(csv_content)
                 reader = csv.reader(f, delimiter=';')

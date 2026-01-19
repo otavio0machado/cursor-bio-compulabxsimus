@@ -148,6 +148,7 @@ class State(rx.State):
     
     # AI Results Data (Structured)
     ai_analysis_data: List[Dict[str, Any]] = []
+    ai_analysis_csv: str = ""  # CSV data URI para download
     
     # CSVs gerados
     compulab_csv: str = ""
@@ -1371,19 +1372,39 @@ class State(rx.State):
                 self.ai_analysis = final_analysis
                 self.success_message = "✅ Análise por IA gerada!"
                 
-                # Parsear para tabela na UI
+                # Parsear para tabela na UI (Plain CSV Format - sem code blocks)
                 try:
-                    import re
                     import csv
                     from io import StringIO
                     
-                    csv_pattern = r"```csv\s*(.*?)\s*```"
-                    match = re.search(csv_pattern, final_analysis, re.DOTALL)
-                    if match:
-                        csv_content = match.group(1)
+                    # Encontrar seção de divergências (linhas com ;)
+                    lines = final_analysis.split('\n')
+                    csv_lines = []
+                    for line in lines:
+                        line = line.strip()
+                        if ';' in line and not line.startswith('#') and not line.startswith('*'):
+                            csv_lines.append(line)
+                    
+                    if csv_lines:
+                        # Detectar se tem header
+                        first_line = csv_lines[0]
+                        if 'Paciente' in first_line and 'Nome_Exame' in first_line:
+                            csv_content = '\n'.join(csv_lines)
+                        else:
+                            # Adicionar header manualmente
+                            header = "Paciente;Nome_Exame;Codigo_Exame;Valor_Compulab;Valor_Simus;Tipo_Divergencia"
+                            csv_content = header + '\n' + '\n'.join(csv_lines)
+                        
                         f = StringIO(csv_content)
                         reader = csv.DictReader(f, delimiter=';')
                         self.ai_analysis_data = list(reader)
+                        
+                        # Gerar data URI para download CSV
+                        import base64
+                        csv_bytes = csv_content.encode('utf-8-sig')
+                        csv_base64 = base64.b64encode(csv_bytes).decode('utf-8')
+                        self.ai_analysis_csv = f"data:text/csv;charset=utf-8-sig;base64,{csv_base64}"
+                        
                 except Exception as e:
                     print(f"Erro ao parsear CSV para UI: {e}")
                 
