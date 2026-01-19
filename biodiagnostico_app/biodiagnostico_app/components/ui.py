@@ -91,25 +91,20 @@ def text(content: str, size: str = "body", color: str = None, **props) -> rx.Com
 
 def card(*children, **props) -> rx.Component:
     """Container card padrão com sombra e bordas arredondadas"""
-    base_style = {
-        "bg": Color.SURFACE,
-        "border": f"1px solid {Color.BORDER}",
-        "border_radius": Design.RADIUS_XL,
-        "padding": "1.5rem",
-        "box_shadow": Design.SHADOW_DEFAULT,
-        "transition": "all 0.3s ease",
-        "_hover": {"box_shadow": Design.SHADOW_MD, "transform": "translateY(-2px)"},
-    }
+    from ..styles import CARD_STYLE
+
+    base_style = CARD_STYLE.copy()
+    base_style["_hover"] = {"box_shadow": Design.SHADOW_MD, "transform": "translateY(-2px)"}
 
     # Merge styles handling duplicates carefully (props take precedence)
     final_style = base_style.copy()
     final_style.update(props)
-    
+
     return rx.box(*children, **final_style)
 
 def button(
-    label: str, 
-    icon: str = None, 
+    label: str,
+    icon: str = None,
     variant: str = "primary",  # primary, secondary, ghost, danger
     on_click = None,
     is_loading: bool = False,
@@ -117,36 +112,20 @@ def button(
     **props
 ) -> rx.Component:
     """Botão unificado com variantes"""
-    
-    # Base styles
+    from ..styles import BUTTON_PRIMARY_STYLE, BUTTON_SECONDARY_STYLE
+
+    # Base styles with display and gap
     base_style = {
-        "padding_y": "0.75rem",
-        "padding_x": "1.5rem",
-        "border_radius": Design.RADIUS_LG,
-        "font_weight": "600",
-        "cursor": "pointer",
         "display": "flex",
         "align_items": "center",
         "justify_content": "center",
-        "transition": "all 0.2s ease",
         "gap": "0.5rem",
     }
 
-    # Variant styles
+    # Variant styles using new style constants
     variants = {
-        "primary": {
-            "bg": Color.PRIMARY,
-            "color": "white",
-            "border": "1px solid transparent",
-            "box_shadow": Design.SHADOW_SM,
-            "_hover": {"bg": Color.PRIMARY_HOVER, "box_shadow": Design.SHADOW_MD, "transform": "translateY(-1px)"},
-        },
-        "secondary": {
-            "bg": "transparent",
-            "color": Color.DEEP,
-            "border": f"1px solid {Color.BORDER}",
-            "_hover": {"bg": Color.PRIMARY_LIGHT, "border_color": Color.PRIMARY},
-        },
+        "primary": {**BUTTON_PRIMARY_STYLE},
+        "secondary": {**BUTTON_SECONDARY_STYLE},
         "ghost": {
             "bg": "transparent",
             "color": Color.TEXT_SECONDARY,
@@ -213,45 +192,39 @@ def form_field(label: str, control: rx.Component, required: bool = False, error:
     )
 
 def input(placeholder: str = "", **props) -> rx.Component:
-    """Input text padronizado"""
-    base_style = {
-        "placeholder": placeholder,
-        "color": Color.TEXT_PRIMARY,
-        "height": "3rem",
-        "border": f"1px solid {Color.BORDER}",
-        "border_radius": Design.RADIUS_LG,
-        "padding": "0.75rem 1rem",
-        "bg": Color.SURFACE,
-        "width": "100%",
-        "_placeholder": {"color": Color.TEXT_PRIMARY, "opacity": 1},
-        "_focus": {
-            "border_color": Color.PRIMARY,
-            "outline": "none",
-            "box_shadow": f"0 0 0 3px {Color.PRIMARY}20",
-        },
-    }
+    """Input text padronizado com estilos acessíveis (min 44px)"""
+    from ..styles import INPUT_STYLE
+
+    base_style = INPUT_STYLE.copy()
+    base_style["placeholder"] = placeholder
     base_style.update(props)
-    
+
     return rx.input(**base_style)
 
 def select(items, placeholder: str = "Selecione...", value=None, on_change=None, **props) -> rx.Component:
-    """Select padronizado - Native Implementation"""
-    # Estilo base
+    """Select padronizado com estilos acessíveis (min 44px)"""
+    # Estilo base usando os novos padrões
     base_style = {
         "border": f"1px solid {Color.BORDER}",
         "border_radius": Design.RADIUS_LG,
-        "height": "3rem",
+        "min_height": "44px",  # Acessibilidade WCAG
         "bg": Color.SURFACE,
-        "padding": "0 1rem", # Standard padding for native select
+        "padding": f"{Spacing.SM} {Spacing.MD}",  # 12px 16px
         "width": "100%",
         "cursor": "pointer",
+        "color": Color.TEXT_PRIMARY,
+        "font_size": "1rem",  # 16px - evita zoom no iOS
+        "transition": "all 0.2s ease-in-out",
         "_focus": {
             "border_color": Color.PRIMARY,
             "outline": "none",
             "box_shadow": f"0 0 0 3px {Color.PRIMARY}20",
         },
+        "_hover": {
+            "border_color": Color.SECONDARY,
+        },
     }
-    
+
     # Mesclar props de estilo
     style_props = base_style.copy()
     style_props.update(props)
@@ -265,25 +238,31 @@ def select(items, placeholder: str = "Selecione...", value=None, on_change=None,
     )
 
 def text_area(placeholder: str = "", **props) -> rx.Component:
-    """TextArea padronizado"""
+    """TextArea padronizado com estilos acessíveis"""
     base_style = {
         "placeholder": placeholder,
         "border": f"1px solid {Color.BORDER}",
         "border_radius": Design.RADIUS_LG,
-        "padding": "0.75rem 1rem",
+        "padding": f"{Spacing.SM} {Spacing.MD}",  # 12px 16px
         "bg": Color.SURFACE,
         "width": "100%",
         "min_height": "100px",
         "color": Color.TEXT_PRIMARY,
-        "_placeholder": {"color": Color.TEXT_PRIMARY, "opacity": 1},
+        "font_size": "1rem",  # 16px - evita zoom no iOS
+        "transition": "all 0.2s ease-in-out",
+        "_placeholder": {"color": Color.TEXT_SECONDARY, "opacity": 0.7},
         "_focus": {
             "border_color": Color.PRIMARY,
             "outline": "none",
             "box_shadow": f"0 0 0 3px {Color.PRIMARY}20",
+            "transform": "scale(1.01)",
+        },
+        "_hover": {
+            "border_color": Color.SECONDARY,
         },
     }
     base_style.update(props)
-    
+
     return rx.text_area(**base_style)
 
 def status_badge(text: str, status: str = "default") -> rx.Component:

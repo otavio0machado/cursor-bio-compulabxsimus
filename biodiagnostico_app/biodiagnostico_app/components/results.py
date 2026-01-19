@@ -13,47 +13,78 @@ def metric_card(
     delta: str = None,
     delta_positive: bool = True
 ) -> rx.Component:
-    """Card de métrica individual"""
+    """Card de métrica individual com design moderno e acessível"""
+    from ..styles import Color, Design, Spacing, Typography
+
     return rx.box(
         rx.hstack(
+            # Ícone em container com fundo
             rx.box(
-                rx.text(icon, class_name="text-4xl"),
-                class_name="text-lime-500"
+                rx.text(icon, font_size="2.5rem"),  # 40px
+                padding=Spacing.MD,  # 16px
+                border_radius=Design.RADIUS_XL,  # 16px
+                bg=f"{Color.PRIMARY}15",  # 8% opacity verde
+                color=Color.PRIMARY,
+                class_name="flex items-center justify-center"
             ),
             rx.vstack(
+                # Título com tipografia aprimorada
                 rx.text(
                     title,
-                    class_name="text-gray-500 text-sm uppercase tracking-wide font-medium"
+                    **Typography.LABEL,
+                    text_transform="uppercase",
+                    letter_spacing="0.05em",
+                    color=Color.TEXT_SECONDARY
                 ),
+                # Valor com hierarquia visual clara
                 rx.text(
                     value,
-                    class_name="text-green-800 text-2xl font-bold font-['Poppins']"
+                    font_size=["1.75rem", "2rem", "2.25rem"],  # Responsivo: 28px -> 36px
+                    font_weight="800",
+                    line_height="1.2",
+                    color=Color.DEEP
                 ),
+                # Delta (variação) com cor condicional
                 rx.cond(
                     delta is not None,
                     rx.text(
                         delta,
-                        class_name=rx.cond(
+                        font_size="0.875rem",  # 14px
+                        font_weight="600",
+                        color=rx.cond(
                             delta_positive,
-                            "text-green-600 text-sm font-medium",
-                            "text-red-600 text-sm font-medium"
+                            Color.SUCCESS,
+                            Color.ERROR
                         )
                     ),
                 ),
+                # Texto auxiliar
                 rx.cond(
                     help_text != "",
                     rx.text(
                         help_text,
-                        class_name="text-gray-400 text-xs"
+                        **Typography.CAPTION,
+                        color=Color.TEXT_SECONDARY
                     ),
                 ),
                 spacing="1",
                 align="start",
             ),
-            spacing="4",
+            spacing=Spacing.LG,  # 24px
             align="center",
         ),
-        class_name="bg-white p-5 rounded-2xl shadow-lg shadow-green-900/5 border border-green-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+        # Card com novos estilos
+        bg=Color.SURFACE,
+        padding=Spacing.LG,  # 24px
+        border_radius=Design.RADIUS_XL,  # 16px
+        box_shadow=Design.SHADOW_DEFAULT,
+        border=f"1px solid {Color.BORDER}",
+        transition="all 0.3s ease",
+        _hover={
+            "box_shadow": Design.SHADOW_LG,
+            "transform": "translateY(-4px)",
+            "border_color": f"{Color.PRIMARY}40"  # Border verde sutil no hover
+        }
     )
 
 
