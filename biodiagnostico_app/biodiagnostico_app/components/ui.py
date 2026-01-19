@@ -216,32 +216,33 @@ def input(placeholder: str = "", **props) -> rx.Component:
     return rx.input(**base_style)
 
 def select(items, placeholder: str = "Selecione...", value=None, on_change=None, **props) -> rx.Component:
-    """Select padronizado - suporta listas dinâmicas"""
+    """Select padronizado - Native Implementation"""
     # Estilo base
-    trigger_style = {
+    base_style = {
         "border": f"1px solid {Color.BORDER}",
         "border_radius": Design.RADIUS_LG,
         "height": "3rem",
-        "width": "100%",
         "bg": Color.SURFACE,
+        "padding": "0 1rem", # Standard padding for native select
+        "width": "100%",
+        "cursor": "pointer",
+        "_focus": {
+            "border_color": Color.PRIMARY,
+            "outline": "none",
+            "box_shadow": f"0 0 0 3px {Color.PRIMARY}20",
+        },
     }
     
     # Mesclar props de estilo
-    trigger_style.update({k: v for k, v in props.items() if k not in ['on_change', 'value']})
+    style_props = base_style.copy()
+    style_props.update(props)
     
-    return rx.select.root(
-        rx.select.trigger(
-            placeholder=placeholder,
-            **trigger_style
-        ),
-        rx.select.content(
-            rx.foreach(
-                items,
-                lambda item: rx.select.item(item, value=item)
-            ),
-        ),
+    return rx.select(
+        items,
+        placeholder=placeholder,
         value=value,
         on_change=on_change,
+        **style_props
     )
 
 def text_area(placeholder: str = "", **props) -> rx.Component:

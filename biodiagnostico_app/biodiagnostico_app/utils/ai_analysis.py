@@ -1,9 +1,9 @@
 """
-AI Analysis utilities using Google Gemini
+AI Analysis utilities using OpenAI
 Laboratório Biodiagnóstico
 """
 from datetime import datetime
-
+import openai
 
 def generate_ai_analysis(
     compulab_total,
@@ -14,14 +14,19 @@ def generate_ai_analysis(
     breakdown,
     api_key: str
 ):
-    """Gera análise inteligente usando Gemini AI"""
+    """Gera análise inteligente usando OpenAI"""
     try:
-        import google.generativeai as genai
-        genai.configure(api_key=api_key)
+        if not api_key:
+            return None, "API Key não fornecida."
+            
+        print(f"DEBUG: Configurando OpenAI com API Key: {api_key[:4]}...{api_key[-4:] if len(api_key) > 8 else ''}")
+        
+        client = openai.OpenAI(api_key=api_key)
+        
     except ImportError:
-        return None, "Biblioteca google-generativeai não está instalada."
+        return None, "Biblioteca openai não está instalada e configurada."
     except Exception as e:
-        return None, f"Erro ao configurar API: {str(e)}"
+        return None, f"Erro ao configurar OpenAI API: {str(e)}"
     
     # Criar resumo dos dados
     summary_data = f"""
@@ -79,24 +84,19 @@ Forneça uma análise detalhada e acionável com:
 Seja específico, prático e use linguagem profissional mas acessível. Responda em português brasileiro."""
     
     try:
-        # Configurar modelo Gemini
-        model = None
-        try:
-            model = genai.GenerativeModel('gemini-1.5-flash')
-        except Exception as e1:
-            try:
-                model = genai.GenerativeModel('gemini-1.5-pro')
-            except Exception as e2:
-                return None, f"Erro ao configurar modelo Gemini: {str(e1)} | {str(e2)}"
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "Você é um assistente especializado em análise de dados financeiros de laboratórios."},
+                {"role": "user", "content": prompt}
+            ]
+        )
         
-        # Gerar resposta
-        response = model.generate_content(prompt)
-        ai_analysis = response.text
-        
+        ai_analysis = response.choices[0].message.content
         return ai_analysis, None
         
     except Exception as e:
-        return None, f"Erro ao gerar análise por IA: {str(e)}"
+        return None, f"Erro ao gerar análise por IA (OpenAI): {str(e)}"
 
 
 def format_ai_report(ai_analysis: str) -> str:
@@ -108,4 +108,3 @@ def format_ai_report(ai_analysis: str) -> str:
 
 {ai_analysis}
 """
-

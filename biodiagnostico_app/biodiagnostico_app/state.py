@@ -18,6 +18,7 @@ from .services.supabase_client import supabase
 from .services.qc_service import QCService
 from .services.reagent_service import ReagentService
 from .services.maintenance_service import MaintenanceService
+from .config import Config
 
 class AnalysisResult(BaseModel):
     """Resultado de uma análise individual"""
@@ -170,7 +171,7 @@ class State(rx.State):
     success_message: str = ""
     
     # Análise por IA
-    gemini_api_key: str = ""
+    openai_api_key: str = Config.OPENAI_API_KEY
     ai_analysis: str = ""
     
     # PDF da análise
@@ -455,6 +456,9 @@ class State(rx.State):
     def unique_exam_names(self) -> List[str]:
         """Retorna lista única de nomes de exames para o dropdown"""
         # Lista de exames comuns em laboratório (padronizada)
+        return ["DEBUG_TEST_ITEM"]
+        
+        # Lista de exames comuns em laboratório (padronizada)
         common_exams = [
             "GLICOSE",
             "HEMOGRAMA",
@@ -497,15 +501,42 @@ class State(rx.State):
             "ANTIGENO PROSTATICO ESPECIFICO",
         ]
         
-        # Adicionar exames dos registros existentes
-        recorded_exams = set()
-        for record in self.qc_records:
-            if record.exam_name:
-                recorded_exams.add(record.exam_name)
-        
         # Combinar e ordenar
-        all_exams = set(common_exams) | recorded_exams
-        return sorted(list(all_exams))
+        try:
+            # Adicionar exames dos registros existentes
+            recorded_exams = set()
+            if self.qc_records:
+                for record in self.qc_records:
+                    if record and hasattr(record, "exam_name") and record.exam_name:
+                        recorded_exams.add(record.exam_name)
+            
+            # Adicionar exames dos PDFs analisados (Compulab)
+            if self._compulab_patients:
+                for patient_data in self._compulab_patients.values():
+                    for exam in patient_data.get("exams", []):
+                        if exam.get("exam_name"):
+                            recorded_exams.add(exam["exam_name"])
+                            
+            # Adicionar exames dos PDFs analisados (Simus)
+            if self._simus_patients:
+                for patient_data in self._simus_patients.values():
+                    for exam in patient_data.get("exams", []):
+                        if exam.get("exam_name"):
+                            recorded_exams.add(exam["exam_name"])
+                            
+            all_exams = set(common_exams) | recorded_exams
+            return sorted(list(all_exams))
+            
+        except Exception as e:
+            # Log error for debugging
+            try:
+                import traceback
+                with open("debug_exam_list.txt", "a") as f:
+                    f.write(f"Error in unique_exam_names: {str(e)}\n")
+                    f.write(traceback.format_exc())
+            except:
+                pass
+            return sorted(common_exams)
     
     def set_login_email(self, email: str):
         """Define o email de login"""

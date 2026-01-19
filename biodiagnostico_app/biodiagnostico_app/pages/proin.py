@@ -270,6 +270,7 @@ def registro_qc_tab() -> rx.Component:
                         ),
                         required=True
                     ),
+                    rx.text(f"DEBUG: Selected='{State.qc_exam_name}' - Total Exams: {State.unique_exam_names.length()}", color="red", font_size="0.8rem"),
                     ui.form_field(
                         "Número do Lote (Opcional)",
                         ui.input(

@@ -2,9 +2,10 @@
 Configurações centralizadas da aplicação
 """
 import os
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 
-load_dotenv()
+# Carregar variáveis de ambiente procurando em diretórios pais
+load_dotenv(find_dotenv())
 
 class Config:
     """Configurações da aplicação"""
@@ -14,8 +15,8 @@ class Config:
     SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
     SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")
     
-    # Gemini
-    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+    # OpenAI
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
     
     # Cloudinary
     CLOUDINARY_CLOUD_NAME = os.getenv("CLOUDINARY_CLOUD_NAME", "")
