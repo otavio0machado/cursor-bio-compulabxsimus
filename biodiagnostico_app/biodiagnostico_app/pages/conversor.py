@@ -217,7 +217,7 @@ def conversor_page() -> rx.Component:
                 State.success_message != "",
                 rx.box(
                     rx.hstack(
-                        rx.icon("check-circle", size=20, color="#15803d"),
+                        rx.icon("circle-check", size=20, color="#15803d"),
                         rx.text(State.success_message, class_name="text-green-700"),
                         spacing="2",
                         align="center",
@@ -229,7 +229,7 @@ def conversor_page() -> rx.Component:
                 State.error_message != "",
                 rx.box(
                     rx.hstack(
-                        rx.icon("x-circle", size=20, color="#dc2626"),
+                        rx.icon("circle-x", size=20, color="#dc2626"),
                         rx.text(State.error_message, class_name="text-red-700"),
                         spacing="2",
                         align="center",
