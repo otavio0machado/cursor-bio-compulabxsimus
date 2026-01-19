@@ -719,7 +719,7 @@ def relatorios_tab() -> rx.Component:
             ),
             rx.center(
                 rx.vstack(
-                    rx.text("📊", font_size="3rem"),
+                    rx.icon("bar-chart-2", size=48, color="#9ca3af"),
                     ui.text("Selecione um exame para visualizar o gráfico", color="gray"),
                     spacing="2",
                     align="center"
