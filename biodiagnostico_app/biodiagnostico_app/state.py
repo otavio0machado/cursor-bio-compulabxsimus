@@ -1639,7 +1639,7 @@ class State(rx.State):
         self.maintenance_error_message = ""
     
     @rx.var
-    def qc_records_today(self) -> List[Dict[str, Any]]:
+    def qc_records_today(self) -> List[QCRecord]:
         """Registros de CQ do dia atual"""
         today = datetime.now().strftime("%Y-%m-%d")
         return [r for r in self.qc_records if r.date.startswith(today)]

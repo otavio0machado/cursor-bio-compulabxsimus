@@ -963,22 +963,22 @@ def relatorios_tab() -> rx.Component:
                             rx.table.root(
                                 rx.table.header(
                                     rx.table.row(
-                                        rx.table.column_header_cell("Data", class_name="text-xs uppercase text-gray-900 font-bold"),
-                                        rx.table.column_header_cell("Valor", class_name="text-xs uppercase text-gray-900 font-bold"),
-                                        rx.table.column_header_cell("Alvo", class_name="text-xs uppercase text-gray-900 font-bold"),
-                                        rx.table.column_header_cell("DP", class_name="text-xs uppercase text-gray-900 font-bold"),
-                                        rx.table.column_header_cell("CV%", class_name="text-xs uppercase text-gray-900 font-bold"),
-                                        rx.table.column_header_cell("Status", class_name="text-xs uppercase text-gray-900 font-bold"),
+                                        rx.table.column_header_cell("Data", class_name="text-xs uppercase"),
+                                        rx.table.column_header_cell("Valor", class_name="text-xs uppercase"),
+                                        rx.table.column_header_cell("Alvo", class_name="text-xs uppercase"),
+                                        rx.table.column_header_cell("DP", class_name="text-xs uppercase"),
+                                        rx.table.column_header_cell("CV%", class_name="text-xs uppercase"),
+                                        rx.table.column_header_cell("Status", class_name="text-xs uppercase"),
                                     )
                                 ),
                                 rx.table.body(
                                     rx.foreach(
                                         State.levey_jennings_data,
                                         lambda d: rx.table.row(
-                                            rx.table.cell(d["date"], class_name="text-sm text-gray-900"),
-                                            rx.table.cell(d["value"].to_string(), class_name="font-medium text-gray-900"),
-                                            rx.table.cell(d["target"].to_string(), class_name="text-gray-900"),
-                                            rx.table.cell(d["sd"].to_string(), class_name="text-gray-900"),
+                                            rx.table.cell(d["date"], class_name="text-sm"),
+                                            rx.table.cell(d["value"].to_string(), class_name="font-medium"),
+                                            rx.table.cell(d["target"].to_string()),
+                                            rx.table.cell(d["sd"].to_string()),
                                             rx.table.cell(
                                                 rx.text(
                                                     d["cv"].to_string() + "%",
