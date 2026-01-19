@@ -23,6 +23,9 @@ ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 RUN reflex init
 
+# Pré-build do frontend para agilizar o startup e evitar OOM em runtime
+RUN reflex export --frontend-only --no-zip
+
 COPY nginx.conf /etc/nginx/nginx.conf
 
 RUN chmod +x start.sh
