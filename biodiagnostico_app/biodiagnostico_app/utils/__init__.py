@@ -13,5 +13,5 @@ from .pdf_processor import (
     load_from_csv,
     EXAM_NAME_MAPPING
 )
-from .comparison import compare_patients, compute_difference_breakdown
+from .comparison import compare_patients, compute_difference_breakdown, format_divergences_to_json
 
