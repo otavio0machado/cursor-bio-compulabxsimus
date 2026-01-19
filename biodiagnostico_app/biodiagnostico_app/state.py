@@ -1335,8 +1335,10 @@ class State(rx.State):
     
     async def generate_ai_analysis(self):
         """Gera análise por IA (Async + Parallel)"""
-        if not self.openai_api_key:
-            self.error_message = "ERRO: Configure sua API Key da OpenAI primeiro"
+        api_key = self.openai_api_key or Config.OPENAI_API_KEY
+        
+        if not api_key:
+            self.error_message = "ERRO: API Key não configurada no ambiente (.env)"
             return
         
         if not self.has_analysis:
