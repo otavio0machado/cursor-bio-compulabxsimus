@@ -129,7 +129,7 @@ def results_summary() -> rx.Component:
                 metric_card(
                     title="Exames Faltantes",
                     value=f"{State.missing_exams_count}",
-                    icon="alert-triangle",  # Aviso
+                    icon="triangle-alert",  # Aviso
                     help_text="no SIMUS",
                 ),
                 columns="4",

@@ -19,7 +19,7 @@ def financial_kpi_widget() -> rx.Component:
             rx.vstack(
                 # Header
                 rx.hstack(
-                    rx.icon("alert-triangle", size=24, color=Color.TEXT_SECONDARY),
+                    rx.icon("triangle-alert", size=24, color=Color.TEXT_SECONDARY),
                     rx.text(
                         "Divergência Total Detectada",
                         class_name="text-gray-600 font-semibold text-sm uppercase tracking-wide"
