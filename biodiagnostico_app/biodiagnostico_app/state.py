@@ -13,6 +13,7 @@ import gc
 import tempfile
 import os
 import shutil
+import base64
 from .services import cloudinary_service
 from .services.supabase_client import supabase
 from .services.qc_service import QCService
@@ -154,6 +155,21 @@ class State(rx.State):
     compulab_csv: str = ""
     simus_csv: str = ""
     csv_generated: bool = False
+
+    # Excel gerados (Feature 3) - armazenados como base64 string
+    compulab_xlsx: str = ""
+    simus_xlsx: str = ""
+
+    # Preview dos dados (Feature 1)
+    compulab_preview: List[Dict[str, Any]] = []
+    simus_preview: List[Dict[str, Any]] = []
+
+    # Custom Mappings para nomes de exames (Feature 4)
+    custom_mappings: Dict[str, str] = {}
+    mapping_original_name: str = ""
+    mapping_correct_name: str = ""
+    mapping_success_message: str = ""
+    mapping_error_message: str = ""
     
     # Estado de carregamento
     is_loading: bool = False
@@ -188,6 +204,8 @@ class State(rx.State):
     # Dados armazenados para análise
     _compulab_patients: Dict = {}
     _simus_patients: Dict = {}
+    _compulab_df: Any = None  # DataFrame interno para Feature 2
+    _simus_df: Any = None  # DataFrame interno para Feature 2
     
     # ===== ProIn - Análise de Planilhas Excel =====
     excel_file_name: str = ""
@@ -933,9 +951,10 @@ class State(rx.State):
                     generate_csvs_from_pdfs,
                     compulab_bytes,
                     simus_bytes,
-                    update_progress
+                    update_progress,
+                    self.custom_mappings if self.custom_mappings else None
                 )
-                
+
                 # Monitorar progresso enquanto executa
                 while not future.done():
                     # Atualizar estado do Reflex
@@ -943,31 +962,107 @@ class State(rx.State):
                     self.csv_stage = progress_state["stage"]
                     yield
                     await asyncio.sleep(0.2)  # Verificar progresso a cada 200ms
-                
-                compulab_csv, simus_csv, success = future.result()
-                
+
+                # Desempacotar todos os novos retornos
+                compulab_csv, simus_csv, compulab_xlsx, simus_xlsx, compulab_df, simus_df, success = future.result()
+
                 # Atualizar estado final
                 self.csv_progress_percentage = progress_state["percentage"]
                 self.csv_stage = progress_state["stage"]
                 yield
-            
+
             if success:
                 self.compulab_csv = compulab_csv
                 self.simus_csv = simus_csv
                 self.csv_generated = True
+
+                # Armazenar Excel (Feature 3) - converter bytes para base64 string
+                if compulab_xlsx:
+                    self.compulab_xlsx = base64.b64encode(compulab_xlsx).decode('utf-8')
+                if simus_xlsx:
+                    self.simus_xlsx = base64.b64encode(simus_xlsx).decode('utf-8')
+
+                # Gerar preview (Feature 1) - apenas primeiras 10 linhas
+                if compulab_df is not None and not compulab_df.empty:
+                    self.compulab_preview = compulab_df.head(10).to_dict('records')
+                if simus_df is not None and not simus_df.empty:
+                    self.simus_preview = simus_df.head(10).to_dict('records')
+
+                # Armazenar DataFrames internos para análise (Feature 2)
+                if compulab_df is not None:
+                    self._compulab_df = compulab_df
+                if simus_df is not None:
+                    self._simus_df = simus_df
+
                 self.csv_progress_percentage = 100
                 self.csv_stage = "Concluído"
-                self.success_message = "SUCESSO: CSVs gerados com sucesso!"
+                self.success_message = "SUCESSO: Arquivos gerados com sucesso! CSV e Excel prontos para download."
                 yield
             else:
-                self.error_message = "ERRO: Erro ao gerar CSVs. Verifique os arquivos."
+                self.error_message = "ERRO: Erro ao gerar arquivos. Verifique os PDFs."
                 yield
         except Exception as e:
             self.error_message = f"ERRO: Erro: {str(e)}"
             yield
         finally:
             self.is_generating_csv = False
-    
+
+    # ===== Feature 4: Custom Mapping Editor =====
+    def add_custom_mapping(self):
+        """Adiciona um mapeamento customizado de nome de exame"""
+        self.mapping_error_message = ""
+        self.mapping_success_message = ""
+
+        original = self.mapping_original_name.strip().upper()
+        correct = self.mapping_correct_name.strip().upper()
+
+        if not original or not correct:
+            self.mapping_error_message = "Preencha ambos os campos!"
+            return
+
+        if original == correct:
+            self.mapping_error_message = "Os nomes não podem ser iguais!"
+            return
+
+        # Adicionar ao dicionário
+        self.custom_mappings[original] = correct
+        self.mapping_success_message = f"✓ Mapeamento adicionado: {original} → {correct}"
+
+        # Limpar campos
+        self.mapping_original_name = ""
+        self.mapping_correct_name = ""
+
+    def remove_custom_mapping(self, original_name: str):
+        """Remove um mapeamento customizado"""
+        if original_name in self.custom_mappings:
+            del self.custom_mappings[original_name]
+            self.mapping_success_message = f"✓ Mapeamento removido: {original_name}"
+
+    def clear_all_mappings(self):
+        """Limpa todos os mapeamentos customizados"""
+        self.custom_mappings = {}
+        self.mapping_success_message = "✓ Todos os mapeamentos foram removidos"
+
+    # ===== Feature 2: Seamless Analysis Flow =====
+    def send_to_analysis(self):
+        """Transfere dados do conversor para a página de análise (Feature 2)"""
+        if not self.csv_generated:
+            self.error_message = "Gere os CSVs primeiro antes de analisar!"
+            return rx.redirect("/conversor")
+
+        # Verificar se temos DataFrames disponíveis
+        if self._compulab_df is None or self._simus_df is None:
+            self.error_message = "Dados não disponíveis para análise. Gere os CSVs novamente."
+            return rx.redirect("/conversor")
+
+        # Os dados já estão armazenados em _compulab_df e _simus_df
+        # A página de análise usará esses dados diretamente
+
+        # Limpar mensagens e redirecionar
+        self.success_message = ""
+        self.error_message = ""
+        return rx.redirect("/analise")
+
     def _run_pdf_extraction_sync(self, compulab_path: str, simus_path: str, compulab_is_csv: bool = False, simus_is_csv: bool = False, progress_callback=None) -> dict:
         """
         Executa a extração de PDF ou CSV de forma síncrona (chamado em thread separada)

@@ -310,21 +310,33 @@ def exam_names_match(exam_name1, exam_name2):
     return False
 
 
-def map_simus_to_compulab_exam_name(simus_exam_name):
-    """Mapeia nome do exame do SIMUS para o nome equivalente no COMPULAB"""
+def map_simus_to_compulab_exam_name(simus_exam_name, custom_mappings: Optional[Dict[str, str]] = None):
+    """Mapeia nome do exame do SIMUS para o nome equivalente no COMPULAB
+
+    Args:
+        simus_exam_name: Nome do exame no SIMUS
+        custom_mappings: Dicionário opcional de mapeamentos customizados (prioridade sobre EXAM_NAME_MAPPING)
+    """
     if not simus_exam_name:
         return simus_exam_name
-    
+
     simus_clean = str(simus_exam_name).strip().upper()
-    
-    for simus_key, compulab_value in EXAM_NAME_MAPPING.items():
+
+    # Mesclar mapeamentos: Custom tem prioridade sobre o fixo
+    merged_mappings = {**EXAM_NAME_MAPPING}
+    if custom_mappings:
+        merged_mappings.update(custom_mappings)
+
+    # Tentar match exato primeiro
+    for simus_key, compulab_value in merged_mappings.items():
         if simus_key.upper() == simus_clean:
             return compulab_value
         if normalize_exam_name(simus_key) == normalize_exam_name(simus_clean):
             return compulab_value
-    
+
+    # Tentar match parcial
     normalized_simus = normalize_exam_name(simus_clean)
-    for simus_key, compulab_value in EXAM_NAME_MAPPING.items():
+    for simus_key, compulab_value in merged_mappings.items():
         normalized_key = normalize_exam_name(simus_key)
         if normalized_key in normalized_simus or normalized_simus in normalized_key:
             key_words = set(normalized_key.split())
@@ -332,7 +344,7 @@ def map_simus_to_compulab_exam_name(simus_exam_name):
             common_words = key_words & simus_words
             if len(common_words) >= 2:
                 return compulab_value
-    
+
     return simus_exam_name
 
 
@@ -506,19 +518,20 @@ def _collect_simus_lines(pdf_file):
     return lines_all
 
 
-def extract_simus_patients(pdf_file, known_patient_names=None, progress_callback: Optional[Callable[[int, int], None]] = None):
+def extract_simus_patients(pdf_file, known_patient_names=None, progress_callback: Optional[Callable[[int, int], None]] = None, custom_mappings: Optional[Dict[str, str]] = None):
     """
     Extrai dados de pacientes do SIMUS usando tabelas do PDF
-    
+
     Otimizado para arquivos grandes:
     - Processa páginas em batches
     - Libera memória entre iterações
     - Suporta callback de progresso
-    
+
     Args:
         pdf_file: Caminho para o arquivo PDF
         known_patient_names: Lista opcional de nomes de pacientes conhecidos
         progress_callback: Função callback(pagina_atual, total_paginas) para reportar progresso
+        custom_mappings: Dicionário opcional de mapeamentos customizados de nomes de exames
     """
     patients = defaultdict(lambda: {'exams': [], 'total': Decimal('0')})
     total_value = Decimal('0')
@@ -640,7 +653,7 @@ def extract_simus_patients(pdf_file, known_patient_names=None, progress_callback
                             else:
                                 exam_name_clean = ""
                             
-                            exam_name_mapped = map_simus_to_compulab_exam_name(exam_name_clean)
+                            exam_name_mapped = map_simus_to_compulab_exam_name(exam_name_clean, custom_mappings)
                             if exam_name_mapped != exam_name_clean:
                                 exam_name = normalize_exam_name(exam_name_mapped)
                             else:
@@ -794,13 +807,17 @@ def extract_simus_patients(pdf_file, known_patient_names=None, progress_callback
     return patients, total_value, sigtap_value, contratualizado_value
 
 
-def generate_csvs_from_pdfs(compulab_pdf_bytes, simus_pdf_bytes, progress_callback: Optional[Callable[[int, str], None]] = None):
-    """Gera CSVs a partir dos bytes dos PDFs
-    
+def generate_csvs_from_pdfs(compulab_pdf_bytes, simus_pdf_bytes, progress_callback: Optional[Callable[[int, str], None]] = None, custom_mappings: Optional[Dict[str, str]] = None):
+    """Gera CSVs e Excel a partir dos bytes dos PDFs
+
     Args:
         compulab_pdf_bytes: Bytes do PDF COMPULAB
         simus_pdf_bytes: Bytes do PDF SIMUS
         progress_callback: Função callback(percentage: int, stage: str) para reportar progresso
+        custom_mappings: Dicionário opcional de mapeamentos customizados de nomes de exames
+
+    Returns:
+        Tupla com (compulab_csv, simus_csv, compulab_xlsx, simus_xlsx, compulab_df, simus_df, success)
     """
     tmp_compulab_path = None
     tmp_simus_path = None
@@ -829,11 +846,11 @@ def generate_csvs_from_pdfs(compulab_pdf_bytes, simus_pdf_bytes, progress_callba
                 progress_callback(progress, f"Processando COMPULAB... {percentage}%")
         
         compulab_patients, compulab_total = extract_compulab_patients(
-            tmp_compulab_path, 
+            tmp_compulab_path,
             progress_callback=compulab_progress if progress_callback else None
         )
         if compulab_patients is None:
-            return None, None, False
+            return None, None, None, None, None, None, False
         
         if progress_callback:
             progress_callback(45, "Organizando dados COMPULAB...")
@@ -855,8 +872,12 @@ def generate_csvs_from_pdfs(compulab_pdf_bytes, simus_pdf_bytes, progress_callba
                     exam_progress = int((processed_exams / total_exams) * 10)
                     progress_callback(45 + exam_progress, f"Organizando dados COMPULAB... {processed_exams}/{total_exams} exames")
         
+        # Criar DataFrame COMPULAB com tipos corretos
         compulab_df = pd.DataFrame(compulab_rows)
-        
+        # Garantir que coluna Valor é float
+        if not compulab_df.empty:
+            compulab_df['Valor'] = compulab_df['Valor'].astype(float)
+
         # Estágio 3: Processando SIMUS (55-90%)
         if progress_callback:
             progress_callback(55, "Processando SIMUS...")
@@ -870,13 +891,14 @@ def generate_csvs_from_pdfs(compulab_pdf_bytes, simus_pdf_bytes, progress_callba
                     progress_callback(progress, f"Processando SIMUS... Página {page}/{total_pages}")
         
         simus_patients, simus_total, _, _ = extract_simus_patients(
-            tmp_simus_path, 
+            tmp_simus_path,
             known_patient_names=list(compulab_patients.keys()),
-            progress_callback=simus_progress if progress_callback else None
+            progress_callback=simus_progress if progress_callback else None,
+            custom_mappings=custom_mappings
         )
         
         if simus_patients is None:
-            return None, None, False
+            return None, None, None, None, None, None, False
         
         if progress_callback:
             progress_callback(90, "Organizando dados SIMUS...")
@@ -898,34 +920,73 @@ def generate_csvs_from_pdfs(compulab_pdf_bytes, simus_pdf_bytes, progress_callba
                 if progress_callback and total_simus_exams > 0:
                     exam_progress = int((processed_simus_exams / total_simus_exams) * 5)
                     progress_callback(90 + exam_progress, f"Organizando dados SIMUS... {processed_simus_exams}/{total_simus_exams} exames")
-        
+
+        # Criar DataFrame SIMUS com tipos corretos
         simus_df = pd.DataFrame(simus_rows)
-        
-        # Estágio 4: Gerando CSVs (95-98%)
+        # Garantir que coluna Valor é float
+        if not simus_df.empty:
+            simus_df['Valor'] = simus_df['Valor'].astype(float)
+
+        # Estágio 4: Gerando arquivos (95-100%)
         if progress_callback:
             progress_callback(95, "Gerando arquivos CSV...")
         
+        # Gerar CSVs
         compulab_csv = compulab_df.to_csv(
             index=False, sep=';', decimal=',', encoding='utf-8-sig'
         )
-        
+
         if progress_callback:
-            progress_callback(98, "Finalizando conversão...")
-        
+            progress_callback(96, "Gerando arquivos Excel...")
+
         simus_csv = simus_df.to_csv(
             index=False, sep=';', decimal=',', encoding='utf-8-sig'
         )
-        
+
+        # Gerar arquivos Excel
+        compulab_xlsx = None
+        simus_xlsx = None
+
+        try:
+            import io
+
+            # Gerar Excel COMPULAB
+            compulab_buffer = io.BytesIO()
+            with pd.ExcelWriter(compulab_buffer, engine='openpyxl') as writer:
+                compulab_df.to_excel(writer, index=False, sheet_name='COMPULAB')
+            compulab_xlsx = compulab_buffer.getvalue()
+
+            if progress_callback:
+                progress_callback(98, "Finalizando Excel SIMUS...")
+
+            # Gerar Excel SIMUS
+            simus_buffer = io.BytesIO()
+            with pd.ExcelWriter(simus_buffer, engine='openpyxl') as writer:
+                simus_df.to_excel(writer, index=False, sheet_name='SIMUS')
+            simus_xlsx = simus_buffer.getvalue()
+
+        except ImportError:
+            # openpyxl não disponível - fallback silencioso
+            if progress_callback:
+                progress_callback(98, "Excel não disponível, usando apenas CSV...")
+            pass
+        except Exception as e:
+            # Erro ao gerar Excel - fallback silencioso
+            print(f"Aviso: Falha ao gerar Excel: {e}")
+            if progress_callback:
+                progress_callback(98, "Erro ao gerar Excel, usando apenas CSV...")
+            pass
+
         if progress_callback:
             progress_callback(100, "Concluído")
-        
-        return compulab_csv, simus_csv, True
+
+        return compulab_csv, simus_csv, compulab_xlsx, simus_xlsx, compulab_df, simus_df, True
             
     except Exception as e:
         print(f"Erro ao gerar CSVs: {e}")
         if progress_callback:
             progress_callback(0, f"Erro: {str(e)}")
-        return None, None, False
+        return None, None, None, None, None, None, False
     finally:
         if tmp_compulab_path and os.path.exists(tmp_compulab_path):
             try:
