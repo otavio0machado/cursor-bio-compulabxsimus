@@ -1,11 +1,18 @@
 """
 Análise COMPULAB x SIMUS page
-Design moderno com upload aprimorado
+Design moderno com upload aprimorado e visualização IA avançada
 """
 import reflex as rx
 from ..state import State
 from ..components.file_upload import compact_upload_card, upload_progress_indicator, large_file_progress_indicator
 from ..components import ui
+from ..components.ai_audit import (
+    ai_progress_display,
+    ai_analysis_summary_panel,
+    ai_divergence_type_badge,
+    ai_analysis_empty_state,
+    ai_error_display
+)
 from ..styles import Color
 
 
@@ -378,6 +385,7 @@ def analise_page() -> rx.Component:
                         ),
                         rx.tabs.content(
                             rx.vstack(
+                                # API Key não configurada
                                 rx.cond(
                                     State.openai_api_key == "",
                                     rx.box(
@@ -396,36 +404,123 @@ def analise_page() -> rx.Component:
                                         ),
                                         class_name="bg-orange-50 border border-orange-200 rounded-xl p-4"
                                     ),
+
+                                    # API Key configurada
                                     rx.vstack(
-                                        rx.button(
-                                            rx.cond(
-                                                State.is_generating_ai,
-                                                rx.hstack(
-                                                    rx.spinner(size="1", color="white"),
-                                                    rx.text("Gerando análise..."),
-                                                    spacing="2",
+                                        # Botão de geração
+                                        rx.box(
+                                            rx.button(
+                                                rx.cond(
+                                                    State.is_generating_ai,
+                                                    rx.hstack(
+                                                        rx.spinner(size="2", color="white"),
+                                                        rx.text("Gerando análise..."),
+                                                        spacing="2",
+                                                    ),
+                                                    rx.hstack(
+                                                        rx.icon("bot", size=20, color="white"),
+                                                        rx.text("Gerar Análise por IA"),
+                                                        spacing="2",
+                                                    ),
                                                 ),
-                                                rx.hstack(
-                                                    rx.icon("bot", size=16, color="white"),
-                                                    rx.text("Gerar Análise por IA"),
-                                                    spacing="2",
-                                                ),
+                                                on_click=State.generate_ai_analysis,
+                                                disabled=State.is_generating_ai,
+                                                class_name="bg-gradient-to-r from-[#1B5E20] to-[#2E7D32] text-white px-8 py-4 rounded-xl font-bold hover:shadow-2xl transition-all text-lg"
                                             ),
-                                            on_click=State.generate_ai_analysis,
-                                            disabled=State.is_generating_ai,
-                                            class_name="bg-[#1B5E20] text-white px-6 py-3 rounded-xl font-semibold hover:bg-[#2E7D32] hover:shadow-lg transition-all"
+                                            class_name="flex justify-center w-full"
                                         ),
+
+                                        # Indicador de progresso
+                                        ai_progress_display(
+                                            State.ai_loading_progress,
+                                            State.ai_loading_text,
+                                            State.is_generating_ai
+                                        ),
+
+                                        # Resultados da análise IA
                                         rx.cond(
-                                            State.ai_analysis != "",
-                                            rx.box(
-                                                rx.markdown(State.ai_analysis),
-                                                class_name="bg-white rounded-xl p-6 border border-gray-200 prose max-w-none mt-4"
+                                            State.has_ai_analysis,
+                                            rx.vstack(
+                                                # Painel resumo executivo
+                                                ai_analysis_summary_panel(
+                                                    State.ai_total_divergences,
+                                                    State.ai_pacientes_afetados,
+                                                    State.ai_ausentes_simus,
+                                                    State.ai_ausentes_compulab,
+                                                    State.ai_valores_divergentes,
+                                                    State.formatted_ai_impacto_financeiro
+                                                ),
+
+                                                # Tabela de divergências
+                                                rx.box(
+                                                    rx.vstack(
+                                                        rx.hstack(
+                                                            rx.icon("table-2", size=20, color=Color.DEEP),
+                                                            rx.text(
+                                                                "Detalhamento das Divergências",
+                                                                class_name="text-[#1B5E20] font-bold text-lg"
+                                                            ),
+                                                            spacing="3",
+                                                            align="center",
+                                                        ),
+                                                        rx.data_table(
+                                                            data=State.ai_analysis_data,
+                                                            columns=[
+                                                                {"name": "Paciente", "label": "Paciente", "width": "15%"},
+                                                                {"name": "Nome_Exame", "label": "Exame", "width": "25%"},
+                                                                {"name": "Codigo_Exame", "label": "Código", "width": "10%"},
+                                                                {"name": "Valor_Compulab", "label": "COMPULAB", "width": "12%"},
+                                                                {"name": "Valor_Simus", "label": "SIMUS", "width": "12%"},
+                                                                {"name": "Tipo_Divergencia", "label": "Tipo", "width": "26%"},
+                                                            ],
+                                                            pagination=True,
+                                                            search=True,
+                                                            sort=True,
+                                                        ),
+                                                        spacing="4",
+                                                    ),
+                                                    class_name="bg-white border border-gray-200 rounded-2xl p-6 shadow-lg mt-6"
+                                                ),
+
+                                                # Relatório markdown completo (expansível)
+                                                rx.box(
+                                                    rx.vstack(
+                                                        rx.hstack(
+                                                            rx.icon("file-text", size=20, color=Color.DEEP),
+                                                            rx.text(
+                                                                "Relatório Completo",
+                                                                class_name="text-[#1B5E20] font-bold text-lg"
+                                                            ),
+                                                            spacing="3",
+                                                            align="center",
+                                                        ),
+                                                        rx.box(
+                                                            rx.markdown(State.ai_analysis),
+                                                            class_name="prose prose-sm max-w-none"
+                                                        ),
+                                                        spacing="4",
+                                                    ),
+                                                    class_name="bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-2xl p-6 shadow-lg mt-6"
+                                                ),
+
+                                                spacing="6",
+                                                width="100%",
+                                            ),
+
+                                            # Estado vazio
+                                            rx.cond(
+                                                ~State.is_generating_ai,
+                                                ai_analysis_empty_state(),
                                             ),
                                         ),
-                                        spacing="4",
+
+                                        spacing="6",
                                         width="100%",
                                     ),
                                 ),
+
+                                spacing="4",
+                                width="100%",
                                 class_name="mt-4"
                             ),
                             value="ai",

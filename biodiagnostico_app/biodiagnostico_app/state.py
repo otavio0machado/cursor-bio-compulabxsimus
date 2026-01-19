@@ -180,7 +180,15 @@ class State(rx.State):
     # Análise por IA
     openai_api_key: str = Config.OPENAI_API_KEY
     ai_analysis: str = ""
-    
+
+    # Estatísticas da Análise IA
+    ai_total_divergences: int = 0
+    ai_pacientes_afetados: int = 0
+    ai_ausentes_simus: int = 0
+    ai_ausentes_compulab: int = 0
+    ai_valores_divergentes: int = 0
+    ai_impacto_financeiro: float = 0.0
+
     # PDF da análise
     analysis_pdf: str = ""
     
@@ -425,7 +433,17 @@ class State(rx.State):
     def formatted_divergences_total(self) -> str:
         """Total de divergências formatado"""
         return f"R$ {self.divergences_total:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-    
+
+    @rx.var
+    def formatted_ai_impacto_financeiro(self) -> str:
+        """Impacto financeiro da análise IA formatado"""
+        return f"R$ {self.ai_impacto_financeiro:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+    @rx.var
+    def has_ai_analysis(self) -> bool:
+        """Verifica se existe análise por IA"""
+        return self.ai_analysis != "" and len(self.ai_analysis_data) > 0
+
     @rx.var
     def processing_progress_text(self) -> str:
         """Texto de progresso do processamento"""
@@ -1370,13 +1388,13 @@ class State(rx.State):
             else:
                 self.ai_analysis = final_analysis
                 self.success_message = "✅ Análise por IA gerada!"
-                
-                # Parsear para tabela na UI
+
+                # Parsear para tabela na UI e extrair estatísticas
                 try:
                     import re
                     import csv
                     from io import StringIO
-                    
+
                     csv_pattern = r"```csv\s*(.*?)\s*```"
                     match = re.search(csv_pattern, final_analysis, re.DOTALL)
                     if match:
@@ -1384,6 +1402,44 @@ class State(rx.State):
                         f = StringIO(csv_content)
                         reader = csv.DictReader(f, delimiter=';')
                         self.ai_analysis_data = list(reader)
+
+                        # Extrair estatísticas
+                        pacientes_set = set()
+                        ausentes_simus = 0
+                        ausentes_compulab = 0
+                        valores_divergentes = 0
+                        impacto_total = 0.0
+
+                        for row in self.ai_analysis_data:
+                            paciente = row.get('Paciente', '')
+                            if paciente:
+                                pacientes_set.add(paciente)
+
+                            tipo = row.get('Tipo_Divergencia', '')
+                            if 'Ausente no SIMUS' in tipo or 'Ausente no Simus' in tipo:
+                                ausentes_simus += 1
+                            elif 'Ausente no COMPULAB' in tipo or 'Ausente no Compulab' in tipo:
+                                ausentes_compulab += 1
+                            elif 'Divergente' in tipo:
+                                valores_divergentes += 1
+
+                            # Calcular impacto financeiro
+                            try:
+                                val_comp = row.get('Valor_Compulab', '0').replace(',', '.')
+                                val_simus = row.get('Valor_Simus', '0').replace(',', '.')
+                                v_comp = float(val_comp) if val_comp else 0.0
+                                v_simus = float(val_simus) if val_simus else 0.0
+                                impacto_total += abs(v_comp - v_simus)
+                            except (ValueError, TypeError):
+                                pass
+
+                        self.ai_total_divergences = len(self.ai_analysis_data)
+                        self.ai_pacientes_afetados = len(pacientes_set)
+                        self.ai_ausentes_simus = ausentes_simus
+                        self.ai_ausentes_compulab = ausentes_compulab
+                        self.ai_valores_divergentes = valores_divergentes
+                        self.ai_impacto_financeiro = impacto_total
+
                 except Exception as e:
                     print(f"Erro ao parsear CSV para UI: {e}")
                 
@@ -1472,9 +1528,18 @@ class State(rx.State):
         self.explained_total = 0.0
         self.residual = 0.0
         self.ai_analysis = ""
+        self.ai_analysis_data = []
         self.analysis_pdf = ""
         self._compulab_patients = {}
         self._simus_patients = {}
+
+        # Reset estatísticas IA
+        self.ai_total_divergences = 0
+        self.ai_pacientes_afetados = 0
+        self.ai_ausentes_simus = 0
+        self.ai_ausentes_compulab = 0
+        self.ai_valores_divergentes = 0
+        self.ai_impacto_financeiro = 0.0
     
     # ===== ProIn - Métodos para Análise de Planilhas Excel =====
     
