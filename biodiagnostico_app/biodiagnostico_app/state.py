@@ -2313,3 +2313,355 @@ class State(rx.State):
         finally:
             self.is_analyzing_excel = False
 
+    # ========================================
+    # DASHBOARD - CENTRO DE COMANDO OPERACIONAL
+    # Computed Vars para os 10 widgets estratégicos
+    # ========================================
+
+    # Widget 1: KPI Financeiro - Total Loss Value
+    @rx.var(cache=True)
+    def total_loss_value(self) -> float:
+        """Valor total de perdas financeiras (divergências + exames faltantes)"""
+        return self.divergences_total + self.missing_exams_total
+
+    @rx.var
+    def formatted_total_loss_value(self) -> str:
+        """Valor de perda formatado em R$"""
+        return f"R$ {self.total_loss_value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+    @rx.var
+    def loss_value_color(self) -> str:
+        """Cor do indicador baseado no valor de perda"""
+        if self.total_loss_value == 0:
+            return "green"
+        elif self.total_loss_value < 50:
+            return "yellow"
+        else:
+            return "red"
+
+    @rx.var
+    def loss_value_status(self) -> str:
+        """Status textual da perda"""
+        if self.total_loss_value == 0:
+            return "Sem Divergências"
+        elif self.total_loss_value < 50:
+            return "Atenção Necessária"
+        else:
+            return "Ação Urgente"
+
+    # Widget 2: Top 5 Ofensores - Exames com mais divergências
+    @rx.var(cache=True)
+    def top_divergence_exams(self) -> List[Dict[str, Any]]:
+        """Top 5 exames com maiores divergências sistemáticas"""
+        if not self.value_divergences:
+            return []
+
+        try:
+            import pandas as pd
+            # Converter para DataFrame
+            df = pd.DataFrame(self.value_divergences)
+
+            if df.empty or 'exam_name' not in df.columns:
+                return []
+
+            # Calcular diferença absoluta
+            if 'compulab_value' in df.columns and 'simus_value' in df.columns:
+                df['abs_diff'] = abs(df['compulab_value'] - df['simus_value'])
+            elif 'difference' in df.columns:
+                df['abs_diff'] = abs(df['difference'])
+            else:
+                return []
+
+            # Agrupar por exame e somar diferenças
+            grouped = df.groupby('exam_name')['abs_diff'].sum().reset_index()
+            grouped.columns = ['exam_name', 'total_divergence']
+
+            # Top 5
+            top5 = grouped.nlargest(5, 'total_divergence')
+
+            return [
+                {
+                    "exam": row['exam_name'],
+                    "total": f"R$ {row['total_divergence']:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                }
+                for _, row in top5.iterrows()
+            ]
+        except Exception as e:
+            print(f"Erro ao calcular top divergências: {e}")
+            return []
+
+    # Widget 3: Breakdown de Perdas - Dados para gráfico de funil
+    @rx.var(cache=True)
+    def loss_funnel_data(self) -> List[Dict[str, Any]]:
+        """Dados estruturados para o gráfico de funil de perdas"""
+        return [
+            {"stage": "Faturamento COMPULAB", "value": self.compulab_total, "color": "#4CAF50"},
+            {"stage": "Pacientes Não Encontrados", "value": -self.missing_patients_total, "color": "#F59E0B"},
+            {"stage": "Exames Não Encontrados", "value": -self.missing_exams_total, "color": "#EF4444"},
+            {"stage": "Divergência de Valores", "value": -self.divergences_total, "color": "#EF4444"},
+            {"stage": "Faturamento SIMUS", "value": self.simus_total, "color": "#10B981"},
+        ]
+
+    # Widget 4: Alertas Críticos - QC com problemas
+    @rx.var(cache=True)
+    def critical_alerts(self) -> List[Dict[str, Any]]:
+        """Alertas críticos de QC que exigem ação imediata"""
+        alerts = []
+
+        for record in self.qc_records:
+            # CV > 5.0% é crítico
+            if record.cv > 5.0:
+                alerts.append({
+                    "exam": record.exam_name,
+                    "message": f"CV alto: {record.cv:.1f}% (limite: 5.0%)",
+                    "severity": "high",
+                    "icon": "triangle-alert",
+                    "date": record.date
+                })
+
+            # Verificar regras de Westgard (se houver target_value e target_sd)
+            if record.target_value > 0 and record.target_sd > 0:
+                # Calcular desvio em relação ao target
+                deviation = abs(record.value - record.target_value) / record.target_sd if record.target_sd > 0 else 0
+
+                # Regra 1-3s: Um valor fora de 3 SD
+                if deviation > 3:
+                    alerts.append({
+                        "exam": record.exam_name,
+                        "message": f"Westgard 1-3s: Valor fora de 3 SD (desvio: {deviation:.1f} SD)",
+                        "severity": "high",
+                        "icon": "triangle-alert",
+                        "date": record.date
+                    })
+                # Regra 1-2s: Advertência
+                elif deviation > 2:
+                    alerts.append({
+                        "exam": record.exam_name,
+                        "message": f"Westgard 1-2s: Valor fora de 2 SD (desvio: {deviation:.1f} SD)",
+                        "severity": "medium",
+                        "icon": "alert-circle",
+                        "date": record.date
+                    })
+
+        # Retornar apenas os 10 mais recentes
+        return sorted(alerts, key=lambda x: x.get('date', ''), reverse=True)[:10]
+
+    # Widget 5: Sparklines - Dados dos 3 analitos mais críticos
+    @rx.var(cache=True)
+    def top_critical_analytes(self) -> List[str]:
+        """3 analitos mais críticos/volumosos para monitoramento"""
+        if not self.qc_records:
+            return []
+
+        # Contar frequência de cada exame
+        exam_counts = {}
+        for record in self.qc_records:
+            exam_counts[record.exam_name] = exam_counts.get(record.exam_name, 0) + 1
+
+        # Retornar top 3
+        sorted_exams = sorted(exam_counts.items(), key=lambda x: x[1], reverse=True)
+        return [exam for exam, _ in sorted_exams[:3]]
+
+    @rx.var(cache=True)
+    def sparkline_data(self) -> Dict[str, List[Dict[str, Any]]]:
+        """Dados de tendência dos últimos 7 dias para os 3 analitos principais"""
+        from datetime import datetime, timedelta
+
+        result = {}
+        today = datetime.now()
+        seven_days_ago = today - timedelta(days=7)
+
+        for exam in self.top_critical_analytes:
+            # Filtrar registros dos últimos 7 dias para este exame
+            exam_data = []
+            for record in self.qc_records:
+                if record.exam_name == exam:
+                    try:
+                        record_date = datetime.strptime(record.date, "%Y-%m-%d")
+                        if record_date >= seven_days_ago:
+                            exam_data.append({
+                                "date": record.date,
+                                "value": record.value,
+                                "cv": record.cv
+                            })
+                    except:
+                        continue
+
+            # Ordenar por data
+            exam_data.sort(key=lambda x: x['date'])
+            result[exam] = exam_data
+
+        return result
+
+    # Widget 6: Status Grid dos Equipamentos
+    @rx.var(cache=True)
+    def equipment_status_grid(self) -> List[Dict[str, Any]]:
+        """Status visual de cada equipamento (QC + Manutenção)"""
+        from datetime import datetime, timedelta
+
+        equipment_status = {}
+        today = datetime.now()
+
+        # Inicializar com todos os equipamentos únicos
+        for equipment in self.unique_equipment_names:
+            if equipment:
+                equipment_status[equipment] = {
+                    "name": equipment,
+                    "qc_status": "ok",  # ok, pending, failed
+                    "maintenance_status": "ok",  # ok, upcoming, overdue
+                    "overall_status": "green"  # green, yellow, red
+                }
+
+        # Verificar status de QC (últimos 7 dias)
+        seven_days_ago = today - timedelta(days=7)
+        for record in self.qc_records:
+            if record.equipment in equipment_status:
+                try:
+                    record_date = datetime.strptime(record.date, "%Y-%m-%d")
+                    if record_date >= seven_days_ago:
+                        # Verificar se há falha no QC
+                        if record.cv > 5.0 or record.status == "Rejeitado":
+                            equipment_status[record.equipment]["qc_status"] = "failed"
+                except:
+                    pass
+
+        # Verificar status de manutenção
+        for maintenance in self.maintenance_records:
+            if maintenance.equipment in equipment_status:
+                try:
+                    if maintenance.next_date:
+                        next_date = datetime.strptime(maintenance.next_date, "%Y-%m-%d")
+                        days_until = (next_date - today).days
+
+                        if days_until < 0:
+                            equipment_status[maintenance.equipment]["maintenance_status"] = "overdue"
+                        elif days_until <= 3:
+                            equipment_status[maintenance.equipment]["maintenance_status"] = "upcoming"
+                except:
+                    pass
+
+        # Calcular status geral
+        for equipment in equipment_status.values():
+            if equipment["qc_status"] == "failed" or equipment["maintenance_status"] == "overdue":
+                equipment["overall_status"] = "red"
+            elif equipment["qc_status"] == "pending" or equipment["maintenance_status"] == "upcoming":
+                equipment["overall_status"] = "yellow"
+            else:
+                equipment["overall_status"] = "green"
+
+        return list(equipment_status.values())
+
+    # Widget 7: Semáforo de Reagentes
+    @rx.var(cache=True)
+    def lots_expiring_soon(self) -> List[Dict[str, Any]]:
+        """Lotes de reagentes ordenados por proximidade de vencimento"""
+        from datetime import datetime, timedelta
+
+        today = datetime.now()
+        lots_with_status = []
+
+        for lot in self.reagent_lots:
+            try:
+                expiry_date = datetime.strptime(lot.expiry_date, "%Y-%m-%d")
+                days_left = (expiry_date - today).days
+
+                # Determinar status
+                if days_left < 0:
+                    status = "expired"
+                    color = "red"
+                    badge = "🔴"
+                elif days_left == 0:
+                    status = "expires_today"
+                    color = "red"
+                    badge = "🔴"
+                elif days_left < 7:
+                    status = "critical"
+                    color = "orange"
+                    badge = "🟠"
+                elif days_left < 30:
+                    status = "warning"
+                    color = "yellow"
+                    badge = "🟡"
+                else:
+                    continue  # Não mostrar reagentes com mais de 30 dias
+
+                lots_with_status.append({
+                    "name": lot.name,
+                    "lot_number": lot.lot_number,
+                    "expiry_date": lot.expiry_date,
+                    "days_left": days_left,
+                    "status": status,
+                    "color": color,
+                    "badge": badge
+                })
+            except:
+                continue
+
+        # Ordenar por dias restantes (mais urgente primeiro)
+        lots_with_status.sort(key=lambda x: x['days_left'])
+
+        return lots_with_status
+
+    # Widget 8: Agenda de Manutenções (próximos 7 dias)
+    @rx.var(cache=True)
+    def upcoming_maintenances(self) -> List[Dict[str, Any]]:
+        """Manutenções previstas para os próximos 7 dias"""
+        from datetime import datetime, timedelta
+
+        today = datetime.now()
+        seven_days_later = today + timedelta(days=7)
+        upcoming = []
+
+        for maintenance in self.maintenance_records:
+            try:
+                if maintenance.next_date:
+                    next_date = datetime.strptime(maintenance.next_date, "%Y-%m-%d")
+
+                    if today <= next_date <= seven_days_later:
+                        days_until = (next_date - today).days
+                        upcoming.append({
+                            "equipment": maintenance.equipment,
+                            "type": maintenance.type,
+                            "date": maintenance.next_date,
+                            "days_until": days_until,
+                            "technician": maintenance.technician
+                        })
+            except:
+                continue
+
+        # Ordenar por data
+        upcoming.sort(key=lambda x: x['date'])
+
+        return upcoming
+
+    # Widget 9: Histórico de Volume (mock data para demonstração)
+    @rx.var(cache=True)
+    def volume_history_6months(self) -> List[Dict[str, Any]]:
+        """Volume de pacientes processados nos últimos 6 meses (mock data)"""
+        from datetime import datetime, timedelta
+        import random
+
+        result = []
+        today = datetime.now()
+
+        # Gerar dados mock para os últimos 6 meses
+        for i in range(6, 0, -1):
+            month_date = today - timedelta(days=30 * i)
+            month_name = month_date.strftime("%b/%y")
+
+            # Usar dados reais se disponível, senão gerar mock
+            if self.compulab_count > 0 and i == 1:
+                volume = self.compulab_count + self.simus_count
+            else:
+                # Gerar volume mock baseado em padrões realistas
+                base_volume = 150
+                variation = random.randint(-30, 50)
+                volume = base_volume + variation
+
+            result.append({
+                "month": month_name,
+                "volume": volume
+            })
+
+        return result
+
