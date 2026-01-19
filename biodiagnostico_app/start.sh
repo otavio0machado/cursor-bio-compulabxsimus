@@ -8,9 +8,9 @@ reflex run --env prod --backend-only --backend-port 8000 &
 REFLEX_PID=$!
 
 # Debug: Listar arquivos gerados
-echo "=== Debug: Conteúdo de .web ==="
-ls -la /app/.web || echo ".web não encontrado"
-ls -la /app/.web/_static || echo ".web/_static não encontrado"
+echo "=== Debug: Localizando index.html ==="
+find /app -name "index.html" || echo "index.html não encontrado"
+ls -la /app/build || echo "/app/build não encontrado"
 echo "=============================="
 
 # Aguardar Backend estar pronto (máximo 60 segundos)
