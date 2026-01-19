@@ -3,6 +3,8 @@ Comparison utilities for COMPULAB vs SIMUS analysis
 Laboratório Biodiagnóstico
 Otimizado para resultados determinísticos e consistentes
 """
+import json
+import re
 from decimal import Decimal
 from .pdf_processor import normalize_exam_name_for_comparison, exam_names_match
 
@@ -130,4 +132,62 @@ def compute_difference_breakdown(compulab_total, simus_total, comparison_results
         "explained_total": explained,
         "residual": residual,
     }
+
+
+def format_divergences_to_json(delimited_data: str) -> str:
+    """
+    Converte dados delimitados de divergências laboratoriais em JSON estruturado.
+
+    Entrada esperada (delimitado por ; ou ,):
+    Paciente;Nome_Exame;Codigo_Exame;Valor_Compulab;Valor_Simus;Tipo_Divergencia
+    ANA SILVA;HEMOGRAMA;202020380;6,15;6,16;Valor Divergente
+
+    Saída: JSON array com objetos estruturados
+
+    Args:
+        delimited_data: String com dados delimitados (CSV ou TSV)
+
+    Returns:
+        JSON string formatado
+    """
+    if not delimited_data or not delimited_data.strip():
+        return "[]"
+
+    lines = delimited_data.strip().split('\n')
+    if not lines:
+        return "[]"
+
+    # Detectar delimitador (ponto-e-vírgula ou vírgula)
+    first_line = lines[0]
+    delimiter = ';' if ';' in first_line else ','
+
+    result = []
+    header_found = False
+    expected_fields = ["Paciente", "Nome_Exame", "Codigo_Exame", "Valor_Compulab", "Valor_Simus", "Tipo_Divergencia"]
+
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+
+        parts = [p.strip() for p in line.split(delimiter)]
+
+        # Verificar se é cabeçalho
+        if not header_found and any(field in line for field in expected_fields):
+            header_found = True
+            continue
+
+        # Processar linha de dados
+        if len(parts) >= 6:
+            obj = {
+                "Paciente": parts[0] if len(parts) > 0 else "",
+                "Nome_Exame": parts[1] if len(parts) > 1 else "",
+                "Codigo_Exame": parts[2] if len(parts) > 2 else "",
+                "Valor_Compulab": parts[3] if len(parts) > 3 else "",
+                "Valor_Simus": parts[4] if len(parts) > 4 else "",
+                "Tipo_Divergencia": parts[5] if len(parts) > 5 else ""
+            }
+            result.append(obj)
+
+    return json.dumps(result, ensure_ascii=False, indent=2)
 
