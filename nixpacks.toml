@@ -1,0 +1,17 @@
+[phases.setup]
+nixPkgs = ["python311", "nodejs-18_x"]
+
+[phases.install]
+cmds = [
+  "cd biodiagnostico_app",
+  "pip install -r requirements.txt"
+]
+
+[phases.build]
+cmds = [
+  "cd biodiagnostico_app",
+  "reflex init"
+]
+
+[start]
+cmd = "cd biodiagnostico_app && reflex run --env prod --loglevel info"
