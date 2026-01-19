@@ -10,16 +10,22 @@ Este projeto agora faz deployment **diretamente** sem usar Docker.
 
 ### 1️⃣ **Railway** (Recomendado)
 ```bash
-# Railway detecta automaticamente o railway.toml
-# Configuração: NIXPACKS builder
+# Railway detecta automaticamente o nixpacks.toml e railway.toml
 railway up
 ```
 
-**Configurações do Railway:**
-- Builder: NIXPACKS
-- Build Command: `cd biodiagnostico_app && pip install -r requirements.txt && reflex init`
-- Start Command: `cd biodiagnostico_app && reflex run --env prod --loglevel info`
-- Port: 3000 (padrão do Reflex)
+**Configurações Automáticas:**
+- Builder: NIXPACKS (configurado via `nixpacks.toml`)
+- Python: 3.11
+- Node.js: 18.x
+- Build: Automático via `reflex init`
+- Start: `reflex run --env prod --loglevel info`
+- Port: 3000 (porta padrão do Reflex)
+
+**⚠️ IMPORTANTE:**
+- O Railway usa `nixpacks.toml` para as instruções de build
+- NÃO precisa configurar nada manualmente no dashboard
+- Apenas faça push e o Railway faz tudo automaticamente
 
 **Variáveis de Ambiente Necessárias:**
 ```
