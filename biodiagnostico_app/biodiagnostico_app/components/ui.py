@@ -432,7 +432,7 @@ def toast(
     status_config = {
         "success": {"bg": Color.SUCCESS_BG, "color": Color.SUCCESS, "icon": "circle-check"},
         "error": {"bg": Color.ERROR_BG, "color": Color.ERROR, "icon": "circle-x"},
-        "warning": {"bg": Color.WARNING_BG, "color": Color.WARNING, "icon": "alert-triangle"},
+        "warning": {"bg": Color.WARNING_BG, "color": Color.WARNING, "icon": "triangle-alert"},
         "info": {"bg": "#EFF6FF", "color": "#1D4ED8", "icon": "info"},
     }
 

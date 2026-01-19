@@ -92,7 +92,7 @@ def dashboard_page() -> rx.Component:
                         # Widget 3: Funil de Perda
                         loss_funnel_chart(),
 
-                        columns=["1", "1", "3"],  # 1 em mobile/tablet, 3 em desktop
+                        columns="3",  # 3 colunas (responsivo automaticamente)
                         spacing="6",
                         width="100%",
                         class_name="animate-fade-in-up"
@@ -122,7 +122,7 @@ def dashboard_page() -> rx.Component:
                         # Widget 5: Sparklines (Tendências)
                         sparklines_widget(),
 
-                        columns=["1", "1", "2"],  # 1 em mobile/tablet, 2 em desktop
+                        columns="2",  # 2 colunas (responsivo automaticamente)
                         spacing="6",
                         width="100%",
                         class_name="animate-fade-in-up delay-100"
@@ -159,7 +159,7 @@ def dashboard_page() -> rx.Component:
                         # Widget 8: Agenda de Manutenções
                         maintenance_timeline(),
 
-                        columns=["1", "1", "2"],  # 1 em mobile/tablet, 2 em desktop
+                        columns="2",  # 2 colunas (responsivo automaticamente)
                         spacing="6",
                         width="100%",
                         class_name="animate-fade-in-up delay-100"
@@ -189,7 +189,7 @@ def dashboard_page() -> rx.Component:
                         # Widget 10: Quick Actions
                         quick_actions_widget(),
 
-                        columns=["1", "1", "2"],  # 1 em mobile/tablet, 2 em desktop
+                        columns="2",  # 2 colunas (responsivo automaticamente)
                         spacing="6",
                         width="100%",
                         class_name="animate-fade-in-up delay-100"
@@ -263,7 +263,7 @@ def dashboard_page() -> rx.Component:
                             class_name="cursor-pointer hover:shadow-lg transition-all duration-300 h-full group border-transparent hover:border-purple-200"
                         ),
 
-                        columns=["1", "2", "3"],  # 1 em mobile, 2 em tablet, 3 em desktop
+                        columns="3",  # 3 colunas (responsivo automaticamente)
                         spacing="6",
                         width="100%",
                         class_name="animate-fade-in-up delay-200"
