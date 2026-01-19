@@ -1,13 +1,14 @@
 [build]
-builder = "dockerfile"
-dockerfilePath = "biodiagnostico_app/Dockerfile"
+builder = "NIXPACKS"
+buildCommand = "cd biodiagnostico_app && pip install -r requirements.txt && reflex init"
 watchPatterns = ["biodiagnostico_app/**"]
 
 [deploy]
+startCommand = "cd biodiagnostico_app && reflex run --env prod --backend-only"
 healthcheckPath = "/"
 healthcheckTimeout = 600
 restartPolicyType = "ON_FAILURE"
 numReplicas = 1
 
 [[services]]
-port = 8080
+port = 3000
