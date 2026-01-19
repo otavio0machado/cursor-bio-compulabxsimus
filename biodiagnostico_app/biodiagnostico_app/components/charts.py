@@ -207,14 +207,10 @@ def critical_alerts_feed() -> rx.Component:
                         State.critical_alerts,
                         lambda alert: rx.box(
                             rx.hstack(
-                                rx.icon(
-                                    alert["icon"],
-                                    size=20,
-                                    color=rx.cond(
-                                        alert["severity"] == "high",
-                                        Color.ERROR,
-                                        Color.WARNING
-                                    )
+                                rx.cond(
+                                    alert["severity"] == "high",
+                                    rx.icon("triangle-alert", size=20, color=Color.ERROR),
+                                    rx.icon("alert-circle", size=20, color=Color.WARNING)
                                 ),
                                 rx.vstack(
                                     rx.text(
