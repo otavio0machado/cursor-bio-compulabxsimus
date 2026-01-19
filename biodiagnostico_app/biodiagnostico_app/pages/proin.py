@@ -87,7 +87,7 @@ def dashboard_tab() -> rx.Component:
                     ui.stat_card("Alertas CV > 5%", State.dashboard_alerts_count, "triangle-alert", "error"),
                     ui.stat_card("Sem Alertas", "0", "sparkles", "success")
                 ),
-                columns=["1", "2", "2", "4"],
+                columns="4",
                 spacing="4",
                 width="100%",
             ),
@@ -203,7 +203,7 @@ def dashboard_tab() -> rx.Component:
                 width="100%",
             ),
             
-            columns=["1", "1", "2", "2"],
+            columns="2",
             spacing="6",
             width="100%",
         ),
@@ -312,7 +312,7 @@ def registro_qc_tab() -> rx.Component:
                         ),
                         required=True
                     ),
-                    columns=["2", "2", "4", "4"],
+                    columns="4",
                     spacing="4",
                     width="100%",
                 ),
@@ -371,11 +371,11 @@ def registro_qc_tab() -> rx.Component:
                                 rx.icon(
                                     rx.cond(
                                         State.qc_cv_status == "ok",
-                                        "check-circle",
+                                        "circle-check",
                                         rx.cond(
                                             State.qc_cv_status == "warning",
-                                            "alert-circle",
-                                            "x-circle"
+                                            "circle-alert",
+                                            "circle-x"
                                         )
                                     ),
                                     size=20,
@@ -404,7 +404,7 @@ def registro_qc_tab() -> rx.Component:
                         ),
                         spacing="1",
                     ),
-                    columns=["2", "2", "4", "4"],
+                    columns="4",
                     spacing="4",
                     width="100%",
                 ),
@@ -797,14 +797,14 @@ def relatorios_tab() -> rx.Component:
                             on_change=State.set_levey_jennings_period,
                         ),
                     ),
-                    columns=["1", "2", "3", "3"],
+                    columns="3",
                     spacing="4",
                     width="100%"
                 ),
                 ui.button(
                     "Gerar Gráfico",
                     icon="chart-line",
-                    on_click=State._update_levey_jennings_data,
+                    on_click=State.update_levey_jennings_data,
                     class_name="mt-4"
                 ),
             ),
@@ -862,37 +862,37 @@ def relatorios_tab() -> rx.Component:
                         rx.recharts.graphing_tooltip(),
                         rx.recharts.legend(),
                         rx.recharts.reference_line(
-                            y=State.lj_target_plus_1sd,
+                            y=State.lj_target_plus_1sd.to_string(),
                             stroke="#22C55E",
                             stroke_dasharray="3 3",
                             label="+1 DP"
                         ),
                         rx.recharts.reference_line(
-                            y=State.lj_target_minus_1sd,
+                            y=State.lj_target_minus_1sd.to_string(),
                             stroke="#22C55E",
                             stroke_dasharray="3 3",
                             label="-1 DP"
                         ),
                         rx.recharts.reference_line(
-                            y=State.lj_target_plus_2sd,
+                            y=State.lj_target_plus_2sd.to_string(),
                             stroke="#F59E0B",
                             stroke_dasharray="3 3",
                             label="+2 DP"
                         ),
                         rx.recharts.reference_line(
-                            y=State.lj_target_minus_2sd,
+                            y=State.lj_target_minus_2sd.to_string(),
                             stroke="#F59E0B",
                             stroke_dasharray="3 3",
                             label="-2 DP"
                         ),
                         rx.recharts.reference_line(
-                            y=State.lj_target_plus_3sd,
+                            y=State.lj_target_plus_3sd.to_string(),
                             stroke="#EF4444",
                             stroke_dasharray="3 3",
                             label="+3 DP"
                         ),
                         rx.recharts.reference_line(
-                            y=State.lj_target_minus_3sd,
+                            y=State.lj_target_minus_3sd.to_string(),
                             stroke="#EF4444",
                             stroke_dasharray="3 3",
                             label="-3 DP"
@@ -901,6 +901,7 @@ def relatorios_tab() -> rx.Component:
                         width="100%",
                         height=350,
                     ),
+                    width="100%",
                     class_name="p-4"
                 ),
                 
@@ -942,7 +943,7 @@ def relatorios_tab() -> rx.Component:
                         ),
                         class_name="text-center py-4"
                     ),
-                    columns=["2", "4", "4", "4"],
+                    columns="4",
                     spacing="4",
                     width="100%",
                     class_name="mt-4"
@@ -962,22 +963,22 @@ def relatorios_tab() -> rx.Component:
                             rx.table.root(
                                 rx.table.header(
                                     rx.table.row(
-                                        rx.table.column_header_cell("Data", class_name="text-xs uppercase"),
-                                        rx.table.column_header_cell("Valor", class_name="text-xs uppercase"),
-                                        rx.table.column_header_cell("Alvo", class_name="text-xs uppercase"),
-                                        rx.table.column_header_cell("DP", class_name="text-xs uppercase"),
-                                        rx.table.column_header_cell("CV%", class_name="text-xs uppercase"),
-                                        rx.table.column_header_cell("Status", class_name="text-xs uppercase"),
+                                        rx.table.column_header_cell("Data", class_name="text-xs uppercase text-gray-900 font-bold"),
+                                        rx.table.column_header_cell("Valor", class_name="text-xs uppercase text-gray-900 font-bold"),
+                                        rx.table.column_header_cell("Alvo", class_name="text-xs uppercase text-gray-900 font-bold"),
+                                        rx.table.column_header_cell("DP", class_name="text-xs uppercase text-gray-900 font-bold"),
+                                        rx.table.column_header_cell("CV%", class_name="text-xs uppercase text-gray-900 font-bold"),
+                                        rx.table.column_header_cell("Status", class_name="text-xs uppercase text-gray-900 font-bold"),
                                     )
                                 ),
                                 rx.table.body(
                                     rx.foreach(
                                         State.levey_jennings_data,
                                         lambda d: rx.table.row(
-                                            rx.table.cell(d["date"], class_name="text-sm"),
-                                            rx.table.cell(d["value"].to_string(), class_name="font-medium"),
-                                            rx.table.cell(d["target"].to_string()),
-                                            rx.table.cell(d["sd"].to_string()),
+                                            rx.table.cell(d["date"], class_name="text-sm text-gray-900"),
+                                            rx.table.cell(d["value"].to_string(), class_name="font-medium text-gray-900"),
+                                            rx.table.cell(d["target"].to_string(), class_name="text-gray-900"),
+                                            rx.table.cell(d["sd"].to_string(), class_name="text-gray-900"),
                                             rx.table.cell(
                                                 rx.text(
                                                     d["cv"].to_string() + "%",
@@ -1141,13 +1142,13 @@ def importar_tab() -> rx.Component:
                             align="center"
                         ),
                         rx.hstack(
-                            rx.icon("columns", size=16, color="gray"),
+                            rx.icon("columns-2", size=16, color="gray"),
                             rx.text(State.excel_total_columns.to_string() + " colunas", font_size="0.875rem"),
                             spacing="1",
                             align="center"
                         ),
                         rx.hstack(
-                            rx.icon("rows", size=16, color="gray"),
+                            rx.icon("rows-2", size=16, color="gray"),
                             rx.text(State.excel_total_rows.to_string() + " registros a importar", font_size="0.875rem", color=Color.PRIMARY, font_weight="500"),
                             spacing="1",
                             align="center"

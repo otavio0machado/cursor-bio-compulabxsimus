@@ -478,50 +478,40 @@ class State(rx.State):
     @rx.var
     def unique_exam_names(self) -> List[str]:
         """Retorna lista única de nomes de exames para o dropdown"""
-        # Lista de exames comuns em laboratório (padronizada)
-        return ["DEBUG_TEST_ITEM"]
+
         
         # Lista de exames comuns em laboratório (padronizada)
         common_exams = [
-            "GLICOSE",
-            "HEMOGRAMA",
-            "CREATININA",
-            "UREIA",
-            "ACIDO URICO",
-            "COLESTEROL TOTAL",
-            "COLESTEROL HDL",
-            "COLESTEROL LDL",
-            "TRIGLICERIDEOS",
-            "HEMOGLOBINA GLICOSILADA A1C",
-            "TIREOTROFINA (TSH)",
-            "TIROXINA LIVRE (T4 LIVRE)",
-            "VITAMINA D25",
-            "VITAMINA B12",
-            "FERRITINA",
-            "FERRO SERICO",
-            "SODIO",
-            "POTASSIO",
-            "CALCIO",
-            "MAGNESIO",
-            "GOT",
-            "GPT",
-            "GAMA GT",
-            "FOSFATASE ALCALINA",
-            "BILIRRUBINAS",
-            "PROTEINA C REATIVA",
-            "V. S. G.",
-            "TEMPO DE PROTROMBINA",
-            "EXAME QUALITATIVO DE URINA",
-            "UROCULTURA",
-            "INSULINA",
-            "CORTISOL",
-            "PROLACTINA",
-            "ESTRADIOL",
-            "PROGESTERONA",
-            "TESTOSTERONA TOTAL",
-            "HORMONIO FOLICULO ESTIMULANTE FSH",
-            "HORMONIO LUTEINIZANTE LH",
-            "ANTIGENO PROSTATICO ESPECIFICO",
+            "17 HIDROXIPROGESTERONA", "ABSAG", "ACIDO FOLICO", "ACIDO URICO", "ALDOLASE", 
+            "ALFA 1 GLICOPROTEINA ACIDA", "AMILASE", "ANDROSTENEDIONA", "ANTI HBS", "ANTI HCV", 
+            "ANTI HVA IGG", "ANTI TIREOPEROXIDASE", "ANTIBIOGRAMA", "ANTICARDIOLIPINA IGM", 
+            "ANTICORPO ANTICARDIOLIPINA IGG", "ANTICORPOS ANTI DNA", "ANTICORPOS ANTI INSULINA", 
+            "ANTIESTREPTOLISINA O", "ANTIGENO CARCINO EMBRIONICO", "ANTIGENO PROSTATICO ESPECIFICO", 
+            "B HCG", "BACTERIOLOGICO", "BILIRRUBINAS", "CALCIO", "CAPACIDADE FERROPEXICA", 
+            "CITOMEGALOVIRUS IGG", "CITOMEGALOVIRUS IGM", "COLESTEROL HDL", "COLESTEROL LDL", 
+            "COLESTEROL LDL2", "COLESTEROL TOTAL", "COMPLEMENTO C 3", "COMPLEMENTO C4", 
+            "COOMBS INDIRETO", "CORTISOL", "CREATININA", "CREATINOFOSFOQUINASE", 
+            "DEPURACAO DA CREATININA ENDOGENA", "DOSAGEM DE CA 125", "ELETROFORESE DE PROTEINAS", 
+            "EPSTEIN BAAR IGM", "ESTRADIOL", "EXAME A FRESCO", "EXAME PARASITOLOGICO DE FEZES 1 O", 
+            "EXAME PARASITOLOGICO DE FEZES 2 O", "EXAME PARAZITOLOGICO DE FEZES 3 O", 
+            "EXAME QUALITATIVO DE URINA", "FATOR ANTI NUCLEAR", "FATOR RH", "FERRITINA", 
+            "FERRO SERICO", "FOSFATASE ACIDA PROSTATICA", "FOSFATASE ALCALINA", "FOSFORO", 
+            "FTA ABS", "G O T", "G P T", "GAMA GT", "GLICOSE", "GLICOSE 1 E 2 HORAS", 
+            "GRAM DE SECRECAO VAGINAL", "GRUPO SANGUINEO", "HBEAG", "HEMOGLOBINA GLICOSILADA A1C", 
+            "HEMOGRAMA", "HIDROXIPROGESTERONA", "HIV 1 2", "HORMONIO FOLICULO ESTIMULANTE FSH", 
+            "HORMONIO LUTEINIZANTE LH", "HTLV I II", "IGG", "IMUNOGLOBULINA A", 
+            "IMUNOGLOBULINA E", "IMUNOGLOBULINA M", "INSULINA", "LIPASE", "LITIO", 
+            "MAGNESIO", "MICROALBUMINURIA", "PARATORMONIO", "PESQUISA DE LARVAS NAS FEZES", 
+            "PESQUISA DE LEUCOCITOS FECAIS", "PESQUISA DE LEVEDURAS NAS FEZES", 
+            "PESQUISA DE SANGUE OCULTO FEZES", "PESQUISA DE TROFOZOITAS NAS FEZES", "PLAQUETAS", 
+            "POTASSIO", "PROGESTERONA", "PROLACTINA", "PROTEINA C REATIVA", 
+            "PROTEINAS TOTAIS E FRACOES", "PROTEINURIA", "PROVA DO LATEX A R", "SODIO", 
+            "SUBSTANCIAS REDUTORAS NAS FEZES", "TEMPO DE PROTROMBINA", 
+            "TEMPO DE TROMBOPLASTINA ATIVADO", "TESTOSTERONA LIVRE", "TESTOSTERONA TOTAL", 
+            "TIREOGLOBULINA", "TIREOTROFINA", "TIROXINA LIVRE", "TIROXINA T4 RIE", 
+            "TOXOPLASMOSE", "TRANSFERRINA", "TRIGLICERIDEOS", "TRIIODOTIRONINA T3 RIE", 
+            "UREIA", "UROCULTURA", "V S G", "VARICELA ZOSTER IGG", "VARICELA ZOSTER IGM", 
+            "VDRL QUANTITATIVO", "VITAMINA B12", "VITAMINA D25", "ZINCO"
         ]
         
         # Combinar e ordenar
@@ -1652,7 +1642,7 @@ class State(rx.State):
     def qc_records_today(self) -> List[Dict[str, Any]]:
         """Registros de CQ do dia atual"""
         today = datetime.now().strftime("%Y-%m-%d")
-        return [r for r in self.qc_records if r.get("date", "").startswith(today)]
+        return [r for r in self.qc_records if r.date.startswith(today)]
     
     @rx.var
     def qc_records_with_alerts(self) -> List[QCRecord]:
@@ -1850,9 +1840,31 @@ class State(rx.State):
             # Status baseado no CV
             status = "OK" if cv <= 5.0 else "Atenção"
             
+            # Persistir no banco se disponível
+            real_id = str(len(self.qc_records) + 1)
+            
+            if supabase:
+                try:
+                    db_data = {
+                        "date": self.qc_date,
+                        "exam_name": self.qc_exam_name,
+                        "level": self.qc_level,
+                        "lot_number": self.qc_lot_number,
+                        "value": value,
+                        "target_value": target,
+                        "target_sd": sd,
+                        "equipment": self.qc_equipment,
+                        "analyst": self.qc_analyst
+                    }
+                    new_record = await QCService.create_qc_record(db_data)
+                    if new_record and new_record.get("id"):
+                        real_id = new_record.get("id")
+                except Exception as db_error:
+                    print(f"Erro ao salvar no Supabase: {db_error}")
+            
             # Criar registro
             record = QCRecord(
-                id=str(len(self.qc_records) + 1),
+                id=real_id,
                 date=self.qc_date,
                 exam_name=self.qc_exam_name,
                 level=self.qc_level,
@@ -1894,7 +1906,7 @@ class State(rx.State):
     
     async def delete_qc_record(self, record_id: str):
         """Remove um registro de CQ"""
-        if supabase:
+        if supabase and len(record_id) > 10:  # Check for valid UUID length
             success = await QCService.delete_qc_record(record_id)
             if success:
                 await self.load_data_from_db()
@@ -2078,13 +2090,13 @@ class State(rx.State):
     
     def set_levey_jennings_exam(self, value: str):
         self.levey_jennings_exam = value
-        self._update_levey_jennings_data()
+        self.update_levey_jennings_data()
     
     def set_levey_jennings_period(self, value: str):
         self.levey_jennings_period = value
-        self._update_levey_jennings_data()
+        self.update_levey_jennings_data()
     
-    def _update_levey_jennings_data(self):
+    def update_levey_jennings_data(self, args=None):
         """Atualiza os dados para o gráfico Levey-Jennings"""
         if not self.levey_jennings_exam:
             self.levey_jennings_data = []
@@ -2212,14 +2224,7 @@ class State(rx.State):
         avg_sd = sum(p.sd for p in self.levey_jennings_data) / len(self.levey_jennings_data)
         return round(avg_target - 3 * avg_sd, 2)
     
-    @rx.var
-    def unique_exam_names(self) -> List[str]:
-        """Lista de nomes de exames únicos nos registros"""
-        names = set()
-        for r in self.qc_records:
-            if r.exam_name:
-                names.add(r.exam_name)
-        return sorted(list(names))
+
     
     @rx.var
     def unique_equipment_names(self) -> List[str]:
