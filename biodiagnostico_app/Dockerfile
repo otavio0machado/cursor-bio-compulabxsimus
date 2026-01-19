@@ -18,6 +18,9 @@ COPY . .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Aumentar limite de memória do Node para evitar crash durante o build do frontend
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
 RUN reflex init
 
 COPY nginx.conf /etc/nginx/nginx.conf
