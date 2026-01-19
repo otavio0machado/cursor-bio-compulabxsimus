@@ -166,7 +166,7 @@ def api_config_page() -> rx.Component:
             
             # Título
             rx.text(
-                "Configuração API Gemini",
+                "Configuração API OpenAI",
                 class_name="text-[#1B5E20] text-5xl font-bold mt-6"
             ),
             
@@ -179,22 +179,23 @@ def api_config_page() -> rx.Component:
             rx.box(
                 rx.vstack(
                     rx.text(
-                        "🔑 API Key do Google Gemini",
+                        "🔑 API Key da OpenAI",
                         class_name="text-[#1B5E20] font-semibold text-lg"
                     ),
                     rx.input(
-                        placeholder="Cole sua API Key aqui...",
+                        placeholder="Cole sua API Key aqui (sk-...)",
                         type="password",
-                        value=State.gemini_api_key,
+                        value=State.openai_api_key,
                         on_change=State.set_api_key,
                         class_name="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-[#4CAF50] focus:ring-2 focus:ring-green-200 transition-all text-lg"
                     ),
                     rx.cond(
-                        State.gemini_api_key != "",
+                        State.openai_api_key != "",
                         rx.box(
                             rx.hstack(
                                 rx.text("✅"),
                                 rx.text("API Key configurada!"),
+
                                 spacing="2",
                             ),
                             class_name="bg-green-50 border border-green-200 text-green-700 rounded-lg p-3 w-full"
@@ -218,16 +219,16 @@ def api_config_page() -> rx.Component:
                             rx.hstack(
                                 rx.text("1. Acesse"),
                                 rx.link(
-                                    "Google AI Studio",
-                                    href="https://makersuite.google.com/app/apikey",
+                                    "OpenAI Platform",
+                                    href="https://platform.openai.com/api-keys",
                                     is_external=True,
                                     class_name="text-[#4CAF50] hover:underline font-medium"
                                 ),
                                 spacing="1",
                             )
                         ),
-                        rx.list_item("2. Faça login com sua conta Google"),
-                        rx.list_item("3. Clique em 'Create API Key'"),
+                        rx.list_item("2. Faça login com sua conta OpenAI"),
+                        rx.list_item("3. Clique em 'Create new secret key'"),
                         rx.list_item("4. Copie a chave gerada e cole acima"),
                         class_name="text-gray-700 space-y-2 ml-4 list-decimal"
                     ),

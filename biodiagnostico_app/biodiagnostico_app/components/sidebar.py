@@ -109,7 +109,7 @@ def sidebar() -> rx.Component:
                     class_name="text-white/50 text-[10px] font-semibold tracking-[0.15em] px-4 pb-2"
                 ),
                 rx.box(
-                    nav_item("API Gemini", "🤖", "api"),
+                    nav_item("API OpenAI", "🤖", "api"),
                     class_name="px-2"
                 ),
                 spacing="0",

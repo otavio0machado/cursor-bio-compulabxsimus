@@ -379,7 +379,7 @@ def analise_page() -> rx.Component:
                         rx.tabs.content(
                             rx.vstack(
                                 rx.cond(
-                                    State.gemini_api_key == "",
+                                    State.openai_api_key == "",
                                     rx.box(
                                         rx.vstack(
                                             rx.hstack(
@@ -389,7 +389,7 @@ def analise_page() -> rx.Component:
                                                 align="center",
                                             ),
                                             rx.text(
-                                                "Configure sua API Key do Gemini na página de Configurações para usar a análise por IA",
+                                                "Configure sua API Key da OpenAI na página de Configurações para usar a análise por IA",
                                                 class_name="text-orange-600 text-sm"
                                             ),
                                             spacing="2",

@@ -254,10 +254,78 @@ def generate_analysis_pdf(
     # Análise por IA
     if ai_analysis:
         story.append(Paragraph("Análise por Inteligência Artificial", heading_style))
-        # Escapar caracteres especiais e quebrar linhas
-        ai_text = str(ai_analysis).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-        ai_text = ai_text.replace('\n', '<br/>')
-        story.append(Paragraph(ai_text, styles['Normal']))
+        
+        # Tentar extrair CSV da resposta MD
+        try:
+            import re
+            import csv
+            from io import StringIO
+            
+            # Encontrar bloco de codigo csv
+            # Procura por ```csv ... ``` ou apenas o conteúdo se não tiver blocos
+            csv_pattern = r"```csv\s*(.*?)\s*```"
+            match = re.search(csv_pattern, ai_analysis, re.DOTALL)
+            
+            csv_content = ""
+            text_before = ai_analysis
+            
+            if match:
+                csv_content = match.group(1)
+                # Texto antes do CSV (intro)
+                text_before = ai_analysis.split("```csv")[0].strip()
+            
+            # Se tem texto introdutório, adicionar
+            if text_before:
+                # Limpar markdown básico
+                clean_text = text_before.replace('#', '').replace('*', '')
+                story.append(Paragraph(clean_text, styles['Normal']))
+                story.append(Spacer(1, 0.5*cm))
+                
+            if csv_content:
+                # Parsear CSV
+                f = StringIO(csv_content)
+                reader = csv.reader(f, delimiter=';')
+                csv_data = list(reader)
+                
+                if csv_data:
+                    # Formatar cabeçalho
+                    header = csv_data[0]
+                    # Ajustar larguras baseado no conteúdo (estimativa)
+                    # Paciente;Nome_Exame;Codigo_Exame;Valor_Compulab;Valor_Simus;Tipo_Divergencia
+                    col_widths = [5*cm, 5*cm, 2*cm, 2.5*cm, 2.5*cm, 3*cm]
+                    
+                    ai_table = Table(csv_data, colWidths=col_widths, repeatRows=1)
+                    ai_table.setStyle(TableStyle([
+                        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#673AB7')), # Deep Purple
+                        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                        ('FONTSIZE', (0, 0), (-1, 0), 9),
+                        ('FONTSIZE', (0, 1), (-1, -1), 8),
+                        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                        ('TOPPADDING', (0, 0), (-1, 0), 12),
+                        ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+                        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lavender]),
+                        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    ]))
+                    
+                    story.append(ai_table)
+                    story.append(Spacer(1, 1*cm))
+                    
+                    # Adicionar contagem
+                    story.append(Paragraph(f"Total de itens na auditoria: {len(csv_data)-1}", styles['Normal']))
+            else:
+                 # Fallback se não achar CSV mas tiver conteúdo
+                 clean_text = str(ai_analysis).replace('#', '').replace('*', '').replace('\n', '<br/>')
+                 story.append(Paragraph(clean_text, styles['Normal']))
+
+        except Exception as e:
+            # Fallback em caso de erro no parse
+            story.append(Paragraph(f"Erro ao formatar tabela IA: {str(e)}", styles['Normal']))
+            clean_text = str(ai_analysis).replace('\n', '<br/>')
+            story.append(Paragraph(clean_text, styles['Normal']))
+            
         story.append(Spacer(1, 1*cm))
     
     # Rodapé

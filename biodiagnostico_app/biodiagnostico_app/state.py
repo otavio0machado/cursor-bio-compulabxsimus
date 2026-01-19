@@ -142,6 +142,13 @@ class State(rx.State):
     explained_total: float = 0.0
     residual: float = 0.0
     
+    # AI Progress State
+    ai_loading_progress: int = 0
+    ai_loading_text: str = ""
+    
+    # AI Results Data (Structured)
+    ai_analysis_data: List[Dict[str, Any]] = []
+    
     # CSVs gerados
     compulab_csv: str = ""
     simus_csv: str = ""
@@ -1317,13 +1324,13 @@ class State(rx.State):
             gc.collect()
     
     def set_api_key(self, key: str):
-        """Define a API key do Gemini"""
-        self.gemini_api_key = key
+        """Define a API key da OpenAI"""
+        self.openai_api_key = key
     
     async def generate_ai_analysis(self):
-        """Gera análise por IA"""
-        if not self.gemini_api_key:
-            self.error_message = "❌ Configure sua API Key do Gemini primeiro"
+        """Gera análise por IA (Async + Parallel)"""
+        if not self.openai_api_key:
+            self.error_message = "❌ Configure sua API Key da OpenAI primeiro"
             return
         
         if not self.has_analysis:
@@ -1331,45 +1338,61 @@ class State(rx.State):
             return
         
         self.is_generating_ai = True
+        self.ai_loading_progress = 0
+        self.ai_loading_text = "Iniciando..."
         self.error_message = ""
         
         try:
             from .utils.ai_analysis import generate_ai_analysis
             
-            comparison_results = {
-                'missing_patients': self.missing_patients,
-                'missing_exams': self.missing_exams,
-                'value_divergences': self.value_divergences
-            }
+            # Consumir o gerador async
+            final_analysis = None
+            final_error = None
             
-            breakdown = {
-                'missing_patients_total': self.missing_patients_total,
-                'missing_exams_total': self.missing_exams_total,
-                'divergences_total': self.divergences_total,
-                'explained_total': self.explained_total,
-                'residual': self.residual
-            }
+            async for progress_update in generate_ai_analysis(
+                self._compulab_patients,
+                self._simus_patients,
+                self.openai_api_key
+            ):
+                # O gerador retorna tuplas (progresso, status) OU (resultado, erro) no final
+                if isinstance(progress_update, tuple):
+                    val1, val2 = progress_update
+                    
+                    if isinstance(val1, int): # (percentage, message)
+                        self.ai_loading_progress = val1
+                        self.ai_loading_text = val2
+                    else: # (analysis, error) - Resultado final
+                        final_analysis = val1
+                        final_error = val2
             
-            analysis, error = generate_ai_analysis(
-                Decimal(str(self.compulab_total)),
-                Decimal(str(self.simus_total)),
-                self.compulab_count,
-                self.simus_count,
-                comparison_results,
-                breakdown,
-                self.gemini_api_key
-            )
-            
-            if error:
-                self.error_message = f"❌ {error}"
+            if final_error:
+                self.error_message = f"❌ {final_error}"
             else:
-                self.ai_analysis = analysis
+                self.ai_analysis = final_analysis
                 self.success_message = "✅ Análise por IA gerada!"
+                
+                # Parsear para tabela na UI
+                try:
+                    import re
+                    import csv
+                    from io import StringIO
+                    
+                    csv_pattern = r"```csv\s*(.*?)\s*```"
+                    match = re.search(csv_pattern, final_analysis, re.DOTALL)
+                    if match:
+                        csv_content = match.group(1)
+                        f = StringIO(csv_content)
+                        reader = csv.DictReader(f, delimiter=';')
+                        self.ai_analysis_data = list(reader)
+                except Exception as e:
+                    print(f"Erro ao parsear CSV para UI: {e}")
                 
         except Exception as e:
             self.error_message = f"❌ Erro: {str(e)}"
         finally:
             self.is_generating_ai = False
+            self.ai_loading_progress = 0
+            self.ai_loading_text = ""
     
     def generate_pdf_report(self):
         """Gera PDF da análise e armazena no state"""
