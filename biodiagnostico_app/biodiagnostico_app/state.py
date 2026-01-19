@@ -660,14 +660,14 @@ class State(rx.State):
             
             # Validar tamanho do arquivo
             if total_size == 0:
-                self.error_message = "❌ COMPULAB: Arquivo está vazio"
+                self.error_message = "ERRO: COMPULAB: Arquivo está vazio"
                 if tmp_file_path and os.path.exists(tmp_file_path):
                     os.unlink(tmp_file_path)
                 return
             
             max_size_bytes = self.MAX_FILE_SIZE_MB * 1024 * 1024
             if total_size > max_size_bytes:
-                self.error_message = f"❌ COMPULAB: Arquivo muito grande. Máximo: {self.MAX_FILE_SIZE_MB}MB"
+                self.error_message = f"ERRO: COMPULAB: Arquivo muito grande. Máximo: {self.MAX_FILE_SIZE_MB}MB"
                 if tmp_file_path and os.path.exists(tmp_file_path):
                     os.unlink(tmp_file_path)
                 return
@@ -675,7 +675,7 @@ class State(rx.State):
             # Validar extensão
             valid_extensions = ['.pdf', '.csv']
             if not any(file.name.lower().endswith(ext) for ext in valid_extensions):
-                self.error_message = f"❌ COMPULAB: Tipo de arquivo inválido. Aceitos: PDF, CSV"
+                self.error_message = f"ERRO: COMPULAB: Tipo de arquivo inválido. Aceitos: PDF, CSV"
                 if tmp_file_path and os.path.exists(tmp_file_path):
                     os.unlink(tmp_file_path)
                 return
@@ -709,11 +709,11 @@ class State(rx.State):
             size_str = self.compulab_file_size
             file_type = "PDF" if file.name.lower().endswith('.pdf') else "CSV"
             cloud_status = " (Salvo na nuvem)" if self.compulab_file_url else " (Local)"
-            self.success_message = f"✅ COMPULAB carregado: {file.name} ({file_type}, {size_str}){cloud_status}"
+            self.success_message = f"SUCESSO: COMPULAB carregado: {file.name} ({file_type}, {size_str}){cloud_status}"
             self.processing_status = ""
             
         except Exception as e:
-            self.error_message = f"❌ Erro ao carregar COMPULAB: {str(e)}"
+            self.error_message = f"ERRO: Erro ao carregar COMPULAB: {str(e)}"
             self.processing_status = ""
             if tmp_file_path and os.path.exists(tmp_file_path):
                 try:
@@ -776,14 +776,14 @@ class State(rx.State):
             
             # Validar tamanho do arquivo
             if total_size == 0:
-                self.error_message = "❌ SIMUS: Arquivo está vazio"
+                self.error_message = "ERRO: SIMUS: Arquivo está vazio"
                 if tmp_file_path and os.path.exists(tmp_file_path):
                     os.unlink(tmp_file_path)
                 return
             
             max_size_bytes = self.MAX_FILE_SIZE_MB * 1024 * 1024
             if total_size > max_size_bytes:
-                self.error_message = f"❌ SIMUS: Arquivo muito grande. Máximo: {self.MAX_FILE_SIZE_MB}MB"
+                self.error_message = f"ERRO: SIMUS: Arquivo muito grande. Máximo: {self.MAX_FILE_SIZE_MB}MB"
                 if tmp_file_path and os.path.exists(tmp_file_path):
                     os.unlink(tmp_file_path)
                 return
@@ -791,7 +791,7 @@ class State(rx.State):
             # Validar extensão
             valid_extensions = ['.pdf', '.csv']
             if not any(file.name.lower().endswith(ext) for ext in valid_extensions):
-                self.error_message = f"❌ SIMUS: Tipo de arquivo inválido. Aceitos: PDF, CSV"
+                self.error_message = f"ERRO: SIMUS: Tipo de arquivo inválido. Aceitos: PDF, CSV"
                 if tmp_file_path and os.path.exists(tmp_file_path):
                     os.unlink(tmp_file_path)
                 return
@@ -823,11 +823,11 @@ class State(rx.State):
             size_str = self.simus_file_size
             file_type = "PDF" if file.name.lower().endswith('.pdf') else "CSV"
             cloud_status = " (Salvo na nuvem)" if self.simus_file_url else " (Local)"
-            self.success_message = f"✅ SIMUS carregado: {file.name} ({file_type}, {size_str}){cloud_status}"
+            self.success_message = f"SUCESSO: SIMUS carregado: {file.name} ({file_type}, {size_str}){cloud_status}"
             self.processing_status = ""
             
         except Exception as e:
-            self.error_message = f"❌ Erro ao carregar SIMUS: {str(e)}"
+            self.error_message = f"ERRO: Erro ao carregar SIMUS: {str(e)}"
             self.processing_status = ""
             if tmp_file_path and os.path.exists(tmp_file_path):
                 try:
@@ -886,7 +886,7 @@ class State(rx.State):
     async def generate_csvs(self):
         """Gera CSVs a partir dos PDFs"""
         if not self.has_files:
-            self.error_message = "❌ Carregue ambos os arquivos primeiro"
+            self.error_message = "ERRO: Carregue ambos os arquivos primeiro"
             return
         
         self.is_generating_csv = True
@@ -952,13 +952,13 @@ class State(rx.State):
                 self.csv_generated = True
                 self.csv_progress_percentage = 100
                 self.csv_stage = "Concluído"
-                self.success_message = "✅ CSVs gerados com sucesso!"
+                self.success_message = "SUCESSO: CSVs gerados com sucesso!"
                 yield
             else:
-                self.error_message = "❌ Erro ao gerar CSVs. Verifique os arquivos."
+                self.error_message = "ERRO: Erro ao gerar CSVs. Verifique os arquivos."
                 yield
         except Exception as e:
-            self.error_message = f"❌ Erro: {str(e)}"
+            self.error_message = f"ERRO: Erro: {str(e)}"
             yield
         finally:
             self.is_generating_csv = False
@@ -1077,7 +1077,7 @@ class State(rx.State):
         Otimizado para arquivos grandes usando ThreadPoolExecutor
         """
         if not self.has_files:
-            self.error_message = "❌ Carregue ambos os arquivos primeiro"
+            self.error_message = "ERRO: Carregue ambos os arquivos primeiro"
             return
         
         self.is_analyzing = True
@@ -1157,7 +1157,7 @@ class State(rx.State):
                 created_temp_files.append(simus_path)
             
             if not compulab_path or not simus_path:
-                self.error_message = "❌ Arquivos não encontrados"
+                self.error_message = "ERRO: Arquivos não encontrados"
                 # Limpar arquivos temporários criados
                 for temp_path in created_temp_files:
                     try:
@@ -1195,7 +1195,7 @@ class State(rx.State):
             
             # Verificar erros
             if "error" in result:
-                self.error_message = f"❌ {result['error']}"
+                self.error_message = f"ERRO: {result['error']}"
                 yield
                 return
             
@@ -1288,7 +1288,7 @@ class State(rx.State):
             # Concluído (100%)
             self.analysis_progress_percentage = 100
             self.analysis_stage = "Concluído"
-            self.success_message = "✅ Análise concluída com sucesso!"
+            self.success_message = "SUCESSO: Análise concluída com sucesso!"
             self.processing_status = ""
             yield
             
@@ -1301,7 +1301,7 @@ class State(rx.State):
                     pass
                     
         except Exception as e:
-            self.error_message = f"❌ Erro na análise: {str(e)}"
+            self.error_message = f"ERRO: Erro na análise: {str(e)}"
             self.analysis_stage = f"Erro: {str(e)}"
             yield
             # Limpar arquivos temporários em caso de erro também
@@ -1331,11 +1331,11 @@ class State(rx.State):
     async def generate_ai_analysis(self):
         """Gera análise por IA (Async + Parallel)"""
         if not self.openai_api_key:
-            self.error_message = "❌ Configure sua API Key da OpenAI primeiro"
+            self.error_message = "ERRO: Configure sua API Key da OpenAI primeiro"
             return
         
         if not self.has_analysis:
-            self.error_message = "❌ Execute a análise primeiro"
+            self.error_message = "ERRO: Execute a análise primeiro"
             return
         
         self.is_generating_ai = True
@@ -1367,10 +1367,10 @@ class State(rx.State):
                         final_error = val2
             
             if final_error:
-                self.error_message = f"❌ {final_error}"
+                self.error_message = f"ERRO: {final_error}"
             else:
                 self.ai_analysis = final_analysis
-                self.success_message = "✅ Análise por IA gerada!"
+                self.success_message = "SUCESSO: Análise por IA gerada!"
                 
                 # Parsear para tabela na UI (Plain CSV Format - sem code blocks)
                 try:
@@ -1409,7 +1409,7 @@ class State(rx.State):
                     print(f"Erro ao parsear CSV para UI: {e}")
                 
         except Exception as e:
-            self.error_message = f"❌ Erro: {str(e)}"
+            self.error_message = f"ERRO: Erro: {str(e)}"
         finally:
             self.is_generating_ai = False
             self.ai_loading_progress = 0
@@ -1418,7 +1418,7 @@ class State(rx.State):
     def generate_pdf_report(self):
         """Gera PDF da análise e armazena no state"""
         if not self.has_analysis:
-            self.error_message = "❌ Execute a análise primeiro"
+            self.error_message = "ERRO: Execute a análise primeiro"
             self.success_message = ""
             return
         
@@ -1430,7 +1430,7 @@ class State(rx.State):
             try:
                 import reportlab
             except ImportError:
-                self.error_message = "❌ Biblioteca reportlab não está instalada. Execute: pip install reportlab"
+                self.error_message = "ERRO: Biblioteca reportlab não está instalada. Execute: pip install reportlab"
                 self.success_message = ""
                 return
             
@@ -1456,7 +1456,7 @@ class State(rx.State):
             )
             
             if not pdf_bytes or len(pdf_bytes) == 0:
-                self.error_message = "❌ Erro: PDF gerado está vazio"
+                self.error_message = "ERRO: Erro: PDF gerado está vazio"
                 self.success_message = ""
                 return
             
@@ -1465,15 +1465,15 @@ class State(rx.State):
             
             # Armazenar data URI para download
             self.analysis_pdf = f"data:application/pdf;base64,{pdf_base64}"
-            self.success_message = "✅ PDF gerado com sucesso! Clique em 'Download PDF' para baixar."
+            self.success_message = "SUCESSO: PDF gerado com sucesso! Clique em 'Download PDF' para baixar."
             
         except ImportError as e:
-            self.error_message = f"❌ Erro ao importar bibliotecas: {str(e)}. Execute: pip install reportlab"
+            self.error_message = f"ERRO: Erro ao importar bibliotecas: {str(e)}. Execute: pip install reportlab"
             self.success_message = ""
         except Exception as e:
             import traceback
             error_details = traceback.format_exc()
-            self.error_message = f"❌ Erro ao gerar PDF: {str(e)}"
+            self.error_message = f"ERRO: Erro ao gerar PDF: {str(e)}"
             self.success_message = ""
             # Log do erro completo para debug (pode ser removido em produção)
             print(f"Erro completo ao gerar PDF:\n{error_details}")

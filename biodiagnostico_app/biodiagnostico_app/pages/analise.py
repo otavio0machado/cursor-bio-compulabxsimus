@@ -161,7 +161,7 @@ def analise_page() -> rx.Component:
                         align="center",
                     ),
                     rx.hstack(
-                        rx.text("🔍"),
+                        rx.icon("search", size=18),
                         rx.text("Analisar Faturamento"),
                         spacing="2",
                         align="center",
@@ -209,7 +209,7 @@ def analise_page() -> rx.Component:
                 State.success_message != "",
                 rx.box(
                     rx.hstack(
-                        rx.text("✅"),
+                        rx.icon("check-circle", size=20, color="#15803d"),
                         rx.text(State.success_message, class_name="text-green-700"),
                         spacing="2",
                     ),
@@ -220,7 +220,7 @@ def analise_page() -> rx.Component:
                 State.error_message != "",
                 rx.box(
                     rx.hstack(
-                        rx.text("❌"),
+                        rx.icon("x-circle", size=20, color="#dc2626"),
                         rx.text(State.error_message, class_name="text-red-700"),
                         spacing="2",
                     ),
@@ -407,7 +407,7 @@ def analise_page() -> rx.Component:
                                 rx.hstack(
                                     rx.box(
                                         rx.vstack(
-                                            rx.text("⚡", class_name="text-xl"),
+                                            rx.icon("zap", size=20, color="#4CAF50"),
                                             rx.text("Paralelo", class_name="text-xs font-medium text-gray-600"),
                                             spacing="0",
                                             align="center",
@@ -416,7 +416,7 @@ def analise_page() -> rx.Component:
                                     ),
                                     rx.box(
                                         rx.vstack(
-                                            rx.text("🎯", class_name="text-xl"),
+                                            rx.icon("target", size=20, color="#4CAF50"),
                                             rx.text("0.02 Precisão", class_name="text-xs font-medium text-gray-600"),
                                             spacing="0",
                                             align="center",
@@ -425,7 +425,7 @@ def analise_page() -> rx.Component:
                                     ),
                                     rx.box(
                                         rx.vstack(
-                                            rx.text("📊", class_name="text-xl"),
+                                            rx.icon("bar-chart-2", size=20, color="#4CAF50"),
                                             rx.text("CSV + PDF", class_name="text-xs font-medium text-gray-600"),
                                             spacing="0",
                                             align="center",
@@ -499,7 +499,7 @@ def analise_page() -> rx.Component:
                                                 rx.cond(
                                                     State.is_generating_ai,
                                                     rx.spinner(size="1", color="white"),
-                                                    rx.text("🚀", class_name=""),
+                                                    rx.icon("rocket", size=18, color="white"),
                                                 ),
                                                 rx.text("Iniciar Auditoria Inteligente"),
                                                 spacing="2",
@@ -515,7 +515,7 @@ def analise_page() -> rx.Component:
                                             rx.vstack(
                                                 # Header do resultado
                                                 rx.hstack(
-                                                    rx.text("📊", class_name="text-xl"),
+                                                    rx.icon("bar-chart-2", size=24, color="#1B5E20"),
                                                     rx.text(
                                                         "Divergências Encontradas",
                                                         class_name="text-green-800 font-bold"

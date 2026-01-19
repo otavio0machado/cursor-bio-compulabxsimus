@@ -13,19 +13,20 @@ def metric_card(
     delta: str = None,
     delta_positive: bool = True
 ) -> rx.Component:
-    """Card de métrica individual com design moderno e acessível"""
+    """Card de métrica individual com design moderno e acessível - usa ícones Lucide"""
     from ..styles import Color, Design, Spacing, Typography
 
     return rx.box(
         rx.hstack(
-            # Ícone em container com fundo
+            # Ícone Lucide em container com fundo
             rx.box(
-                rx.text(icon, font_size="2.5rem"),  # 40px
+                rx.icon(icon, size=32, color=Color.PRIMARY),  # Ícone Lucide 32px
                 padding=Spacing.MD,  # 16px
                 border_radius=Design.RADIUS_XL,  # 16px
                 bg=f"{Color.PRIMARY}15",  # 8% opacity verde
-                color=Color.PRIMARY,
-                class_name="flex items-center justify-center"
+                display="flex",
+                align_items="center",
+                justify_content="center"
             ),
             rx.vstack(
                 # Título com tipografia aprimorada
@@ -90,11 +91,13 @@ def metric_card(
 
 def results_summary() -> rx.Component:
     """Resumo dos resultados da análise"""
+    from ..styles import Color
+
     return rx.cond(
         State.has_analysis,
         rx.vstack(
             rx.hstack(
-                rx.text("📈", class_name="text-2xl"),
+                rx.icon("trending-up", size=28, color=Color.PRIMARY),
                 rx.text(
                     "Resumo da Análise",
                     class_name="text-green-800 font-bold text-xl"
@@ -106,19 +109,19 @@ def results_summary() -> rx.Component:
                 metric_card(
                     title="COMPULAB Total",
                     value=State.formatted_compulab_total,
-                    icon="💰",
+                    icon="wallet",  # Carteira representando valores COMPULAB
                     help_text=f"{State.compulab_count} pacientes",
                 ),
                 metric_card(
                     title="SIMUS Total",
                     value=State.formatted_simus_total,
-                    icon="💸",
+                    icon="coins",  # Moedas representando valores SIMUS
                     help_text=f"{State.simus_count} pacientes",
                 ),
                 metric_card(
                     title="Diferença Total",
                     value=State.formatted_difference,
-                    icon="📉",
+                    icon="trending-down",  # Gráfico de tendência
                     help_text="COMPULAB - SIMUS",
                     delta=f"{State.difference_percent:.1f}%",
                     delta_positive=State.difference >= 0,
@@ -126,7 +129,7 @@ def results_summary() -> rx.Component:
                 metric_card(
                     title="Exames Faltantes",
                     value=f"{State.missing_exams_count}",
-                    icon="⚠️",
+                    icon="alert-triangle",  # Aviso
                     help_text="no SIMUS",
                 ),
                 columns="4",
