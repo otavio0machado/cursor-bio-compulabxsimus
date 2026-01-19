@@ -1,9 +1,17 @@
 import reflex as rx
-from ..styles import Color, Design, Typography, Animation
+from ..styles import Color, Design, Typography, Animation, Spacing
 
 """
-Biblioteca de Componentes Centralizada
+Biblioteca de Componentes Centralizada - Biodiagnóstico 2.0
 Use estes componentes para garantir consistência visual em toda a aplicação.
+
+Inclui:
+- Tipografia responsiva com hierarquia clara
+- Componentes de formulário acessíveis (mínimo 44px de altura)
+- Sistema de espaçamento consistente
+- Tabelas modernas com alternância de cores
+- Sistema de notificações toast
+- Estados vazios e spinners de carregamento
 """
 
 def heading(text: str, level: int = 1, color: str = None, **props) -> rx.Component:
@@ -57,16 +65,27 @@ def animated_heading(text: str, level: int = 1, color: str = None, delay: int = 
     )
 
 def text(content: str, size: str = "body", color: str = None, **props) -> rx.Component:
-    """Texto de corpo padronizado"""
+    """
+    Texto de corpo padronizado com múltiplas opções de tamanho
+
+    Args:
+        content: Conteúdo do texto
+        size: Tamanho do texto (body, body_large, body_secondary, small, caption, label, label_large)
+        color: Cor personalizada (opcional)
+    """
     styles = {
         "body": Typography.BODY,
+        "body_large": Typography.BODY_LARGE,
+        "body_secondary": Typography.BODY_SECONDARY,
         "small": Typography.SMALL,
+        "caption": Typography.CAPTION,
         "label": Typography.LABEL,
+        "label_large": Typography.LABEL_LARGE,
     }
     style = styles.get(size, Typography.BODY).copy()
     if color:
         style["color"] = color
-        
+
     style.update(props)
     return rx.text(content, **style)
 
@@ -327,4 +346,212 @@ def page_header(title: str, subtitle: str) -> rx.Component:
             align="center",
         ),
         class_name="mb-8 flex justify-center w-full"
+    )
+
+def data_table(
+    headers: list[str],
+    rows: list[list],
+    sortable: bool = False,
+    striped: bool = True,
+    hover: bool = True,
+    **props
+) -> rx.Component:
+    """
+    Tabela de dados profissional com formatação moderna
+
+    Args:
+        headers: Lista de cabeçalhos das colunas
+        rows: Lista de listas com os dados (cada lista interna é uma linha)
+        sortable: Se True, permite ordenação por clique nos cabeçalhos
+        striped: Se True, alterna cores das linhas
+        hover: Se True, destaca linha ao passar o mouse
+    """
+    from ..styles import TABLE_STYLE, TABLE_HEADER_STYLE, TABLE_CELL_STYLE, TABLE_ROW_STYLE, TABLE_ROW_EVEN_STYLE, Spacing
+
+    # Cabeçalhos da tabela
+    header_row = rx.table.header(
+        rx.table.row(
+            *[
+                rx.table.column_header_cell(
+                    rx.hstack(
+                        rx.text(header, **{"font_weight": "600"}),
+                        rx.cond(
+                            sortable,
+                            rx.icon("arrow-up-down", size=14, color=Color.TEXT_SECONDARY)
+                        ),
+                        spacing="2",
+                        align="center"
+                    ),
+                    padding=f"{Spacing.MD} {Spacing.MD}",
+                    bg=Color.PRIMARY_LIGHT,
+                    color=Color.DEEP,
+                    font_weight="600",
+                    font_size="0.875rem",
+                    text_transform="uppercase",
+                    letter_spacing="0.05em",
+                )
+                for header in headers
+            ]
+        )
+    )
+
+    # Linhas de dados
+    def create_row(row_data, index):
+        row_bg = rx.cond(
+            (striped & (index % 2 == 1)),
+            "#F9FAFB",
+            Color.SURFACE
+        )
+
+        return rx.table.row(
+            *[
+                rx.table.cell(
+                    str(cell),
+                    padding=f"{Spacing.SM} {Spacing.MD}",
+                    color=Color.TEXT_PRIMARY,
+                    font_size="0.875rem",
+                )
+                for cell in row_data
+            ],
+            bg=row_bg,
+            class_name=rx.cond(hover, "hover:bg-green-50 transition-colors", ""),
+        )
+
+    body = rx.table.body(
+        *[create_row(row, i) for i, row in enumerate(rows)]
+    )
+
+    return card(
+        rx.table.root(
+            header_row,
+            body,
+            width="100%",
+            variant="surface",
+        ),
+        padding=Spacing.MD,
+        **props
+    )
+
+def toast(
+    message: str,
+    status: str = "info",  # success, error, warning, info
+    duration: int = 3000,
+    icon: str = None,
+) -> rx.Component:
+    """
+    Notificação toast flutuante
+
+    Args:
+        message: Mensagem a ser exibida
+        status: Tipo de notificação (success, error, warning, info)
+        duration: Duração em milissegundos
+        icon: Ícone personalizado (opcional)
+    """
+    from ..styles import Spacing
+
+    # Mapeamento de status para cores e ícones
+    status_config = {
+        "success": {"bg": Color.SUCCESS_BG, "color": Color.SUCCESS, "icon": "circle-check"},
+        "error": {"bg": Color.ERROR_BG, "color": Color.ERROR, "icon": "circle-x"},
+        "warning": {"bg": Color.WARNING_BG, "color": Color.WARNING, "icon": "alert-triangle"},
+        "info": {"bg": "#EFF6FF", "color": "#1D4ED8", "icon": "info"},
+    }
+
+    config = status_config.get(status, status_config["info"])
+    toast_icon = icon or config["icon"]
+
+    return rx.box(
+        rx.hstack(
+            rx.icon(toast_icon, size=20, color=config["color"]),
+            rx.text(
+                message,
+                font_size="0.875rem",
+                font_weight="500",
+                color=Color.TEXT_PRIMARY,
+            ),
+            spacing="3",
+            align="center",
+        ),
+        bg=config["bg"],
+        border=f"1px solid {config['color']}40",
+        border_radius=Design.RADIUS_LG,
+        padding=f"{Spacing.SM} {Spacing.MD}",
+        box_shadow=Design.SHADOW_MD,
+        class_name="animate-slide-up",
+        position="fixed",
+        bottom="2rem",
+        right="2rem",
+        z_index="9999",
+        min_width="300px",
+        max_width="500px",
+    )
+
+def loading_spinner(size: str = "md", text: str = "") -> rx.Component:
+    """
+    Spinner de carregamento com texto opcional
+
+    Args:
+        size: Tamanho do spinner (sm, md, lg)
+        text: Texto a ser exibido abaixo do spinner
+    """
+    size_map = {"sm": "1", "md": "2", "lg": "3"}
+    spinner_size = size_map.get(size, "2")
+
+    return rx.vstack(
+        rx.spinner(size=spinner_size, color=Color.PRIMARY),
+        rx.cond(
+            text != "",
+            rx.text(
+                text,
+                font_size="0.875rem",
+                color=Color.TEXT_SECONDARY,
+                font_weight="500",
+            )
+        ),
+        spacing="3",
+        align="center",
+        justify="center",
+    )
+
+def empty_state(
+    icon: str,
+    title: str,
+    description: str,
+    action_label: str = "",
+    on_action = None,
+) -> rx.Component:
+    """
+    Estado vazio para quando não há dados a exibir
+
+    Args:
+        icon: Ícone a ser exibido
+        title: Título do estado vazio
+        description: Descrição do que fazer
+        action_label: Texto do botão de ação (opcional)
+        on_action: Callback para o botão de ação
+    """
+    from ..styles import Spacing
+
+    return card(
+        rx.vstack(
+            rx.box(
+                rx.icon(icon, size=48, color=Color.TEXT_SECONDARY),
+                class_name="p-6 rounded-full bg-gray-50",
+            ),
+            heading(title, level=3, color=Color.TEXT_PRIMARY),
+            text(description, size="body", text_align="center", max_width="400px"),
+            rx.cond(
+                action_label != "",
+                button(
+                    action_label,
+                    variant="primary",
+                    on_click=on_action,
+                ),
+            ),
+            spacing="4",
+            align="center",
+            justify="center",
+            padding=f"{Spacing.XXL} {Spacing.XL}",
+        ),
+        text_align="center",
     )
