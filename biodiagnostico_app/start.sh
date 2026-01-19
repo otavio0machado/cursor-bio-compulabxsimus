@@ -4,14 +4,9 @@ echo "Aguardando Reflex iniciar em background..."
 
 # Iniciar Reflex em background
 # Iniciar Reflex em background (apenas backend)
+# Iniciar Reflex em background (apenas backend)
 reflex run --env prod --backend-only --backend-port 8000 &
 REFLEX_PID=$!
-
-# Debug: Listar arquivos gerados
-echo "=== Debug: Localizando index.html ==="
-find /app -name "index.html" || echo "index.html não encontrado"
-ls -la /app/build || echo "/app/build não encontrado"
-echo "=============================="
 
 # Aguardar Backend estar pronto (máximo 60 segundos)
 echo "Aguardando backend (porta 8000)..."
