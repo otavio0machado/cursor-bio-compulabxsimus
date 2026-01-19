@@ -40,41 +40,57 @@ def tab_button(label: str, icon: str, tab_id: str) -> rx.Component:
 def dashboard_tab() -> rx.Component:
     """Aba Dashboard - Visão geral"""
     return rx.vstack(
-        # Header
-        ui.page_header(
-            "Visão Geral do Laboratório",
-            "Monitoramento de qualidade e pendências"
+        # Header with Refresh Button
+        rx.hstack(
+            ui.page_header(
+                "Visão Geral do Laboratório",
+                "Monitoramento de qualidade e pendências"
+            ),
+            rx.spacer(),
+            rx.button(
+                rx.icon("refresh-cw", size=18),
+                rx.text("Atualizar", display=["none", "none", "block"]),
+                on_click=State.load_data_from_db,
+                variant="ghost",
+                size="2",
+                class_name="gap-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl"
+            ),
+            width="100%",
+            align="center",
+            class_name="mb-4"
         ),
         
-        # Grid de KPI Cards
-        rx.grid(
-            ui.stat_card(
-                "Registros Hoje",
-                State.dashboard_total_today,
-                "clipboard-list",
-                "info"
+        # Grid de KPI Cards - Responsivo
+        rx.box(
+            rx.grid(
+                ui.stat_card(
+                    "Registros Hoje",
+                    State.dashboard_total_today,
+                    "clipboard-list",
+                    "info"
+                ),
+                ui.stat_card(
+                    "Registros do Mês",
+                    State.dashboard_total_month,
+                    "calendar",
+                    "success"
+                ),
+                ui.stat_card(
+                    "Taxa de Aprovação",
+                    State.dashboard_approval_rate.to_string() + "%",
+                    "circle-check",
+                    "success",
+                    "CV ≤ 5%"
+                ),
+                rx.cond(
+                    State.has_alerts,
+                    ui.stat_card("Alertas CV > 5%", State.dashboard_alerts_count, "triangle-alert", "error"),
+                    ui.stat_card("Sem Alertas", "0", "sparkles", "success")
+                ),
+                columns=["1", "2", "2", "4"],
+                spacing="4",
+                width="100%",
             ),
-            ui.stat_card(
-                "Registros do Mês",
-                State.dashboard_total_month,
-                "calendar",
-                "success"
-            ),
-            ui.stat_card(
-                "Taxa de Aprovação",
-                State.dashboard_approval_rate.to_string() + "%",
-                "circle-check",
-                "success",
-                "CV ≤ 5%"
-            ),
-            rx.cond(
-                State.has_alerts,
-                ui.stat_card("Alertas CV > 5%", State.dashboard_alerts_count, "triangle-alert", "error"),
-                ui.stat_card("Sem Alertas", "0", "sparkles", "success")
-            ),
-            columns="4",
-            spacing="4",
-            width="100%",
             class_name="mb-8"
         ),
         
@@ -187,7 +203,7 @@ def dashboard_tab() -> rx.Component:
                 width="100%",
             ),
             
-            columns="2",
+            columns=["1", "1", "2", "2"],
             spacing="6",
             width="100%",
         ),
@@ -270,7 +286,15 @@ def registro_qc_tab() -> rx.Component:
                         ),
                         required=True
                     ),
-                    rx.text(f"DEBUG: Selected='{State.qc_exam_name}' - Total Exams: {State.unique_exam_names.length()}", color="red", font_size="0.8rem"),
+                    ui.form_field(
+                        "Nível",
+                        ui.select(
+                            ["N1", "N2", "N3"],
+                            placeholder="Selecione o Nível",
+                            value=State.qc_level,
+                            on_change=State.set_qc_level,
+                        ),
+                    ),
                     ui.form_field(
                         "Número do Lote (Opcional)",
                         ui.input(
@@ -288,7 +312,7 @@ def registro_qc_tab() -> rx.Component:
                         ),
                         required=True
                     ),
-                    columns="3",
+                    columns=["2", "2", "4", "4"],
                     spacing="4",
                     width="100%",
                 ),
@@ -325,30 +349,62 @@ def registro_qc_tab() -> rx.Component:
                         ),
                         required=True
                     ),
-                    ui.form_field(
-                        "CV% (Automático)",
-                        ui.input(
-                            value=State.qc_calculated_cv + "%",
-                            read_only=True,
-                            class_name="font-bold cursor-not-allowed",
-                            style={
-                                "color": "#F59E0B !important", 
-                                "-webkit-text-fill-color": "#F59E0B !important", 
-                                "opacity": "1 !important"
-                            },
-                            _disabled={
-                                "color": "#F59E0B !important", 
-                                "-webkit-text-fill-color": "#F59E0B !important",
-                                "opacity": "1 !important"
-                            },
-                            _read_only={
-                                "color": "#F59E0B !important", 
-                                "-webkit-text-fill-color": "#F59E0B !important",
-                                "opacity": "1 !important"
-                            }
-                        )
+                    # CV% with dynamic color indicator
+                    rx.vstack(
+                        rx.text("CV% (Automático)", font_size="0.875rem", font_weight="500", color=Color.TEXT_SECONDARY),
+                        rx.box(
+                            rx.hstack(
+                                rx.text(
+                                    State.qc_calculated_cv + "%",
+                                    font_size="1.5rem",
+                                    font_weight="bold",
+                                    color=rx.cond(
+                                        State.qc_cv_status == "ok",
+                                        "#22C55E",  # green
+                                        rx.cond(
+                                            State.qc_cv_status == "warning",
+                                            "#F59E0B",  # amber
+                                            "#EF4444"   # red
+                                        )
+                                    )
+                                ),
+                                rx.icon(
+                                    rx.cond(
+                                        State.qc_cv_status == "ok",
+                                        "check-circle",
+                                        rx.cond(
+                                            State.qc_cv_status == "warning",
+                                            "alert-circle",
+                                            "x-circle"
+                                        )
+                                    ),
+                                    size=20,
+                                    color=rx.cond(
+                                        State.qc_cv_status == "ok",
+                                        "#22C55E",
+                                        rx.cond(
+                                            State.qc_cv_status == "warning",
+                                            "#F59E0B",
+                                            "#EF4444"
+                                        )
+                                    )
+                                ),
+                                align="center",
+                                spacing="2"
+                            ),
+                            class_name=rx.cond(
+                                State.qc_cv_status == "ok",
+                                "bg-green-50 border border-green-200 rounded-xl p-3",
+                                rx.cond(
+                                    State.qc_cv_status == "warning",
+                                    "bg-amber-50 border border-amber-200 rounded-xl p-3",
+                                    "bg-red-50 border border-red-200 rounded-xl p-3"
+                                )
+                            )
+                        ),
+                        spacing="1",
                     ),
-                    columns="4",
+                    columns=["2", "2", "4", "4"],
                     spacing="4",
                     width="100%",
                 ),
@@ -377,15 +433,24 @@ def registro_qc_tab() -> rx.Component:
                     width="100%",
                 ),
                 
-                rx.box(
+                rx.hstack(
+                    ui.button(
+                        "Limpar",
+                        icon="eraser",
+                        on_click=State.clear_qc_form,
+                        variant="secondary",
+                        class_name="flex-1"
+                    ),
                     ui.button(
                         "Salvar Registro",
                         icon="save",
                         is_loading=State.is_saving_qc,
                         on_click=State.save_qc_record,
-                        width="100%",
-                        class_name="mt-6"
+                        class_name="flex-[2]"
                     ),
+                    spacing="4",
+                    width="100%",
+                    class_name="mt-6"
                 ),
                 
                 # Feedback Messages
@@ -545,7 +610,18 @@ def reagentes_tab() -> rx.Component:
                 # Lista de Lotes
                 ui.card(
                     rx.vstack(
-                        ui.heading("Lotes Ativos", level=3, class_name="mb-2"),
+                        rx.hstack(
+                            ui.heading("Lotes Ativos", level=3),
+                            rx.spacer(),
+                            rx.badge(
+                                State.reagent_lots.length().to_string() + " lotes",
+                                color_scheme="blue",
+                                variant="soft"
+                            ),
+                            width="100%",
+                            align="center",
+                            class_name="mb-3"
+                        ),
                         rx.cond(
                             State.reagent_lots.length() > 0,
                             rx.vstack(
@@ -553,25 +629,97 @@ def reagentes_tab() -> rx.Component:
                                     State.reagent_lots,
                                     lambda lot: rx.hstack(
                                         rx.box(
-                                            rx.icon("package", size=24, color=Color.TEXT_SECONDARY),
-                                            class_name="bg-gray-50 p-2 rounded-lg"
+                                            rx.icon("package", size=20, color=Color.TEXT_SECONDARY),
+                                            class_name=rx.cond(
+                                                lot["days_left"] <= 7,
+                                                "bg-red-100 p-2 rounded-lg",
+                                                rx.cond(
+                                                    lot["days_left"] <= 30,
+                                                    "bg-amber-100 p-2 rounded-lg",
+                                                    "bg-green-100 p-2 rounded-lg"
+                                                )
+                                            )
                                         ),
                                         rx.vstack(
                                             ui.text(lot["name"], font_weight="500"),
-                                            ui.text(lot["lot_number"], size="small"),
+                                            rx.hstack(
+                                                ui.text(lot["lot_number"], size="small", color="gray"),
+                                                rx.text("•", color="gray", font_size="0.75rem"),
+                                                ui.text(lot["manufacturer"], size="small", color="gray"),
+                                                spacing="1",
+                                            ),
                                             spacing="0"
                                         ),
                                         rx.spacer(),
-                                        ui.status_badge(lot["expiry_date"], status="warning"),
-                                        rx.button("×", on_click=lambda: State.delete_reagent_lot(lot["id"]), size="1", variant="ghost", color_scheme="red"),
+                                        rx.vstack(
+                                            rx.badge(
+                                                rx.cond(
+                                                    lot["days_left"] <= 0,
+                                                    "Vencido",
+                                                    rx.cond(
+                                                        lot["days_left"] <= 7,
+                                                        lot["days_left"].to_string() + " dias",
+                                                        rx.cond(
+                                                            lot["days_left"] <= 30,
+                                                            lot["days_left"].to_string() + " dias",
+                                                            lot["expiry_date"]
+                                                        )
+                                                    )
+                                                ),
+                                                color_scheme=rx.cond(
+                                                    lot["days_left"] <= 7,
+                                                    "red",
+                                                    rx.cond(
+                                                        lot["days_left"] <= 30,
+                                                        "amber",
+                                                        "green"
+                                                    )
+                                                ),
+                                                variant="solid"
+                                            ),
+                                            rx.cond(
+                                                lot["days_left"] <= 30,
+                                                rx.text(
+                                                    lot["expiry_date"],
+                                                    font_size="0.65rem",
+                                                    color="gray",
+                                                    class_name="text-center"
+                                                ),
+                                            ),
+                                            spacing="0",
+                                            align="center"
+                                        ),
+                                        rx.button(
+                                            rx.icon("trash-2", size=14),
+                                            on_click=lambda: State.delete_reagent_lot(lot["id"]),
+                                            size="1",
+                                            variant="ghost",
+                                            color_scheme="red"
+                                        ),
                                         width="100%",
                                         align="center",
-                                        class_name="p-3 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors"
+                                        class_name=rx.cond(
+                                            lot["days_left"] <= 7,
+                                            "p-3 border border-red-200 bg-red-50 rounded-xl hover:bg-red-100 transition-colors",
+                                            rx.cond(
+                                                lot["days_left"] <= 30,
+                                                "p-3 border border-amber-200 bg-amber-50 rounded-xl hover:bg-amber-100 transition-colors",
+                                                "p-3 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors"
+                                            )
+                                        )
                                     )
                                 ),
                                 spacing="2"
                             ),
-                            ui.text("Nenhum lote cadastrado.", size="small", color="gray")
+                            rx.center(
+                                rx.vstack(
+                                    rx.icon("package-open", size=32, color="lightgray"),
+                                    ui.text("Nenhum lote cadastrado.", size="small", color="gray"),
+                                    spacing="2",
+                                    align="center"
+                                ),
+                                class_name="py-8"
+                            )
                         ),
                     ),
                     width="100%"
@@ -621,106 +769,255 @@ def relatorios_tab() -> rx.Component:
         
         # Controls
         ui.card(
-            rx.hstack(
-                rx.box(
-                    ui.text("Exame", size="label"),
-                    ui.select(
-                        State.unique_exam_names,
-                        value=State.levey_jennings_exam,
-                        on_change=State.set_levey_jennings_exam,
-                        placeholder="Selecione...",
+            rx.vstack(
+                rx.grid(
+                    rx.box(
+                        ui.text("Exame", size="label", class_name="mb-1"),
+                        ui.select(
+                            State.unique_exam_names,
+                            value=State.levey_jennings_exam,
+                            on_change=State.set_levey_jennings_exam,
+                            placeholder="Selecione o exame...",
+                        ),
                     ),
-                ),
-                rx.box(
-                    ui.text("Período", size="label"),
-                    ui.select(
-                        ["7", "15", "30", "60", "90"],
-                        value=State.levey_jennings_period,
-                        on_change=State.set_levey_jennings_period,
+                    rx.box(
+                        ui.text("Nível", size="label", class_name="mb-1"),
+                        ui.select(
+                            ["Todos", "N1", "N2", "N3"],
+                            value=State.levey_jennings_level,
+                            on_change=State.set_levey_jennings_level,
+                            placeholder="Selecione...",
+                        ),
                     ),
+                    rx.box(
+                        ui.text("Período (dias)", size="label", class_name="mb-1"),
+                        ui.select(
+                            ["7", "15", "30", "60", "90"],
+                            value=State.levey_jennings_period,
+                            on_change=State.set_levey_jennings_period,
+                        ),
+                    ),
+                    columns=["1", "2", "3", "3"],
+                    spacing="4",
+                    width="100%"
                 ),
-                spacing="4",
-                align="end",
-                justify="center",
-                width="100%"
+                ui.button(
+                    "Gerar Gráfico",
+                    icon="chart-line",
+                    on_click=State._update_levey_jennings_data,
+                    class_name="mt-4"
+                ),
             ),
-            class_name="mb-6 max-w-2xl mx-auto"
+            class_name="mb-6 max-w-3xl mx-auto"
         ),
         
         # Chart Area
         rx.cond(
             State.levey_jennings_data.length() > 0,
-            ui.card(
-                rx.vstack(
+            rx.vstack(
+                # Legend
+                rx.hstack(
                     rx.hstack(
-                        rx.badge("±1 DP", color_scheme="green", variant="solid"),
-                        rx.badge("±2 DP", color_scheme="amber", variant="solid"),
-                        rx.badge("±3 DP", color_scheme="red", variant="solid"),
-                        spacing="2",
-                        justify="end",
-                        width="100%"
+                        rx.box(class_name="w-3 h-3 rounded-full bg-green-500"),
+                        rx.text("±1 DP", font_size="0.75rem"),
+                        spacing="1"
                     ),
-                    
-                    # Mock Chart Visualization
-                    rx.box(
+                    rx.hstack(
+                        rx.box(class_name="w-3 h-3 rounded-full bg-amber-500"),
+                        rx.text("±2 DP", font_size="0.75rem"),
+                        spacing="1"
+                    ),
+                    rx.hstack(
+                        rx.box(class_name="w-3 h-3 rounded-full bg-red-500"),
+                        rx.text("±3 DP", font_size="0.75rem"),
+                        spacing="1"
+                    ),
+                    spacing="4",
+                    justify="center",
+                    width="100%",
+                    class_name="mb-2"
+                ),
+                
+                # Recharts Line Chart
+                ui.card(
+                    rx.recharts.line_chart(
+                        rx.recharts.line(
+                            data_key="value",
+                            stroke="#3B82F6",
+                            stroke_width=2,
+                            dot=True,
+                            name="Valor"
+                        ),
+                        rx.recharts.line(
+                            data_key="target",
+                            stroke="#10B981",
+                            stroke_width=1,
+                            stroke_dash_array="5 5",
+                            dot=False,
+                            name="Alvo"
+                        ),
+                        rx.recharts.x_axis(data_key="date"),
+                        rx.recharts.y_axis(),
+                        rx.recharts.cartesian_grid(stroke_dasharray="3 3"),
+                        rx.recharts.graphing_tooltip(),
+                        rx.recharts.legend(),
+                        rx.recharts.reference_line(
+                            y=State.lj_target_plus_1sd,
+                            stroke="#22C55E",
+                            stroke_dasharray="3 3",
+                            label="+1 DP"
+                        ),
+                        rx.recharts.reference_line(
+                            y=State.lj_target_minus_1sd,
+                            stroke="#22C55E",
+                            stroke_dasharray="3 3",
+                            label="-1 DP"
+                        ),
+                        rx.recharts.reference_line(
+                            y=State.lj_target_plus_2sd,
+                            stroke="#F59E0B",
+                            stroke_dasharray="3 3",
+                            label="+2 DP"
+                        ),
+                        rx.recharts.reference_line(
+                            y=State.lj_target_minus_2sd,
+                            stroke="#F59E0B",
+                            stroke_dasharray="3 3",
+                            label="-2 DP"
+                        ),
+                        rx.recharts.reference_line(
+                            y=State.lj_target_plus_3sd,
+                            stroke="#EF4444",
+                            stroke_dasharray="3 3",
+                            label="+3 DP"
+                        ),
+                        rx.recharts.reference_line(
+                            y=State.lj_target_minus_3sd,
+                            stroke="#EF4444",
+                            stroke_dasharray="3 3",
+                            label="-3 DP"
+                        ),
+                        data=State.levey_jennings_chart_data,
+                        width="100%",
+                        height=350,
+                    ),
+                    class_name="p-4"
+                ),
+                
+                # Statistics Summary
+                rx.grid(
+                    ui.card(
                         rx.vstack(
-                            rx.box(class_name="w-full h-8 bg-red-50 border-b border-red-200"),
-                            rx.box(class_name="w-full h-8 bg-amber-50 border-b border-amber-200"),
-                            rx.box(class_name="w-full h-8 bg-green-50 border-b border-green-200"),
-                            rx.box(class_name="w-full h-2 bg-green-200"), # Target
-                            rx.box(class_name="w-full h-8 bg-green-50 border-t border-green-200"),
-                            rx.box(class_name="w-full h-8 bg-amber-50 border-t border-amber-200"),
-                            rx.box(class_name="w-full h-8 bg-red-50 border-t border-red-200"),
-                            
-                            rx.hstack(
-                                rx.foreach(
-                                    State.levey_jennings_data,
-                                    lambda d: rx.tooltip(
-                                        rx.box(
-                                            class_name="w-3 h-3 rounded-full bg-blue-600 border-2 border-white shadow-sm hover:scale-150 transition-transform cursor-pointer"
-                                        ),
-                                        content=f"{d['date']}: {d['value']}"
+                            rx.text("Média", font_size="0.75rem", color="gray"),
+                            rx.text(State.lj_mean.to_string(), font_size="1.5rem", font_weight="bold", color=Color.PRIMARY),
+                            spacing="0",
+                            align="center"
+                        ),
+                        class_name="text-center py-4"
+                    ),
+                    ui.card(
+                        rx.vstack(
+                            rx.text("Desvio Padrão", font_size="0.75rem", color="gray"),
+                            rx.text(State.lj_sd.to_string(), font_size="1.5rem", font_weight="bold", color=Color.PRIMARY),
+                            spacing="0",
+                            align="center"
+                        ),
+                        class_name="text-center py-4"
+                    ),
+                    ui.card(
+                        rx.vstack(
+                            rx.text("CV% Médio", font_size="0.75rem", color="gray"),
+                            rx.text(State.lj_cv_mean.to_string() + "%", font_size="1.5rem", font_weight="bold", color=Color.PRIMARY),
+                            spacing="0",
+                            align="center"
+                        ),
+                        class_name="text-center py-4"
+                    ),
+                    ui.card(
+                        rx.vstack(
+                            rx.text("Pontos", font_size="0.75rem", color="gray"),
+                            rx.text(State.levey_jennings_data.length().to_string(), font_size="1.5rem", font_weight="bold", color=Color.PRIMARY),
+                            spacing="0",
+                            align="center"
+                        ),
+                        class_name="text-center py-4"
+                    ),
+                    columns=["2", "4", "4", "4"],
+                    spacing="4",
+                    width="100%",
+                    class_name="mt-4"
+                ),
+                
+                # Data Table
+                ui.card(
+                    rx.vstack(
+                        rx.hstack(
+                            ui.heading("Dados do Período", level=3),
+                            rx.spacer(),
+                            rx.badge(State.levey_jennings_data.length().to_string() + " registros", color_scheme="blue", variant="soft"),
+                            width="100%",
+                            align="center"
+                        ),
+                        rx.scroll_area(
+                            rx.table.root(
+                                rx.table.header(
+                                    rx.table.row(
+                                        rx.table.column_header_cell("Data", class_name="text-xs uppercase"),
+                                        rx.table.column_header_cell("Valor", class_name="text-xs uppercase"),
+                                        rx.table.column_header_cell("Alvo", class_name="text-xs uppercase"),
+                                        rx.table.column_header_cell("DP", class_name="text-xs uppercase"),
+                                        rx.table.column_header_cell("CV%", class_name="text-xs uppercase"),
+                                        rx.table.column_header_cell("Status", class_name="text-xs uppercase"),
                                     )
                                 ),
-                                justify="center",
-                                align="center",
-                                class_name="absolute inset-0 w-full h-full"
+                                rx.table.body(
+                                    rx.foreach(
+                                        State.levey_jennings_data,
+                                        lambda d: rx.table.row(
+                                            rx.table.cell(d["date"], class_name="text-sm"),
+                                            rx.table.cell(d["value"].to_string(), class_name="font-medium"),
+                                            rx.table.cell(d["target"].to_string()),
+                                            rx.table.cell(d["sd"].to_string()),
+                                            rx.table.cell(
+                                                rx.text(
+                                                    d["cv"].to_string() + "%",
+                                                    class_name=rx.cond(
+                                                        d["cv"] <= 5.0,
+                                                        "text-green-600 font-bold",
+                                                        rx.cond(
+                                                            d["cv"] <= 10.0,
+                                                            "text-amber-600 font-bold",
+                                                            "text-red-600 font-bold"
+                                                        )
+                                                    )
+                                                )
+                                            ),
+                                            rx.table.cell(
+                                                ui.status_badge(
+                                                    rx.cond(d["cv"] <= 5.0, "OK", "ALERTA"),
+                                                    status=rx.cond(d["cv"] <= 5.0, "success", "error")
+                                                )
+                                            ),
+                                        )
+                                    )
+                                ),
+                                class_name="w-full"
                             ),
-                            position="relative",
-                            class_name="w-full border border-gray-200 rounded-lg overflow-hidden mt-4"
+                            type="always",
+                            scrollbars="both",
+                            style={"max_height": "300px"}
                         ),
-                        class_name="w-full p-4"
                     ),
-                    
-                    # Data Table
-                    rx.table.root(
-                        rx.table.header(
-                            rx.table.row(
-                                rx.table.column_header_cell("Data"),
-                                rx.table.column_header_cell("Valor"),
-                                rx.table.column_header_cell("Target"),
-                                rx.table.column_header_cell("CV%"),
-                            )
-                        ),
-                        rx.table.body(
-                            rx.foreach(
-                                State.levey_jennings_data,
-                                lambda d: rx.table.row(
-                                    rx.table.cell(d["date"]),
-                                    rx.table.cell(d["value"]),
-                                    rx.table.cell(d["target"]),
-                                    rx.table.cell(d["cv"].to_string() + "%", class_name="font-bold"),
-                                )
-                            )
-                        ),
-                        class_name="mt-6 w-full"
-                    )
+                    class_name="mt-4"
                 ),
+                
+                width="100%"
             ),
             rx.center(
                 rx.vstack(
                     rx.icon("bar-chart-2", size=48, color="#9ca3af"),
-                    ui.text("Selecione um exame para visualizar o gráfico", color="gray"),
+                    ui.text("Selecione um exame e clique em 'Gerar Gráfico'", color="gray"),
+                    ui.text("para visualizar a análise Levey-Jennings", color="gray", size="small"),
                     spacing="2",
                     align="center"
                 ),
@@ -814,30 +1111,77 @@ def importar_tab() -> rx.Component:
         rx.cond(
             State.excel_analyzed,
             ui.card(
-                ui.heading("Pré-visualização dos Dados", level=3, class_name="mb-4"),
-                rx.scroll_area(
-                    rx.table.root(
-                        rx.table.header(
-                            rx.table.row(
-                                rx.foreach(
-                                    State.excel_headers,
-                                    lambda h: rx.table.column_header_cell(h)
-                                )
-                            )
+                rx.vstack(
+                    rx.hstack(
+                        ui.heading("Pré-visualização dos Dados", level=3),
+                        rx.spacer(),
+                        rx.badge(
+                            State.excel_total_rows.to_string() + " linhas × " + State.excel_total_columns.to_string() + " colunas",
+                            color_scheme="blue",
+                            variant="soft"
                         ),
-                        rx.table.body(
-                            rx.foreach(
-                                State.excel_preview,
-                                lambda row: rx.table.row(
-                                    rx.foreach(row, lambda cell: rx.table.cell(cell))
-                                )
-                            )
+                        ui.button(
+                            "Limpar",
+                            icon="x",
+                            on_click=State.clear_excel_analysis,
+                            variant="secondary",
+                            size="1"
                         ),
-                        width="100%"
+                        width="100%",
+                        align="center",
+                        class_name="mb-4"
                     ),
-                    type="always",
-                    scrollbars="both",
-                    style={"height": 400}
+                    
+                    # Stats row
+                    rx.grid(
+                        rx.hstack(
+                            rx.icon("file-text", size=16, color="gray"),
+                            rx.text(State.excel_filled_cells.to_string() + " células", font_size="0.875rem"),
+                            spacing="1",
+                            align="center"
+                        ),
+                        rx.hstack(
+                            rx.icon("columns", size=16, color="gray"),
+                            rx.text(State.excel_total_columns.to_string() + " colunas", font_size="0.875rem"),
+                            spacing="1",
+                            align="center"
+                        ),
+                        rx.hstack(
+                            rx.icon("rows", size=16, color="gray"),
+                            rx.text(State.excel_total_rows.to_string() + " registros a importar", font_size="0.875rem", color=Color.PRIMARY, font_weight="500"),
+                            spacing="1",
+                            align="center"
+                        ),
+                        columns="3",
+                        spacing="4",
+                        width="100%",
+                        class_name="mb-4 p-3 bg-gray-50 rounded-lg"
+                    ),
+                    
+                    rx.scroll_area(
+                        rx.table.root(
+                            rx.table.header(
+                                rx.table.row(
+                                    rx.foreach(
+                                        State.excel_headers,
+                                        lambda h: rx.table.column_header_cell(h, class_name="text-xs uppercase font-bold bg-gray-100")
+                                    )
+                                )
+                            ),
+                            rx.table.body(
+                                rx.foreach(
+                                    State.excel_preview,
+                                    lambda row: rx.table.row(
+                                        rx.foreach(row, lambda cell: rx.table.cell(cell, class_name="text-sm"))
+                                    )
+                                )
+                            ),
+                            width="100%"
+                        ),
+                        type="always",
+                        scrollbars="both",
+                        style={"height": 350}
+                    ),
                 ),
                 class_name="mt-8"
             )

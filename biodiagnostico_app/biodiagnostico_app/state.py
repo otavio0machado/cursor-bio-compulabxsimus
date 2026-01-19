@@ -461,6 +461,21 @@ class State(rx.State):
             return "0.00"
     
     @rx.var
+    def qc_cv_status(self) -> str:
+        """Returns status based on CV%: 'ok' (≤5%), 'warning' (5-10%), 'error' (>10%)"""
+        try:
+            cv_str = self.qc_calculated_cv
+            cv = float(cv_str)
+            if cv <= 5.0:
+                return "ok"
+            elif cv <= 10.0:
+                return "warning"
+            else:
+                return "error"
+        except (ValueError, TypeError):
+            return "ok"
+    
+    @rx.var
     def unique_exam_names(self) -> List[str]:
         """Retorna lista única de nomes de exames para o dropdown"""
         # Lista de exames comuns em laboratório (padronizada)
@@ -1784,6 +1799,22 @@ class State(rx.State):
     def set_qc_date(self, value: str):
         self.qc_date = value
     
+    def clear_qc_form(self):
+        """Limpa todos os campos do formulário de CQ"""
+        self.qc_exam_name = ""
+        self.qc_level = ""
+        self.qc_lot_number = ""
+        self.qc_value = ""
+        self.qc_value1 = ""
+        self.qc_value2 = ""
+        self.qc_target_value = ""
+        self.qc_target_sd = ""
+        self.qc_equipment = ""
+        self.qc_analyst = ""
+        self.qc_date = ""
+        self.qc_success_message = ""
+        self.qc_error_message = ""
+    
     async def save_qc_record(self):
         """Salva um novo registro de CQ"""
         self.is_saving_qc = True
@@ -2080,6 +2111,106 @@ class State(rx.State):
                     pass
         
         self.levey_jennings_data = sorted(filtered_records, key=lambda x: x.date)
+    
+    # Levey-Jennings level filter
+    levey_jennings_level: str = "Todos"
+    
+    def set_levey_jennings_level(self, value: str):
+        self.levey_jennings_level = value
+    
+    @rx.var
+    def levey_jennings_chart_data(self) -> List[Dict[str, Any]]:
+        """Returns chart-ready data for Recharts"""
+        return [
+            {
+                "date": point.date,
+                "value": point.value,
+                "target": point.target,
+                "sd": point.sd,
+                "cv": point.cv
+            }
+            for point in self.levey_jennings_data
+        ]
+    
+    @rx.var
+    def lj_mean(self) -> float:
+        """Mean of all values in the Levey-Jennings data"""
+        if not self.levey_jennings_data:
+            return 0.0
+        values = [p.value for p in self.levey_jennings_data]
+        return round(sum(values) / len(values), 2)
+    
+    @rx.var
+    def lj_sd(self) -> float:
+        """Standard deviation of Levey-Jennings data"""
+        if len(self.levey_jennings_data) < 2:
+            return 0.0
+        values = [p.value for p in self.levey_jennings_data]
+        mean = sum(values) / len(values)
+        variance = sum((x - mean) ** 2 for x in values) / (len(values) - 1)
+        return round(variance ** 0.5, 2)
+    
+    @rx.var
+    def lj_cv_mean(self) -> float:
+        """Mean CV% from the Levey-Jennings data"""
+        if not self.levey_jennings_data:
+            return 0.0
+        cv_values = [p.cv for p in self.levey_jennings_data]
+        return round(sum(cv_values) / len(cv_values), 2)
+    
+    @rx.var
+    def lj_target_plus_1sd(self) -> float:
+        """Target + 1 SD for reference line"""
+        if not self.levey_jennings_data:
+            return 0.0
+        avg_target = sum(p.target for p in self.levey_jennings_data) / len(self.levey_jennings_data)
+        avg_sd = sum(p.sd for p in self.levey_jennings_data) / len(self.levey_jennings_data)
+        return round(avg_target + avg_sd, 2)
+    
+    @rx.var
+    def lj_target_minus_1sd(self) -> float:
+        """Target - 1 SD for reference line"""
+        if not self.levey_jennings_data:
+            return 0.0
+        avg_target = sum(p.target for p in self.levey_jennings_data) / len(self.levey_jennings_data)
+        avg_sd = sum(p.sd for p in self.levey_jennings_data) / len(self.levey_jennings_data)
+        return round(avg_target - avg_sd, 2)
+    
+    @rx.var
+    def lj_target_plus_2sd(self) -> float:
+        """Target + 2 SD for reference line"""
+        if not self.levey_jennings_data:
+            return 0.0
+        avg_target = sum(p.target for p in self.levey_jennings_data) / len(self.levey_jennings_data)
+        avg_sd = sum(p.sd for p in self.levey_jennings_data) / len(self.levey_jennings_data)
+        return round(avg_target + 2 * avg_sd, 2)
+    
+    @rx.var
+    def lj_target_minus_2sd(self) -> float:
+        """Target - 2 SD for reference line"""
+        if not self.levey_jennings_data:
+            return 0.0
+        avg_target = sum(p.target for p in self.levey_jennings_data) / len(self.levey_jennings_data)
+        avg_sd = sum(p.sd for p in self.levey_jennings_data) / len(self.levey_jennings_data)
+        return round(avg_target - 2 * avg_sd, 2)
+    
+    @rx.var
+    def lj_target_plus_3sd(self) -> float:
+        """Target + 3 SD for reference line"""
+        if not self.levey_jennings_data:
+            return 0.0
+        avg_target = sum(p.target for p in self.levey_jennings_data) / len(self.levey_jennings_data)
+        avg_sd = sum(p.sd for p in self.levey_jennings_data) / len(self.levey_jennings_data)
+        return round(avg_target + 3 * avg_sd, 2)
+    
+    @rx.var
+    def lj_target_minus_3sd(self) -> float:
+        """Target - 3 SD for reference line"""
+        if not self.levey_jennings_data:
+            return 0.0
+        avg_target = sum(p.target for p in self.levey_jennings_data) / len(self.levey_jennings_data)
+        avg_sd = sum(p.sd for p in self.levey_jennings_data) / len(self.levey_jennings_data)
+        return round(avg_target - 3 * avg_sd, 2)
     
     @rx.var
     def unique_exam_names(self) -> List[str]:
