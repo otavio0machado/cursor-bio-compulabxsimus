@@ -25,7 +25,7 @@ class QCService:
             "target_sd": float(record_data.get("target_sd", 0)),
             "equipment_name": record_data.get("equipment"),
             "analyst_name": record_data.get("analyst"),
-            # cv e status são gerados pelo banco de dados
+            "status": record_data.get("status", "OK")
         }
         
         response = supabase.table("qc_records").insert(data).execute()

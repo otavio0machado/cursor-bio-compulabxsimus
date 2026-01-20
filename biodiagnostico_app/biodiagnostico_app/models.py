@@ -1,5 +1,6 @@
+import reflex as rx
+from typing import List, Optional, Any, Dict
 from pydantic import BaseModel
-from typing import List, Optional, Any
 
 class AnalysisResult(BaseModel):
     """Resultado de uma análise individual"""
@@ -33,6 +34,8 @@ class QCRecord(BaseModel):
     equipment: str = ""
     analyst: str = ""
     status: str = ""
+    westgard_violations: List[Dict[str, Any]] = []
+    z_score: float = 0.0
 
 
 class ReagentLot(BaseModel):
@@ -46,6 +49,14 @@ class ReagentLot(BaseModel):
     storage_temp: str = ""
     created_at: str = ""
     days_left: int = 0
+    current_stock: float = 0.0
+    estimated_consumption: float = 0.0 # por dia
+    
+    @property
+    def days_to_rupture(self) -> Optional[int]:
+        if self.estimated_consumption > 0:
+            return int(self.current_stock / self.estimated_consumption)
+        return None
 
 
 class MaintenanceRecord(BaseModel):
@@ -67,3 +78,27 @@ class LeveyJenningsPoint(BaseModel):
     target: float = 0.0
     sd: float = 0.0
     cv: float = 0.0
+
+
+class PatientHistoryEntry(BaseModel):
+    """Entrada de histórico do paciente"""
+    id: str = ""
+    patient_name: str = ""
+    exam_name: str = ""
+    status: str = ""
+    last_value: float = 0.0
+    notes: str = ""
+    created_at: str = ""
+
+
+class PatientModel(BaseModel):
+    """Modelo simplificado de paciente"""
+    name: str = ""
+    total_exams: int = 0
+    total_value: float = 0.0
+
+
+class TopOffender(BaseModel):
+    """Modelo de ofensor (exame/problema recorrente)"""
+    name: str = ""
+    count: int = 0

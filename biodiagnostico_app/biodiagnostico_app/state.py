@@ -20,7 +20,8 @@ from .services.reagent_service import ReagentService
 from .services.maintenance_service import MaintenanceService
 from .services.audit_service import AuditService
 from .config import Config
-from .models import AnalysisResult, QCRecord, ReagentLot, MaintenanceRecord, LeveyJenningsPoint
+from .models import AnalysisResult, QCRecord, ReagentLot, MaintenanceRecord, LeveyJenningsPoint, PatientHistoryEntry, PatientModel, TopOffender
+from .utils.westgard import WestgardRules
 
 
 class State(rx.State):
@@ -65,9 +66,9 @@ class State(rx.State):
     contratualizado_val: float = 0.0
     
     # Resultados da comparação
-    missing_patients: List[Dict[str, Any]] = []
-    missing_exams: List[Dict[str, Any]] = []
-    value_divergences: List[Dict[str, Any]] = []
+    missing_patients: List[PatientModel] = []
+    missing_exams: List[AnalysisResult] = []
+    value_divergences: List[AnalysisResult] = []
     
     # Breakdown da diferença
     missing_patients_total: float = 0.0
@@ -97,6 +98,26 @@ class State(rx.State):
     is_analyzing: bool = False
     is_generating_csv: bool = False
     is_generating_ai: bool = False
+    
+    # Divergence Resolution & Patient History
+    resolutions: Dict[str, str] = {} # Key: "patient_name|exam_name"
+    patient_history_data: List[PatientHistoryEntry] = []
+    selected_patient_name: str = ""
+    is_showing_patient_history: bool = False
+    resolution_notes: str = ""
+    
+    # Financial Forecast & Goals
+    audit_history: List[Dict[str, Any]] = []
+    revenue_forecast: float = 0.0
+    monthly_goal: float = 50000.0 # Meta padrão
+    
+    @rx.var
+    def goal_progress(self) -> float:
+        """Percentual de atingimento da meta"""
+        if self.monthly_goal > 0:
+            # Usar compulab_total como referência de faturamento realizado
+            return min(100.0, (self.compulab_total / self.monthly_goal) * 100)
+        return 0.0
     
     # Progresso do processamento (para arquivos grandes)
     processing_progress: int = 0
@@ -202,7 +223,9 @@ class State(rx.State):
                     manufacturer=r.get("manufacturer", ""),
                     storage_temp=r.get("storage_temp", ""),
                     created_at=r.get("created_at", ""),
-                    days_left=0 # Calculado na property
+                    days_left=0, # Calculado na property
+                    current_stock=float(r.get("current_stock", 0)) if r.get("current_stock") else 0.0,
+                    estimated_consumption=float(r.get("estimated_consumption", 0)) if r.get("estimated_consumption") else 0.0
                 ) for r in reagent_data
             ]
             
@@ -226,6 +249,13 @@ class State(rx.State):
             if audit_summary:
                 self.last_audit_summary = audit_summary
             
+            # Carregar Histórico e Calcular Forecast (Novo)
+            self.audit_history = await AuditService.get_audit_history(limit=6)
+            self.calculate_forecast()
+
+            # Carregar Resoluções (Novo)
+            await self.load_resolutions()
+            
         except Exception as e:
             print(f"Erro ao carregar dados do Supabase: {e}")
             # Não falhar silenciosamente, talvez setar msg erro global?
@@ -239,6 +269,8 @@ class State(rx.State):
     reagent_quantity: str = ""
     reagent_manufacturer: str = ""
     reagent_storage_temp: str = ""
+    reagent_initial_stock: str = ""
+    reagent_daily_consumption: str = ""
     is_saving_reagent: bool = False
     reagent_success_message: str = ""
     reagent_error_message: str = ""
@@ -282,12 +314,28 @@ class State(rx.State):
         return self.compulab_total - self.simus_total
     
     @rx.var
+    def formatted_revenue_forecast(self) -> str:
+        """Previsão de receita formatada"""
+        return f"R$ {self.revenue_forecast:,.2f}"
+
+    @rx.var
+    def formatted_monthly_goal(self) -> str:
+        """Meta mensal formatada"""
+        return f"R$ {self.monthly_goal:,.2f}"
+    
+    @rx.var
     def difference_percent(self) -> float:
         """Percentual de diferença"""
         if self.simus_total > 0:
             return (self.difference / self.simus_total) * 100
         return 0.0
-    
+
+    def share_on_whatsapp(self, message: str):
+        """Abre o WhatsApp com uma mensagem pré-definida"""
+        import urllib.parse
+        encoded_msg = urllib.parse.quote(message)
+        return rx.redirect(f"https://wa.me/?text={encoded_msg}")
+
     @rx.var
     def missing_exams_count(self) -> int:
         """Quantidade de exames faltantes"""
@@ -355,43 +403,8 @@ class State(rx.State):
         """Total COMPULAB formatado"""
         return f"R$ {self.compulab_total:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
-    @rx.var
-    def financial_growth_day(self) -> float:
-        """Crescimento financeiro diário (baseado no processado atual vs meta)"""
-        # Meta diária hipotética de R$ 5.000,00 para o laboratório
-        daily_target = 5000.0
-        
-        # Usar valor da sessão se houver, senão o valor do último resumo persistente
-        current_total = self.compulab_total
-        if current_total == 0 and self.last_audit_summary:
-            current_total = float(self.last_audit_summary.get("compulab_total", 0.0))
-            
-        if current_total > 0:
-            growth = ((current_total - daily_target) / daily_target) * 100
-            return round(growth, 1)
-        return 0.0
-        
-    @rx.var
-    def top_offenders(self) -> List[Dict[str, Any]]:
-        """Identifica os problemas mais frequentes na análise"""
-        if not self.missing_exams and not self.value_divergences:
-            # Se não houver dados na sessão, mas tivermos resumo persistente, 
-            # não podemos saber quais exames, a menos que tenhamos salvo.
-            # Por enquanto, retorna vazio se nada na sessão.
-            return []
-            
-        counts = {}
-        for exam in self.missing_exams:
-            name = exam.get("exam_name", "Desconhecido")
-            counts[name] = counts.get(name, 0) + 1
-            
-        for div in self.value_divergences:
-            name = div.get("exam_name", "Desconhecido")
-            counts[name] = counts.get(name, 0) + 1
-            
-        sorted_counts = sorted(counts.items(), key=lambda x: x[1], reverse=True)
-        return [{"name": name, "count": count} for name, count in sorted_counts[:5]]
-
+    
+    
     @rx.var
     def formatted_simus_total(self) -> str:
         """Total SIMUS formatado"""
@@ -561,24 +574,24 @@ class State(rx.State):
         
     # ===== Dashboard - Top Offenders =====
     @rx.var
-    def top_offenders(self) -> List[Dict[str, Any]]:
+    def top_offenders(self) -> List[TopOffender]:
         """Retorna os top 5 exames com problemas (faltantes ou divergentes)"""
         counts = {}
         
         # Contar exames faltantes
         for item in self.missing_exams:
-            name = item.get("exam_name", "Desconhecido")
+            name = item.exam_name
             counts[name] = counts.get(name, 0) + 1
             
         # Contar divergências
         for item in self.value_divergences:
-            name = item.get("exam_name", "Desconhecido")
+            name = item.exam_name
             counts[name] = counts.get(name, 0) + 1
             
         # Ordenar e pegar top 5
         sorted_exams = sorted(counts.items(), key=lambda x: x[1], reverse=True)[:5]
         
-        return [{"name": name, "count": count} for name, count in sorted_exams]
+        return [TopOffender(name=str(name), count=int(count)) for name, count in sorted_exams]
     
     def set_login_email(self, email: str):
         """Define o email de login"""
@@ -1272,11 +1285,11 @@ class State(rx.State):
             
             # Converter para listas serializáveis
             self.missing_patients = [
-                {
-                    'patient': item['patient'],
-                    'exams_count': item['exams_count'],
-                    'total_value': float(item['total_value'])
-                }
+                PatientModel(
+                    name=item['patient'],
+                    total_exams=item['exams_count'],
+                    total_value=float(item['total_value'])
+                )
                 for item in comparison_results['missing_patients']
             ]
             
@@ -1346,6 +1359,9 @@ class State(rx.State):
                 }
                 await AuditService.save_audit_summary(summary_data)
                 self.last_audit_summary = summary_data
+                
+                # Carregar resoluções existentes do banco
+                await self.load_resolutions()
 
         except Exception as e:
             self.error_message = f"ERRO: Erro na análise: {str(e)}"
@@ -1541,6 +1557,76 @@ class State(rx.State):
         self.analysis_pdf = ""
         self._compulab_patients = {}
         self._simus_patients = {}
+        self.resolutions = {}
+        self.is_showing_patient_history = False
+
+    async def load_resolutions(self):
+        """Carrega resoluções do banco para o estado"""
+        if not supabase: return
+        res_data = await AuditService.get_resolutions()
+        # Converter dict com chaves tuple para string key compatível com Reflex
+        self.resolutions = { f"{k[0]}|{k[1]}": v for k, v in res_data.items() }
+
+    async def toggle_resolution(self, patient: str, exam: str):
+        """Alterna o status de uma divergência entre 'pendente' e 'resolvido'"""
+        key = f"{patient}|{exam}"
+        current_status = self.resolutions.get(key, "pendente")
+        new_status = "resolvido" if current_status == "pendente" else "pendente"
+        
+        # Otimismo na UI
+        self.resolutions[key] = new_status
+        
+        # Persistir
+        await AuditService.save_divergence_resolution({
+            "patient_name": patient,
+            "exam_name": exam,
+            "status": new_status,
+            "last_value": 0.0 # Opcional
+        })
+
+    async def view_patient_history(self, patient: str):
+        """Busca e exibe o histórico de um paciente"""
+        self.selected_patient_name = patient
+        self.is_showing_patient_history = True
+        history_raw = await AuditService.get_patient_history(patient)
+        self.patient_history_data = [
+            PatientHistoryEntry(
+                id=str(r.get("id", "")),
+                patient_name=r.get("patient_name", ""),
+                exam_name=r.get("exam_name", ""),
+                status=r.get("status", ""),
+                last_value=float(r.get("last_value", 0.0)) if r.get("last_value") else 0.0,
+                notes=r.get("notes", ""),
+                created_at=str(r.get("created_at", ""))
+            ) for r in history_raw
+        ]
+
+    def close_patient_history(self):
+        """Fecha o modal de histórico"""
+        self.is_showing_patient_history = False
+        self.patient_history_data = []
+
+    def calculate_forecast(self):
+        """Calcula previsão de faturamento baseada nos últimos meses"""
+        if not self.audit_history:
+            self.revenue_forecast = 0.0
+            return
+            
+        # Pegar totais do compulab (faturamento real detectado)
+        totals = [h.get("compulab_total", 0.0) for h in self.audit_history if h.get("compulab_total")]
+        
+        if len(totals) < 2:
+            self.revenue_forecast = totals[0] if totals else 0.0
+            return
+            
+        # Média simples das variações ou média móvel?
+        # Vamos usar média móvel ponderada (meses mais recentes valem mais)
+        weights = list(range(1, len(totals) + 1))
+        # Reverter para que o mais recente tenha maior peso
+        weights.reverse()
+        
+        weighted_sum = sum(t * w for t, w in zip(totals, weights))
+        self.revenue_forecast = weighted_sum / sum(weights)
     
     # ===== ProIn - Métodos para Análise de Planilhas Excel =====
     
@@ -1885,8 +1971,24 @@ class State(rx.State):
             # Calcular CV% = (SD / Target) * 100
             cv = (sd / target) * 100 if target > 0 else 0.0
             
-            # Status baseado no CV
-            status = "OK" if cv <= 5.0 else "Atenção"
+            # --- Lógica de Westgard (Novo) ---
+            # Buscar histórico para o mesmo exame e nível
+            history_values = [r.value for r in self.qc_records if r.exam_name == self.qc_exam_name and r.level == self.qc_level]
+            # Adicionar o valor atual
+            history_values.append(value)
+            
+            # Avaliar regras
+            wg_result = WestgardRules.evaluate(history_values, target, sd)
+            violations = wg_result["violations"]
+            z_score = wg_result["z_score"]
+            
+            # Status baseado no Westgard (Sobrescreve o simplificado)
+            if wg_result["status"] == "rejection":
+                status = "REJEITADO (Westgard)"
+            elif wg_result["status"] == "warning":
+                status = "ALERTA (Westgard)"
+            else:
+                status = "OK"
             
             # Persistir no banco se disponível
             real_id = str(len(self.qc_records) + 1)
@@ -1902,7 +2004,8 @@ class State(rx.State):
                         "target_value": target,
                         "target_sd": sd,
                         "equipment": self.qc_equipment,
-                        "analyst": self.qc_analyst
+                        "analyst": self.qc_analyst,
+                        "status": status, # Passar status atualizado
                     }
                     new_record = await QCService.create_qc_record(db_data)
                     if new_record and new_record.get("id"):
@@ -1927,7 +2030,9 @@ class State(rx.State):
                 target_sd=sd,
                 equipment=self.qc_equipment,
                 analyst=self.qc_analyst,
-                status=status
+                status=status,
+                westgard_violations=violations,
+                z_score=z_score
             )
             
             self.qc_records = [record] + self.qc_records
@@ -2012,6 +2117,12 @@ class State(rx.State):
     
     def set_reagent_storage_temp(self, value: str):
         self.reagent_storage_temp = value
+
+    def set_reagent_initial_stock(self, value: str):
+        self.reagent_initial_stock = value
+        
+    def set_reagent_daily_consumption(self, value: str):
+        self.reagent_daily_consumption = value
     
     async def save_reagent_lot(self):
         """Salva um novo lote de reagente"""
@@ -2037,7 +2148,9 @@ class State(rx.State):
                     "expiry_date": self.reagent_expiry_date,
                     "quantity": self.reagent_quantity,
                     "manufacturer": self.reagent_manufacturer,
-                    "storage_temp": self.reagent_storage_temp
+                    "storage_temp": self.reagent_storage_temp,
+                    "current_stock": float(self.reagent_initial_stock) if self.reagent_initial_stock else 0.0,
+                    "estimated_consumption": float(self.reagent_daily_consumption) if self.reagent_daily_consumption else 0.0
                 }
                 await ReagentService.create_reagent_lot(lot_data)
                 await self.load_data_from_db()
@@ -2051,6 +2164,8 @@ class State(rx.State):
                     quantity=self.reagent_quantity,
                     manufacturer=self.reagent_manufacturer,
                     storage_temp=self.reagent_storage_temp,
+                    current_stock=float(self.reagent_initial_stock) if self.reagent_initial_stock else 0.0,
+                    estimated_consumption=float(self.reagent_daily_consumption) if self.reagent_daily_consumption else 0.0,
                     created_at=datetime.now().strftime("%Y-%m-%d %H:%M")
                 )
                 self.reagent_lots = [lot] + self.reagent_lots
@@ -2063,6 +2178,8 @@ class State(rx.State):
             self.reagent_quantity = ""
             self.reagent_manufacturer = ""
             self.reagent_storage_temp = ""
+            self.reagent_initial_stock = ""
+            self.reagent_daily_consumption = ""
             
         except Exception as e:
             self.reagent_error_message = f"Erro ao salvar: {str(e)}"

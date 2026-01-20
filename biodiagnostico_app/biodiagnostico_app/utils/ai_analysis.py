@@ -129,20 +129,25 @@ async def generate_ai_analysis(
             
         client = openai.AsyncOpenAI(api_key=api_key)
         
-        # System Prompt do Auditor (OTIMIZADO)
+        # System Prompt do Auditor (OTIMIZADO v3.0)
         system_prompt = """
 # ROLE
-You are a Senior Medical Audit Algorithm. Compare Dataset A (COMPULAB) and Dataset B (SIMUS).
+You are a Senior Medical Audit Specialist and Data Scientist. Compare Dataset A (COMPULAB) and Dataset B (SIMUS).
 
 # LOGIC RULES
-1. Match by PATIENT + CODE.
+1. Match by PATIENT NAME + EXAM CODE/NAME.
 2. Ignore differences <= 0.05.
-3. Output ONLY the discrepancies. 
+3. Identify discrepancies and suggest a technical ROOT CAUSE.
+
+# TECHNICAL CAUSES TO CONSIDER
+- "Divergência de Tabela": When the value in A is significantly different from B (e.g., SIMUS outdated vs SIGTAP).
+- "Erro de Cadastro": Missing exams in one system usually indicate registration failure.
+- "Paciente Fantasma": Patient in COMPULAB but not in SIMUS (potential manual entry error).
+- "Exame Glosado/Não Integrado": Missing in COMPULAB but present in SIMUS.
 
 # OUTPUT FORMAT (STRICT CSV)
 - Separator: Semicolon (;)
-- Format: Paciente;Nome_Exame;Codigo_Exame;Valor_Compulab;Valor_Simus;Tipo_Divergencia
-- Type terms: "Paciente Ausente no SIMUS", "Paciente Ausente no COMPULAB", "Exame Ausente no SIMUS", "Exame Ausente no COMPULAB", "Valor Divergente"
+- Columns: Paciente;Nome_Exame;Codigo_Exame;Valor_Compulab;Valor_Simus;Tipo_Divergencia;Sugestao_Causa_Raiz
 - NO Header, NO Markdown, NO conversational text. Just lines of data.
 """
 
@@ -183,7 +188,7 @@ You are a Senior Medical Audit Algorithm. Compare Dataset A (COMPULAB) and Datas
         except:
              pass
 
-        final_csv = "Paciente;Nome_Exame;Codigo_Exame;Valor_Compulab;Valor_Simus;Tipo_Divergencia\n" + "\n".join(all_csv_rows)
+        final_csv = "Paciente;Nome_Exame;Codigo_Exame;Valor_Compulab;Valor_Simus;Tipo_Divergencia;Sugestao_Causa_Raiz\n" + "\n".join(all_csv_rows)
         total_divergences = len(all_csv_rows)
         
         final_report = f"""# RELATÓRIO DE AUDITORIA DE IA - BIODIAGNÓSTICO

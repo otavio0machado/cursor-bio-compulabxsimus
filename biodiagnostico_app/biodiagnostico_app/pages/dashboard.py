@@ -67,6 +67,57 @@ def dashboard_page() -> rx.Component:
                         class_name="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100 w-full hover:shadow-md transition-shadow"
                     ),
                     
+                    # Termômetro de Meta (Novo)
+                    rx.box(
+                        rx.vstack(
+                            rx.hstack(
+                                rx.text("Progresso da Meta Mensal", class_name="text-xs font-bold text-gray-500 uppercase tracking-wider"),
+                                rx.spacer(),
+                                rx.text(f"{State.goal_progress:.1f}%", class_name="text-green-700 font-bold"),
+                                width="100%",
+                                align="center"
+                            ),
+                            # Barra de Progresso
+                            rx.box(
+                                rx.box(
+                                    class_name="h-full bg-gradient-to-r from-green-400 to-green-600 rounded-full transition-all duration-1000 ease-out",
+                                    width=f"{State.goal_progress}%"
+                                ),
+                                class_name="w-full h-3 bg-gray-100 rounded-full overflow-hidden shadow-inner mt-2"
+                            ),
+                            rx.hstack(
+                                rx.text(State.formatted_compulab_total, class_name="text-xs font-medium text-gray-400"),
+                                rx.spacer(),
+                                rx.text(f"Meta: {State.formatted_monthly_goal}", class_name="text-xs font-medium text-gray-400"),
+                                width="100%"
+                            ),
+                            width="100%",
+                            spacing="1"
+                        ),
+                        class_name="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 w-full"
+                    ),
+                    
+                    # Previsão (Forecast) Card (Novo)
+                    rx.box(
+                        rx.hstack(
+                            rx.vstack(
+                                rx.text("Previsão de Receita (Forecast)", class_name="text-xs font-bold text-blue-500 uppercase"),
+                                rx.heading(State.formatted_revenue_forecast, size={"initial": "5", "sm": "6"}, class_name="text-blue-900"),
+                                rx.text("Baseado na tendência dos últimos 6 meses", class_name="text-[10px] text-gray-400"),
+                                align="start",
+                                spacing="0"
+                            ),
+                            rx.spacer(),
+                            rx.box(
+                                rx.icon("trending-up", size=24, class_name="text-blue-600"),
+                                class_name="bg-blue-50 p-2 rounded-lg"
+                            ),
+                            width="100%",
+                            align="center"
+                        ),
+                        class_name="bg-gradient-to-br from-blue-50/50 to-white p-5 rounded-2xl shadow-sm border border-blue-100 w-full"
+                    ),
+                    
                     # Mini Stats Grid
                     rx.grid(
                         ui.stat_card(

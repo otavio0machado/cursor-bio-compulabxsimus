@@ -69,8 +69,77 @@ def breakdown_item(icon: str, label: str, value: str, color: str = "gray") -> rx
         class_name="bg-white border border-gray-100 rounded-xl p-4 hover:shadow-md transition-all flex-1"
     )
 
-def render_table(headers: list[str], data: list, columns_keys: list[str]) -> rx.Component:
-    """Renderiza uma tabela estilizada usando os componentes modernos do Reflex"""
+
+def patient_history_modal() -> rx.Component:
+    """Modal para exibir o histórico do paciente"""
+    return rx.dialog.root(
+        rx.dialog.content(
+            rx.vstack(
+                rx.hstack(
+                    rx.icon("user", size=24, color=Color.DEEP),
+                    rx.dialog.title(f"Histórico: {State.selected_patient_name}"),
+                    rx.spacer(),
+                    rx.dialog.close(
+                        rx.button(rx.icon("x", size=20), variant="ghost", on_click=State.close_patient_history)
+                    ),
+                    width="100%",
+                    align="center",
+                ),
+                
+                rx.divider(),
+                
+                rx.scroll_area(
+                    rx.vstack(
+                        rx.foreach(
+                            State.patient_history_data,
+                            lambda entry: rx.box(
+                                rx.hstack(
+                                    rx.vstack(
+                                        rx.text(entry.exam_name, font_weight="bold", size="3"),
+                                        rx.text(entry.created_at.to(str)[:16], size="1", color="gray"),
+                                        spacing="0",
+                                        align="start",
+                                    ),
+                                    rx.spacer(),
+                                    ui.status_badge(
+                                        entry.status,
+                                        status=rx.cond(entry.status == "resolvido", "success", "warning")
+                                    ),
+                                    rx.vstack(
+                                        rx.text(f"Ref: R$ {entry.last_value}", size="1", color="gray"),
+                                        align="end",
+                                    ),
+                                    width="100%",
+                                    align="center",
+                                    class_name="p-3 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors"
+                                )
+                            )
+                        ),
+                        rx.cond(
+                            State.patient_history_data.length() == 0,
+                            rx.center(
+                                rx.text("Nenhum histórico encontrado para este paciente.", color="gray"),
+                                height="100px",
+                                width="100%"
+                            )
+                        ),
+                        width="100%",
+                        spacing="0",
+                    ),
+                    style={"height": "400px"},
+                    width="100%",
+                ),
+                
+                width="100%",
+                spacing="4",
+            ),
+            class_name="max-w-2xl bg-white rounded-2xl p-6"
+        ),
+        open=State.is_showing_patient_history,
+    )
+
+def action_table(headers: list[str], data: list, columns_keys: list[str], is_divergence: bool = False) -> rx.Component:
+    """Tabela com ações (Ver Histórico / Resolver)"""
     return rx.box(
         rx.table.root(
             rx.table.header(
@@ -81,7 +150,8 @@ def render_table(headers: list[str], data: list, columns_keys: list[str]) -> rx.
                             class_name="px-4 py-3 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
                         )
                         for h in headers
-                    ]
+                    ],
+                    rx.table.column_header_cell("Ações", class_name="px-4 py-3 bg-gray-50 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider")
                 )
             ),
             rx.table.body(
@@ -90,11 +160,35 @@ def render_table(headers: list[str], data: list, columns_keys: list[str]) -> rx.
                     lambda item, i: rx.table.row(
                         *[
                             rx.table.cell(
-                                item[key], 
+                                rx.cond(
+                                    key == "patient",
+                                    rx.link(
+                                        item[key],
+                                        class_name="text-blue-600 hover:text-blue-800 font-medium cursor-pointer",
+                                        on_click=lambda: State.view_patient_history(item[key])
+                                    ),
+                                    item[key]
+                                ),
                                 class_name="px-4 py-3 whitespace-nowrap text-sm text-gray-700"
                             )
                             for key in columns_keys
                         ],
+                        rx.table.cell(
+                            rx.hstack(
+                                rx.cond(
+                                    is_divergence,
+                                    rx.button(
+                                        rx.icon("circle", size=16),
+                                        on_click=lambda: State.toggle_resolution(item["patient"], item["exam_name"]),
+                                        variant="ghost",
+                                        color_scheme="gray",
+                                        size="1",
+                                    )
+                                ),
+                                justify="end",
+                            ),
+                            align="right"
+                        ),
                         class_name=rx.cond(
                             i % 2 == 0, 
                             "bg-white hover:bg-gray-50 transition-colors", 
@@ -360,7 +454,7 @@ def analise_page() -> rx.Component:
                             rx.cond(
                                 State.missing_exams_count > 0,
                                     rx.box(
-                                        render_table(
+                                        action_table(
                                             headers=["Paciente", "Exame", "Valor (R$)"],
                                             data=State.missing_exams,
                                             columns_keys=["patient", "exam_name", "value"]
@@ -383,10 +477,11 @@ def analise_page() -> rx.Component:
                             rx.cond(
                                 State.divergences_count > 0,
                                     rx.box(
-                                        render_table(
+                                        action_table(
                                             headers=["Paciente", "Exame", "COMPULAB", "SIMUS", "Diferença"],
                                             data=State.value_divergences,
-                                            columns_keys=["patient", "exam_name", "compulab_value", "simus_value", "difference"]
+                                            columns_keys=["patient", "exam_name", "compulab_value", "simus_value", "difference"],
+                                            is_divergence=True
                                         ),
                                         class_name="mt-4"
                                     ),
@@ -657,6 +752,7 @@ def analise_page() -> rx.Component:
                 ),
             ),
             
+            patient_history_modal(),
             spacing="0",
             align="center",
             width="100%",

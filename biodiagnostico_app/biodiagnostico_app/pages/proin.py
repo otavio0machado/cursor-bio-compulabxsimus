@@ -607,8 +607,8 @@ def reagentes_tab() -> rx.Component:
                         True
                     ),
                     rx.grid(
-                        ui.form_field("Qtde.", ui.input(value=State.reagent_quantity, on_change=State.set_reagent_quantity)),
-                        ui.form_field("Temp.", ui.input(value=State.reagent_storage_temp, on_change=State.set_reagent_storage_temp)),
+                        ui.form_field("Estoque Atual", ui.input(placeholder="0", value=State.reagent_initial_stock, on_change=State.set_reagent_initial_stock)),
+                        ui.form_field("Consumo p/ Dia", ui.input(placeholder="0", value=State.reagent_daily_consumption, on_change=State.set_reagent_daily_consumption)),
                         columns="2",
                         spacing="2",
                         width="100%"
@@ -713,6 +713,20 @@ def reagentes_tab() -> rx.Component:
                                                     color="gray",
                                                     class_name="text-center"
                                                 ),
+                                            ),
+                                            # Risco de Ruptura (Novo)
+                                            rx.cond(
+                                                lot["days_to_rupture"] != None,
+                                                rx.badge(
+                                                    rx.cond(
+                                                        lot["days_to_rupture"] <= 5,
+                                                        "RISCO RUPTURA",
+                                                        f"Estoque: {lot['days_to_rupture']} dias"
+                                                    ),
+                                                    color_scheme=rx.cond(lot["days_to_rupture"] <= 5, "red", "gray"),
+                                                    variant="outline",
+                                                    class_name="mt-1"
+                                                )
                                             ),
                                             spacing="0",
                                             align="center"
