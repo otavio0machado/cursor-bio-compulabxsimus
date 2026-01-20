@@ -27,11 +27,12 @@ def upload_file(file_path: str, resource_type: str = "auto") -> Optional[str]:
         # Tenta inicializar caso não tenha sido feito ainda
         init_cloudinary()
         
-        # Upload
-        response = cloudinary.uploader.upload(
+        # Upload usando upload_large para suportar arquivos > 10MB
+        response = cloudinary.uploader.upload_large(
             file_path,
             resource_type=resource_type,
-            folder="biodiagnostico_uploads"
+            folder="biodiagnostico_uploads",
+            chunk_size=6000000  # 6MB chunks
         )
         
         return response.get("secure_url")

@@ -11,8 +11,8 @@ from .pdf_processor import normalize_exam_name_for_comparison, exam_names_match
 
 def compare_patients(compulab_patients, simus_patients):
     """
-    Compara pacientes entre COMPULAB e SIMUS usando APENAS NOMES
-    Resultados são sempre consistentes e determinísticos (mesma ordem)
+    Compara pacientes entre COMPULAB e SIMUS usando NOMES e CÓDIGOS de exames.
+    Resultados são sempre consistentes e determinísticos.
     """
     results = {
         'missing_patients': [],  # Pacientes no COMPULAB mas não no SIMUS
@@ -23,7 +23,7 @@ def compare_patients(compulab_patients, simus_patients):
     compulab_names = set(compulab_patients.keys())
     simus_names = set(simus_patients.keys())
     
-    # Pacientes faltantes no SIMUS - ORDENAR para garantir consistência
+    # Pacientes faltantes no SIMUS
     missing_in_simus = sorted(compulab_names - simus_names)
     for patient in missing_in_simus:
         results['missing_patients'].append({
@@ -33,7 +33,7 @@ def compare_patients(compulab_patients, simus_patients):
             'exams': compulab_patients[patient]['exams']
         })
     
-    # Comparar pacientes comuns - ORDENAR para garantir consistência
+    # Comparar pacientes comuns
     common_patients = sorted(compulab_names & simus_names)
     
     for patient in common_patients:
@@ -43,70 +43,95 @@ def compare_patients(compulab_patients, simus_patients):
         # Criar cópia mutável da lista do SIMUS para marcar quais já foram usados
         simus_used_indices = set()
         
-        # Agrupar exames por nome normalizado para comparação
-        compulab_grouped = {}
+        # Agrupar exames do COMPULAB por CÓDIGO (se disponível) ou NOME NORMALIZADO
+        compulab_items = []
         for exam in compulab_exam_list:
-            norm_key = normalize_exam_name_for_comparison(exam['exam_name'])
-            if norm_key not in compulab_grouped:
-                compulab_grouped[norm_key] = []
-            compulab_grouped[norm_key].append(exam)
+            code = exam.get('code', '')
+            norm_name = normalize_exam_name_for_comparison(exam['exam_name'])
+            # Prioridade para código, senão nome
+            compulab_items.append({
+                'original': exam,
+                'match_key': f"CODE_{code}" if code and len(code) >= 5 else f"NAME_{norm_name}",
+                'code': code,
+                'norm_name': norm_name
+            })
         
-        # ORDENAR grupos por chave normalizada para garantir ordem determinística
-        sorted_comp_groups = sorted(compulab_grouped.items(), key=lambda x: x[0])
+        # Agrupar por match_key para tratar exames múltiplos do mesmo tipo
+        compulab_grouped = {}
+        for item in compulab_items:
+            key = item['match_key']
+            if key not in compulab_grouped:
+                compulab_grouped[key] = []
+            compulab_grouped[key].append(item['original'])
+            
+        # Ordenar chaves para determinismo
+        sorted_keys = sorted(compulab_grouped.keys())
         
-        # Para cada grupo de exames do COMPULAB, encontrar correspondentes no SIMUS
-        for comp_norm_key, comp_exams in sorted_comp_groups:
-            # ORDENAR exames dentro do grupo por nome e valor para consistência
-            comp_exams = sorted(comp_exams, key=lambda x: (x['exam_name'], x['value']))
+        for key in sorted_keys:
+            comp_exams = compulab_grouped[key]
+            # Extrair o que estamos buscando
+            is_code_search = key.startswith("CODE_")
+            search_val = key.replace("CODE_", "").replace("NAME_", "")
             
             simus_matches = []
             
-            # Procurar matches no SIMUS - ORDENAR antes de iterar para matching determinístico
-            # Ordenar por índice primeiro (ordem original), depois por nome normalizado
-            sorted_simus_with_index = sorted(
-                enumerate(simus_exam_list),
-                key=lambda x: (normalize_exam_name_for_comparison(x[1]['exam_name']), x[1]['exam_name'], x[1]['value'])
-            )
-            
-            for i, sim_exam in sorted_simus_with_index:
+            # Procurar matches no SIMUS
+            for i, sim_exam in enumerate(simus_exam_list):
                 if i in simus_used_indices:
                     continue
-                sim_norm_key = normalize_exam_name_for_comparison(sim_exam['exam_name'])
-                if exam_names_match(comp_norm_key, sim_norm_key):
+                
+                match_found = False
+                if is_code_search:
+                    sim_code = sim_exam.get('code', '')
+                    if sim_code == search_val:
+                        match_found = True
+                else:
+                    sim_norm = normalize_exam_name_for_comparison(sim_exam['exam_name'])
+                    if exam_names_match(search_val, sim_norm):
+                        match_found = True
+                
+                if match_found:
                     simus_matches.append((i, sim_exam))
                     simus_used_indices.add(i)
             
-            # ORDENAR matches por índice para manter ordem determinística
-            simus_matches = sorted(simus_matches, key=lambda x: x[0])
-            
             if not simus_matches:
                 # Nenhum match encontrado - exames faltantes
-                # ORDENAR exames antes de adicionar
                 for exam in comp_exams:
                     results['missing_exams'].append({
                         'patient': patient,
                         'exam_name': exam['exam_name'],
-                        'value': exam['value']
+                        'value': exam['value'],
+                        'code': exam.get('code', '')
                     })
             else:
                 # Comparar valores
-                compulab_total = sum(ex['value'] for ex in comp_exams)
-                simus_total = sum(ex['value'] for i, ex in simus_matches)
+                comp_total = sum(Decimal(str(ex['value'])) for ex in comp_exams)
+                sim_total = sum(Decimal(str(ex[1]['value'])) for ex in simus_matches)
                 
-                if abs(compulab_total - simus_total) > Decimal('0.01'):
-                    # Usa o nome mais completo para exibição
-                    # Se houver empate no tamanho, usar o primeiro alfabeticamente
-                    all_names = [ex['exam_name'] for ex in comp_exams] + [ex['exam_name'] for i, ex in simus_matches]
+                if abs(comp_total - sim_total) > Decimal('0.01'):
+                    # Divergência de valor
+                    all_names = [ex['exam_name'] for ex in comp_exams] + [ex[1]['exam_name'] for ex in simus_matches]
                     display_name = max(all_names, key=lambda x: (len(x), x))
+                    
+                    # Tentar pegar o código de qualquer um deles
+                    codes = {ex.get('code', '') for ex in comp_exams} | {ex[1].get('code', '') for ex in simus_matches}
+                    display_code = next((c for c in codes if c), "")
+                    
                     results['value_divergences'].append({
                         'patient': patient,
                         'exam_name': display_name,
-                        'compulab_value': compulab_total,
-                        'simus_value': simus_total,
-                        'difference': compulab_total - simus_total,
+                        'code': display_code,
+                        'compulab_value': float(comp_total),
+                        'simus_value': float(sim_total),
+                        'difference': float(comp_total - sim_total),
                         'compulab_count': len(comp_exams),
                         'simus_count': len(simus_matches)
                     })
+        
+        # Opcional: Identificar exames no SIMUS que sobraram (não estão no COMPULAB)
+        # Por enquanto não estamos salvando isso para não mudar a lógica de negócio principal,
+        # mas poderíamos adicionar results['extra_simus_exams']
+    
     
     # ORDENAR resultados finais para garantir consistência total
     results['missing_patients'].sort(key=lambda x: (x['patient'], x['total_value']))
@@ -118,12 +143,29 @@ def compare_patients(compulab_patients, simus_patients):
 
 def compute_difference_breakdown(compulab_total, simus_total, comparison_results):
     """Calcula a explicação da diferença total (COMPULAB - SIMUS)"""
+    # Converter para Decimal para garantir consistência
+    compulab_total = Decimal(str(compulab_total)) if not isinstance(compulab_total, Decimal) else compulab_total
+    simus_total = Decimal(str(simus_total)) if not isinstance(simus_total, Decimal) else simus_total
+    
     diff_total = compulab_total - simus_total
-    missing_patients_total = sum(item['total_value'] for item in comparison_results['missing_patients'])
-    missing_exams_total = sum(item['value'] for item in comparison_results['missing_exams'])
-    divergences_total = sum(item['difference'] for item in comparison_results['value_divergences'])
+    
+    # Converter todos os valores para Decimal antes de somar
+    missing_patients_total = sum(
+        (Decimal(str(item['total_value'])) for item in comparison_results['missing_patients']),
+        Decimal('0')
+    )
+    missing_exams_total = sum(
+        (Decimal(str(item['value'])) for item in comparison_results['missing_exams']),
+        Decimal('0')
+    )
+    divergences_total = sum(
+        (Decimal(str(item['difference'])) for item in comparison_results['value_divergences']),
+        Decimal('0')
+    )
+    
     explained = missing_patients_total + missing_exams_total + divergences_total
     residual = diff_total - explained
+    
     return {
         "diff_total": diff_total,
         "missing_patients_total": missing_patients_total,
@@ -132,6 +174,7 @@ def compute_difference_breakdown(compulab_total, simus_total, comparison_results
         "explained_total": explained,
         "residual": residual,
     }
+
 
 
 def format_divergences_to_json(delimited_data: str) -> str:

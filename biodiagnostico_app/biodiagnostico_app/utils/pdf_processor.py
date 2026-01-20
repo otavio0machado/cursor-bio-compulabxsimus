@@ -569,56 +569,91 @@ def extract_simus_patients(pdf_file, known_patient_names=None, progress_callback
                         if not table or len(table) < 2:
                             continue
                         
+                        # Busca mais flexível do cabeçalho
                         header_row = None
+                        header_keywords = ['PACIENTE', 'EXAME', 'PROCEDIMENTO', 'NOME', 'CÓDIGO', 'VALOR']
                         for i, row in enumerate(table):
-                            if row and any(cell and ('PACIENTE' in str(cell).upper() or 'EXAME' in str(cell).upper()) for cell in row if cell):
+                            if not row:
+                                continue
+                            row_text = ' '.join([str(c).upper() if c else '' for c in row])
+                            if any(kw in row_text for kw in header_keywords):
                                 header_row = i
                                 break
                         
                         if header_row is None:
-                            continue
+                            # Tentar usar primeira linha como cabeçalho se tiver pelo menos 3 colunas
+                            if table[0] and len([c for c in table[0] if c]) >= 3:
+                                header_row = 0
+                            else:
+                                continue
                         
                         header = table[header_row]
                         paciente_col = None
                         exame_col = None
                         valor_pago_col = None
                         codigo_col = None
+                        valor_sus_col = None
                         
                         for idx, cell in enumerate(header):
                             if not cell:
                                 continue
-                            cell_upper = str(cell).upper()
-                            if 'PACIENTE' in cell_upper and paciente_col is None:
+                            cell_upper = str(cell).upper().strip()
+                            
+                            # Detectar coluna de paciente
+                            if any(kw in cell_upper for kw in ['PACIENTE', 'BENEFICIÁRIO', 'BENEFICIARIO', 'NOME']) and paciente_col is None:
                                 paciente_col = idx
-                            elif 'EXAME' in cell_upper and exame_col is None:
+                            # Detectar coluna de exame
+                            elif any(kw in cell_upper for kw in ['EXAME', 'PROCEDIMENTO', 'DESCRIÇÃO', 'DESCRICAO']) and exame_col is None:
                                 exame_col = idx
-                            elif ('VALOR PAGO' in cell_upper or ('PAGO' in cell_upper and 'SUS' not in cell_upper)) and valor_pago_col is None:
+                            # Detectar coluna de valor pago (prioridade)
+                            elif ('VALOR PAGO' in cell_upper or ('PAGO' in cell_upper and 'SUS' not in cell_upper) or 'VL PAGO' in cell_upper) and valor_pago_col is None:
                                 valor_pago_col = idx
-                            elif 'COD' in cell_upper or 'CÓD' in cell_upper:
+                            # Detectar coluna de código
+                            elif any(kw in cell_upper for kw in ['COD', 'CÓD', 'CÓDIGO', 'CODIGO', 'SIGTAP']) and codigo_col is None:
                                 codigo_col = idx
+                            # Detectar valor SUS como fallback
+                            elif 'SUS' in cell_upper and 'VL' in cell_upper and valor_sus_col is None:
+                                valor_sus_col = idx
+                        
+                        # Se não encontrou valor pago, usar valor SUS
+                        if valor_pago_col is None and valor_sus_col is not None:
+                            valor_pago_col = valor_sus_col
                         
                         for row in table[header_row + 1:]:
                             if not row or len(row) < max(paciente_col or 0, exame_col or 0, valor_pago_col or 0) + 1:
                                 continue
                             
-                            paciente_cell = str(row[paciente_col]).strip() if paciente_col and len(row) > paciente_col and row[paciente_col] else ""
-                            if not paciente_cell or paciente_cell.upper() in ['PACIENTE', 'TOTAL', 'TOTAL E FRACOES', '']:
+                            paciente_cell = str(row[paciente_col]).strip() if paciente_col is not None and len(row) > paciente_col and row[paciente_col] else ""
+                            if not paciente_cell or paciente_cell.upper() in ['PACIENTE', 'TOTAL', 'TOTAL E FRACOES', '', 'SUBTOTAL']:
                                 continue
                             
                             patient_name = normalize_name(paciente_cell)
                             
-                            exame_cell = str(row[exame_col]).strip() if exame_col and len(row) > exame_col and row[exame_col] else ""
+                            exame_cell = str(row[exame_col]).strip() if exame_col is not None and len(row) > exame_col and row[exame_col] else ""
                             
+                            # Buscar código de exame (8 a 10 dígitos são comuns)
                             exam_code = ""
-                            if codigo_col and len(row) > codigo_col and row[codigo_col]:
+                            if codigo_col is not None and len(row) > codigo_col and row[codigo_col]:
+                                # Primeiro tenta 10 dígitos
                                 code_match = re.search(r'\b(\d{10})\b', str(row[codigo_col]))
                                 if code_match:
                                     exam_code = code_match.group(1)
+                                else:
+                                    # Fallback para 8 dígitos
+                                    code_match = re.search(r'\b(\d{8})\b', str(row[codigo_col]))
+                                    if code_match:
+                                        exam_code = code_match.group(1)
                             
+                            # Tentar extrair código do campo de exame se não encontrou
                             if not exam_code and exame_cell:
                                 code_match = re.search(r'\b(\d{10})\b', exame_cell)
                                 if code_match:
                                     exam_code = code_match.group(1)
+                                else:
+                                    code_match = re.search(r'\b(\d{8})\b', exame_cell)
+                                    if code_match:
+                                        exam_code = code_match.group(1)
+
                             
                             exam_value = None
                             if valor_pago_col and len(row) > valor_pago_col and row[valor_pago_col]:

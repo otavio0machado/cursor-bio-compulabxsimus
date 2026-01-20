@@ -46,9 +46,12 @@ class MaintenanceService:
     @staticmethod
     async def delete_maintenance_record(record_id: str) -> bool:
         """Remove registro de manutenção"""
-        response = supabase.table("maintenance_records")\
-            .delete()\
-            .eq("id", record_id)\
-            .execute()
-            
-        return len(response.data) > 0
+        try:
+            supabase.table("maintenance_records")\
+                .delete()\
+                .eq("id", record_id)\
+                .execute()
+            return True
+        except Exception as e:
+            print(f"Erro ao deletar registro de manutenção {record_id}: {e}")
+            return False

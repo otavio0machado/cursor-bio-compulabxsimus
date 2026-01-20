@@ -102,8 +102,8 @@ Analyze this batch now and output ONLY the CSV lines."""
             
         except Exception as e:
             if attempt < retries:
-                print(f"Aviso batch {batch_id} (tentativa {attempt+1}): {e}. Tentando novamente...")
-                await asyncio.sleep(2 * (attempt + 1))
+                print(f"Aviso batch {batch_id} (tentativa {attempt+1}): {e}. Tentando novamente em {10 * (attempt + 1)}s...")
+                await asyncio.sleep(10 * (attempt + 1))
             else:
                 print(f"Erro fatal no batch {batch_id} após {retries} retentativas: {e}")
                 return []
@@ -149,7 +149,7 @@ You are a Senior Medical Audit Algorithm. Compare Dataset A (COMPULAB) and Datas
         all_csv_rows = []
         all_patients = sorted(list(set(list(compulab_patients.keys()) + list(simus_patients.keys()))))
         
-        chunk_size = 25
+        chunk_size = 15
         total_patients = len(all_patients)
         batches = [all_patients[i:i + chunk_size] for i in range(0, total_patients, chunk_size)]
         total_batches = len(batches)
@@ -157,8 +157,8 @@ You are a Senior Medical Audit Algorithm. Compare Dataset A (COMPULAB) and Datas
         
         yield 5, f"Auditando {total_batches} lotes..."
         
-        # Semáforo para não estourar rate limit
-        sem = asyncio.Semaphore(5)
+        # Semáforo para não estourar rate limit (TPM 30k é baixo)
+        sem = asyncio.Semaphore(2)
         
         async def sem_process_batch(batch_idx, chunk):
             async with sem:

@@ -32,7 +32,26 @@ class AuditService:
             response = supabase.table("audit_summaries").insert(db_data).execute()
             return response.data[0] if response.data else {}
         except Exception as e:
-            print(f"Erro ao salvar resumo de auditoria: {e}")
+            err_msg = str(e)
+            if "PGRST205" in err_msg or "audit_summaries" in err_msg:
+                print("--- AVISO: TABELA 'audit_summaries' NÃO ENCONTRADA NO SUPABASE ---")
+                print("Para corrigir, execute este SQL no Painel do Supabase:")
+                print("""
+                CREATE TABLE public.audit_summaries (
+                    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+                    created_at timestamptz DEFAULT now(),
+                    compulab_total double precision,
+                    simus_total double precision,
+                    missing_exams_count integer,
+                    divergences_count integer,
+                    missing_patients_count integer,
+                    ai_summary text
+                );
+                ALTER TABLE public.audit_summaries ENABLE ROW LEVEL SECURITY;
+                CREATE POLICY \"Permitir acesso público\" ON public.audit_summaries FOR ALL USING (true);
+                """)
+            else:
+                print(f"Erro ao salvar resumo de auditoria: {e}")
             return {}
 
     @staticmethod
@@ -44,7 +63,7 @@ class AuditService:
         try:
             response = supabase.table("audit_summaries")\
                 .select("*")\
-                .order("created_at", descending=True)\
+                .order("created_at", desc=True)\
                 .limit(1)\
                 .execute()
                 

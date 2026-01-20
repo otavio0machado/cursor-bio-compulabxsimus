@@ -735,7 +735,7 @@ class State(rx.State):
                 self.compulab_file_url = file_url
                 print(f"DEBUG: Upload Cloudinary sucesso: {file_url}")
             else:
-                print("DEBUG: Erro upload Cloudinary")
+                print("DEBUG: Erro upload Cloudinary (COMPULAB). Note: Arquivos > 10MB podem falhar no plano gratuito.")
                 # Não falhar o processo todo se o Cloudinary falhar, mas avisar?
                 # Por enquanto segue, pois temos o arquivo local APENAS SE ESTIVERMOS NA MESMA SESSÃO/CONTAINER
             
@@ -851,7 +851,8 @@ class State(rx.State):
                 self.simus_file_url = file_url
                 print(f"DEBUG: Upload Cloudinary sucesso: {file_url}")
             else:
-                print("DEBUG: Erro upload Cloudinary")
+                print("DEBUG: Erro upload Cloudinary. Note: Arquivos > 10MB podem falhar no plano gratuito.")
+                # O processo continua usando o arquivo local temporário
             
             # Mensagem com detalhes
             size_str = self.simus_file_size
@@ -1953,16 +1954,45 @@ class State(rx.State):
     
     async def delete_qc_record(self, record_id: str):
         """Remove um registro de CQ"""
-        if supabase and len(record_id) > 10:  # Check for valid UUID length
-            success = await QCService.delete_qc_record(record_id)
+        self.qc_error_message = ""
+        self.qc_success_message = ""
+        
+        if supabase and record_id and len(str(record_id)) > 10:  # Check for valid UUID length
+            success = await QCService.delete_qc_record(str(record_id))
             if success:
                 await self.load_data_from_db()
-                self.qc_success_message = "Registro removido do banco"
+                self.qc_success_message = "Registro removido com sucesso!"
             else:
-                self.qc_error_message = "Falha ao remover registro"
+                self.qc_error_message = "Falha ao remover registro do banco"
         else:
-            self.qc_records = [r for r in self.qc_records if r.id != record_id]
-            self.qc_success_message = "Registro removido"
+            # Fallback for local or short IDs
+            initial_count = len(self.qc_records)
+            self.qc_records = [r for r in self.qc_records if str(r.id) != str(record_id)]
+            if len(self.qc_records) < initial_count:
+                self.qc_success_message = "Registro removido (local)"
+            else:
+                self.qc_error_message = f"Registro não encontrado: {record_id}"
+
+    async def clear_all_qc_records(self):
+        """Remove todos os registros (CUIDADO!)"""
+        if not supabase:
+            self.qc_records = []
+            self.qc_success_message = "Todos os dados locais foram removidos"
+            return
+
+        try:
+            # Em um cenário real, poderíamos ter uma confirmação
+            # Por enquanto, vamos remover os últimos registros se confirmado ou todos
+            # Supabase delete sem filtro costuma ser bloqueado por segurança (RLS)
+            # Vamos remover apenas os que estão na lista atual para segurança
+            for record in self.qc_records:
+                if record.id:
+                    await QCService.delete_qc_record(record.id)
+            
+            await self.load_data_from_db()
+            self.qc_success_message = "Histórico limpo com sucesso!"
+        except Exception as e:
+            self.qc_error_message = f"Erro ao limpar histórico: {str(e)}"
     
     # Gestão de Reagentes
     def set_reagent_name(self, value: str):

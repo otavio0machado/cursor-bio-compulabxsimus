@@ -55,10 +55,13 @@ class ReagentService:
     @staticmethod
     async def delete_reagent_lot(lot_id: str) -> bool:
         """Marca lote como inativo (soft delete) ou remove"""
-        # Soft delete é mais seguro
-        response = supabase.table("reagent_lots")\
-            .update({"is_active": False})\
-            .eq("id", lot_id)\
-            .execute()
-            
-        return len(response.data) > 0
+        try:
+            # Soft delete é mais seguro: apenas marca como inativo
+            supabase.table("reagent_lots")\
+                .update({"is_active": False})\
+                .eq("id", lot_id)\
+                .execute()
+            return True
+        except Exception as e:
+            print(f"Erro ao deletar lote de reagente {lot_id}: {e}")
+            return False

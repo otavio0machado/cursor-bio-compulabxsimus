@@ -137,9 +137,14 @@ class QCService:
     @staticmethod
     async def delete_qc_record(record_id: str) -> bool:
         """Remove registro de CQ"""
-        response = supabase.table("qc_records")\
-            .delete()\
-            .eq("id", record_id)\
-            .execute()
-        
-        return len(response.data) > 0
+        try:
+            # Tenta deletar o registro. Se não houver erro, consideramos sucesso.
+            # O Supabase pode não retornar data se configurado para 'minimal' ou dependendo da versão.
+            supabase.table("qc_records")\
+                .delete()\
+                .eq("id", record_id)\
+                .execute()
+            return True
+        except Exception as e:
+            print(f"Erro ao deletar registro QC {record_id}: {e}")
+            return False

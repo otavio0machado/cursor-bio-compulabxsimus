@@ -41,27 +41,26 @@ def dashboard_tab() -> rx.Component:
     """Aba Dashboard - Visão geral"""
     return rx.vstack(
         # Header with Refresh Button
-            # Header with Refresh Button
-            rx.hstack(
-                rx.vstack(
-                    ui.heading("Visão Geral", level=2),
-                    ui.text("Monitoramento de qualidade e pendências", size="small", color=Color.TEXT_SECONDARY),
-                    spacing="1",
-                    align="start",
-                ),
-                rx.spacer(),
-                rx.button(
-                    rx.icon("refresh-cw", size=18),
-                    rx.text("Atualizar", display=["none", "none", "block"]),
-                    on_click=State.load_data_from_db,
-                    variant="ghost",
-                    size="2",
-                    class_name="gap-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl"
-                ),
-                width="100%",
-                align="center",
-                class_name="mb-6"
+        rx.hstack(
+            rx.vstack(
+                ui.heading("Visão Geral", level=2),
+                ui.text("Monitoramento de qualidade e pendências", size="small", color=Color.TEXT_SECONDARY),
+                spacing="1",
+                align="start",
             ),
+            rx.spacer(),
+            rx.button(
+                rx.icon("refresh-cw", size=18),
+                rx.text("Atualizar", display=["none", "none", "block"]),
+                on_click=State.load_data_from_db,
+                variant="ghost",
+                size="2",
+                class_name="gap-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl"
+            ),
+            width="100%",
+            align="center",
+            class_name="mb-6 max-w-6xl mx-auto w-full"
+        ),
         
         # Grid de KPI Cards - Responsivo
         rx.box(
@@ -94,7 +93,7 @@ def dashboard_tab() -> rx.Component:
                 spacing="4",
                 width="100%",
             ),
-            class_name="mb-8"
+            class_name="mb-8 max-w-6xl mx-auto w-full"
         ),
         
         # Grid Secundário (Pendências e Alertas)
@@ -178,7 +177,7 @@ def dashboard_tab() -> rx.Component:
                                     ui.status_badge(
                                         "CV: " + r["cv"].to_string() + "%",
                                         status="error"
-                                    ),
+                                     ),
                                     width="100%",
                                     align="center",
                                     class_name="p-2 hover:bg-red-50 rounded-lg transition-colors"
@@ -209,6 +208,7 @@ def dashboard_tab() -> rx.Component:
             columns={"initial": "1", "md": "2"},
             spacing="6",
             width="100%",
+            class_name="max-w-6xl mx-auto"
         ),
 
         # Tabela Recente
@@ -258,7 +258,7 @@ def dashboard_tab() -> rx.Component:
                     class_name="bg-white rounded-xl border border-gray-100 shadow-sm overflow-x-auto"
                 ),
             ),
-            class_name="w-full mt-6"
+            class_name="w-full mt-6 max-w-6xl mx-auto"
         ),
         
         spacing="0",
@@ -492,7 +492,25 @@ def registro_qc_tab() -> rx.Component:
         # Histórico Table Section
         rx.box(
             rx.vstack(
-                ui.heading("Histórico Recente", level=3, class_name="mb-2"),
+                rx.hstack(
+                    ui.heading("Histórico Recente", level=3),
+                    rx.spacer(),
+                    rx.cond(
+                        State.qc_records.length() > 0,
+                        rx.button(
+                            "Limpar Histórico",
+                            rx.icon("trash-2", size=14),
+                            on_click=State.clear_all_qc_records,
+                            variant="ghost",
+                            color_scheme="red",
+                            size="1",
+                            class_name="text-xs opacity-70 hover:opacity-100"
+                        ),
+                    ),
+                    width="100%",
+                    align="center",
+                    class_name="mb-4"
+                ),
                 rx.cond(
                     State.qc_records.length() > 0,
                     rx.box(
@@ -511,25 +529,25 @@ def registro_qc_tab() -> rx.Component:
                                 rx.foreach(
                                     State.qc_records,
                                     lambda r: rx.table.row(
-                                        rx.table.cell(r["date"][:16], class_name="text-sm text-gray-600"),
-                                        rx.table.cell(r["exam_name"], font_weight="500"),
-                                        rx.table.cell(r["value"]),
+                                        rx.table.cell(r.date[:16], class_name="text-sm text-gray-600"),
+                                        rx.table.cell(r.exam_name, font_weight="500"),
+                                        rx.table.cell(r.value.to_string()),
                                         rx.table.cell(
                                             rx.text(
-                                                r["cv"].to_string() + "%",
-                                                class_name=rx.cond(r["status"] == "OK", "text-green-600 font-bold", "text-red-600 font-bold")
+                                                r.cv.to_string() + "%",
+                                                class_name=rx.cond(r.status == "OK", "text-green-600 font-bold", "text-red-600 font-bold")
                                             )
                                         ),
                                         rx.table.cell(
                                             ui.status_badge(
-                                                r["status"],
-                                                status=rx.cond(r["status"] == "OK", "success", "error")
+                                                r.status,
+                                                status=rx.cond(r.status == "OK", "success", "error")
                                             )
                                         ),
                                         rx.table.cell(
                                             rx.button(
                                                 rx.icon("trash-2", size=14, color="red"),
-                                                on_click=lambda: State.delete_qc_record(r["id"]),
+                                                on_click=lambda: State.delete_qc_record(r.id),
                                                 variant="ghost",
                                                 color_scheme="red",
                                                 size="1"
@@ -1252,6 +1270,7 @@ def proin_page() -> rx.Component:
             
             width="100%",
             max_width="1280px",
+            align="center",
             class_name="mx-auto px-1 md:px-6 pb-12"
         ),
         class_name="flex-1 bg-gray-50/30 w-full"

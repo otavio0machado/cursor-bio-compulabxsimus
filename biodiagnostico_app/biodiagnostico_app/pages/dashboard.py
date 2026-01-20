@@ -155,13 +155,13 @@ def dashboard_page() -> rx.Component:
                 columns={"initial": "1", "md": "2"},
                 spacing="6",
                 width="100%",
-                class_name="mb-10"
+                class_name="mb-10 max-w-6xl mx-auto w-full"
             ),
             
-            rx.divider(class_name="mb-10"),
+            rx.divider(class_name="mb-10 max-w-6xl mx-auto"),
             
             # Quick Access Section
-            ui.heading("Acesso Rápido", level=2, class_name="mb-6"),
+            ui.heading("Acesso Rápido", level=2, class_name="mb-6 max-w-6xl mx-auto w-full text-center"),
             rx.grid(
                 quick_access_card(
                     "Conversor PDF",
@@ -187,10 +187,11 @@ def dashboard_page() -> rx.Component:
                 columns={"initial": "1", "md": "3"},
                 spacing="6",
                 width="100%",
-                class_name="mb-12 animate-fade-in-up delay-100"
+                class_name="mb-12 animate-fade-in-up delay-100 max-w-6xl mx-auto w-full"
             ),
 
             width="100%",
+            align="center",
             padding_bottom="4rem"
         ),
         width="100%"
