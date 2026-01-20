@@ -41,24 +41,27 @@ def dashboard_tab() -> rx.Component:
     """Aba Dashboard - Visão geral"""
     return rx.vstack(
         # Header with Refresh Button
-        rx.hstack(
-            ui.page_header(
-                "Visão Geral do Laboratório",
-                "Monitoramento de qualidade e pendências"
+            # Header with Refresh Button
+            rx.hstack(
+                rx.vstack(
+                    ui.heading("Visão Geral", level=2),
+                    ui.text("Monitoramento de qualidade e pendências", size="small", color=Color.TEXT_SECONDARY),
+                    spacing="1",
+                    align="start",
+                ),
+                rx.spacer(),
+                rx.button(
+                    rx.icon("refresh-cw", size=18),
+                    rx.text("Atualizar", display=["none", "none", "block"]),
+                    on_click=State.load_data_from_db,
+                    variant="ghost",
+                    size="2",
+                    class_name="gap-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl"
+                ),
+                width="100%",
+                align="center",
+                class_name="mb-6"
             ),
-            rx.spacer(),
-            rx.button(
-                rx.icon("refresh-cw", size=18),
-                rx.text("Atualizar", display=["none", "none", "block"]),
-                on_click=State.load_data_from_db,
-                variant="ghost",
-                size="2",
-                class_name="gap-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl"
-            ),
-            width="100%",
-            align="center",
-            class_name="mb-4"
-        ),
         
         # Grid de KPI Cards - Responsivo
         rx.box(
@@ -87,7 +90,7 @@ def dashboard_tab() -> rx.Component:
                     ui.stat_card("Alertas CV > 5%", State.dashboard_alerts_count, "triangle-alert", "error"),
                     ui.stat_card("Sem Alertas", "0", "sparkles", "success")
                 ),
-                columns="4",
+                columns={"initial": "1", "sm": "2", "md": "2", "lg": "4"},
                 spacing="4",
                 width="100%",
             ),
@@ -203,7 +206,7 @@ def dashboard_tab() -> rx.Component:
                 width="100%",
             ),
             
-            columns="2",
+            columns={"initial": "1", "md": "2"},
             spacing="6",
             width="100%",
         ),
@@ -212,7 +215,7 @@ def dashboard_tab() -> rx.Component:
         rx.box(
             rx.vstack(
                 rx.hstack(
-                    rx.icon("file-text", size=20, color=Color.TEXT_SECONDARY),
+                    rx.icon("file_text", size=20, color=Color.TEXT_SECONDARY),
                     ui.heading("Últimos Registros", level=3),
                     spacing="2",
                     align="center",
@@ -252,7 +255,7 @@ def dashboard_tab() -> rx.Component:
                         ),
                         class_name="w-full"
                     ),
-                    class_name="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden"
+                    class_name="bg-white rounded-xl border border-gray-100 shadow-sm overflow-x-auto"
                 ),
             ),
             class_name="w-full mt-6"
@@ -266,9 +269,12 @@ def dashboard_tab() -> rx.Component:
 def registro_qc_tab() -> rx.Component:
     """Aba de Registro de Controle de Qualidade"""
     return rx.vstack(
-        ui.page_header(
-            "Registro de CQ",
-            "Insira os dados diários para cálculo automático do CV%"
+        rx.vstack(
+            ui.heading("Registro de CQ", level=2),
+            ui.text("Insira os dados diários para cálculo automático do CV%", size="small", color=Color.TEXT_SECONDARY),
+            spacing="1",
+            align="start",
+            class_name="mb-6"
         ),
         
         ui.card(
@@ -312,7 +318,7 @@ def registro_qc_tab() -> rx.Component:
                         ),
                         required=True
                     ),
-                    columns="4",
+                    columns={"initial": "1", "sm": "2", "md": "2", "lg": "4"},
                     spacing="4",
                     width="100%",
                 ),
@@ -404,7 +410,7 @@ def registro_qc_tab() -> rx.Component:
                         ),
                         spacing="1",
                     ),
-                    columns="4",
+                    columns={"initial": "1", "sm": "2", "md": "2", "lg": "4"},
                     spacing="4",
                     width="100%",
                 ),
@@ -428,26 +434,27 @@ def registro_qc_tab() -> rx.Component:
                             on_change=State.set_qc_analyst,
                         )
                     ),
-                    columns="2",
+                    columns={"initial": "1", "sm": "2"},
                     spacing="4",
                     width="100%",
                 ),
                 
-                rx.hstack(
+                rx.grid(
                     ui.button(
                         "Limpar",
                         icon="eraser",
                         on_click=State.clear_qc_form,
                         variant="secondary",
-                        class_name="flex-1"
+                        width="100%",
                     ),
                     ui.button(
                         "Salvar Registro",
                         icon="save",
                         is_loading=State.is_saving_qc,
                         on_click=State.save_qc_record,
-                        class_name="flex-[2]"
+                        width="100%",
                     ),
+                    columns={"initial": "1", "sm": "2"},
                     spacing="4",
                     width="100%",
                     class_name="mt-6"
@@ -458,7 +465,7 @@ def registro_qc_tab() -> rx.Component:
                     State.qc_success_message != "",
                     rx.box(
                         rx.hstack(
-                            rx.icon("circle-check", size=24, color="green"),
+                            rx.icon("circle_check", size=24, color="green"),
                             ui.text(State.qc_success_message, font_weight="500", color="green"),
                             spacing="3",
                             align="center"
@@ -470,7 +477,7 @@ def registro_qc_tab() -> rx.Component:
                     State.qc_error_message != "",
                     rx.box(
                         rx.hstack(
-                            rx.icon("circle-x", size=24, color="red"),
+                            rx.icon("circle_x", size=24, color="red"),
                             ui.text(State.qc_error_message, font_weight="500", color="red"),
                             spacing="3",
                             align="center"
@@ -533,7 +540,7 @@ def registro_qc_tab() -> rx.Component:
                                 )
                             ),
                         ),
-                        class_name="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden"
+                        class_name="bg-white rounded-xl border border-gray-100 shadow-sm overflow-x-auto"
                     ),
                     rx.center(
                         ui.text("Nenhum registro encontrado.", size="body", color="gray"),
@@ -552,9 +559,12 @@ def registro_qc_tab() -> rx.Component:
 def reagentes_tab() -> rx.Component:
     """Aba de Gestão de Reagentes"""
     return rx.vstack(
-        ui.page_header(
-            "Gestão de Reagentes",
-            "Controle de lotes, validade e fabricantes"
+        rx.vstack(
+            ui.heading("Gestão de Reagentes", level=2),
+            ui.text("Controle de lotes, validade e fabricantes", size="small", color=Color.TEXT_SECONDARY),
+            spacing="1",
+            align="start",
+            class_name="mb-6 w-full"
         ),
         
         rx.grid(
@@ -713,7 +723,7 @@ def reagentes_tab() -> rx.Component:
                             ),
                             rx.center(
                                 rx.vstack(
-                                    rx.icon("package-open", size=32, color="lightgray"),
+                                    rx.icon("package_open", size=32, color="lightgray"),
                                     ui.text("Nenhum lote cadastrado.", size="small", color="gray"),
                                     spacing="2",
                                     align="center"
@@ -732,14 +742,14 @@ def reagentes_tab() -> rx.Component:
                         rx.grid(
                             ui.input(placeholder="Equipamento...", value=State.maintenance_equipment, on_change=State.set_maintenance_equipment),
                             ui.select(["Preventiva", "Corretiva", "Calibração"], value=State.maintenance_type, on_change=State.set_maintenance_type),
-                            columns="2",
+                            columns={"initial": "1", "sm": "2"},
                             spacing="2",
                             width="100%"
                         ),
                         rx.grid(
                             ui.input(type="date", value=State.maintenance_date, on_change=State.set_maintenance_date),
                             ui.input(type="date", placeholder="Próxima...", value=State.maintenance_next_date, on_change=State.set_maintenance_next_date),
-                            columns="2",
+                            columns={"initial": "1", "sm": "2"},
                             spacing="2",
                             width="100%"
                         ),
@@ -753,7 +763,7 @@ def reagentes_tab() -> rx.Component:
                 spacing="6",
                 width="100%"
             ),
-            columns="2",
+            columns={"initial": "1", "lg": "2"},
             spacing="6",
             width="100%"
         )
@@ -762,9 +772,12 @@ def reagentes_tab() -> rx.Component:
 def relatorios_tab() -> rx.Component:
     """Aba de Relatórios - Gráfico Levey-Jennings"""
     return rx.vstack(
-        ui.page_header(
-            "Análise Levey-Jennings",
-            "Visualização de tendências e desvios padrão"
+        rx.vstack(
+            ui.heading("Análise Levey-Jennings", level=2),
+            ui.text("Visualização de tendências e desvios padrão", size="small", color=Color.TEXT_SECONDARY),
+            spacing="1",
+            align="start",
+            class_name="mb-6 w-full"
         ),
         
         # Controls
@@ -803,7 +816,7 @@ def relatorios_tab() -> rx.Component:
                 ),
                 ui.button(
                     "Gerar Gráfico",
-                    icon="chart-line",
+                    icon="chart_line",
                     on_click=State.update_levey_jennings_data,
                     class_name="mt-4"
                 ),
@@ -943,7 +956,7 @@ def relatorios_tab() -> rx.Component:
                         ),
                         class_name="text-center py-4"
                     ),
-                    columns="4",
+                    columns={"initial": "1", "sm": "2", "md": "2", "lg": "4"},
                     spacing="4",
                     width="100%",
                     class_name="mt-4"
@@ -1016,7 +1029,7 @@ def relatorios_tab() -> rx.Component:
             ),
             rx.center(
                 rx.vstack(
-                    rx.icon("bar-chart-2", size=48, color="#9ca3af"),
+                    rx.icon("chart_bar", size=48, color="#9ca3af"),
                     ui.text("Selecione um exame e clique em 'Gerar Gráfico'", color="gray"),
                     ui.text("para visualizar a análise Levey-Jennings", color="gray", size="small"),
                     spacing="2",
@@ -1032,9 +1045,12 @@ def relatorios_tab() -> rx.Component:
 def importar_tab() -> rx.Component:
     """Aba de Importação de Planilhas"""
     return rx.vstack(
-        ui.page_header(
-            "Importação Inteligente",
-            "Migre dados de planilhas Excel (xlsx/xls) automaticamente"
+        rx.vstack(
+            ui.heading("Importação Inteligente", level=2),
+            ui.text("Migre dados de planilhas Excel (xlsx/xls) automaticamente", size="small", color=Color.TEXT_SECONDARY),
+            spacing="1",
+            align="start",
+            class_name="mb-6 w-full"
         ),
         
         ui.card(
@@ -1051,7 +1067,7 @@ def importar_tab() -> rx.Component:
                                 align="center"
                             ),
                             rx.vstack(
-                                rx.icon("file-spreadsheet", size=48, class_name="opacity-50"),
+                                rx.icon("file_spreadsheet", size=48, class_name="opacity-50"),
                                 ui.text("Arraste sua planilha aqui", font_weight="600"),
                                 ui.text("Suporta .xlsx e .xls", size="small"),
                                 class_name="group-hover:scale-105 transition-transform",
@@ -1099,7 +1115,7 @@ def importar_tab() -> rx.Component:
                     State.excel_success_message != "",
                     rx.callout(
                         State.excel_success_message,
-                        icon="circle-check",
+                        icon="circle_check",
                         color_scheme="green",
                         class_name="mt-4 max-w-2xl mx-auto"
                     )
@@ -1136,24 +1152,24 @@ def importar_tab() -> rx.Component:
                     # Stats row
                     rx.grid(
                         rx.hstack(
-                            rx.icon("file-text", size=16, color="gray"),
+                            rx.icon("file_text", size=16, color="gray"),
                             rx.text(State.excel_filled_cells.to_string() + " células", font_size="0.875rem"),
                             spacing="1",
                             align="center"
                         ),
                         rx.hstack(
-                            rx.icon("columns-2", size=16, color="gray"),
+                            rx.icon("columns_2", size=16, color="gray"),
                             rx.text(State.excel_total_columns.to_string() + " colunas", font_size="0.875rem"),
                             spacing="1",
                             align="center"
                         ),
                         rx.hstack(
-                            rx.icon("rows-2", size=16, color="gray"),
+                            rx.icon("rows_2", size=16, color="gray"),
                             rx.text(State.excel_total_rows.to_string() + " registros a importar", font_size="0.875rem", color=Color.PRIMARY, font_weight="500"),
                             spacing="1",
                             align="center"
                         ),
-                        columns="3",
+                        columns={"initial": "1", "sm": "2", "md": "3"},
                         spacing="4",
                         width="100%",
                         class_name="mb-4 p-3 bg-gray-50 rounded-lg"
@@ -1207,15 +1223,15 @@ def proin_page() -> rx.Component:
             # Navigation Tabs
             rx.box(
                 rx.hstack(
-                    tab_button("Dashboard", "layout-dashboard", "dashboard"),
-                    tab_button("Registro CQ", "file-pen-line", "registro"),
-                    tab_button("Gestão de Reagentes", "flask-conical", "reagentes"),
-                    tab_button("Relatórios", "chart-line", "relatorios"),
+                    tab_button("Dashboard", "layout_dashboard", "dashboard"),
+                    tab_button("Registro CQ", "file_pen_line", "registro"),
+                    tab_button("Gestão de Reagentes", "flask_conical", "reagentes"),
+                    tab_button("Relatórios", "chart_line", "relatorios"),
                     tab_button("Importar", "upload", "importar"),
                     spacing="2",
                     wrap="wrap",
                     justify="center",
-                    class_name="p-1 bg-gray-100/50 rounded-full inline-flex border border-gray-200/50 backdrop-blur-sm"
+                    class_name="p-1 bg-gray-100/50 rounded-2xl md:rounded-full inline-flex border border-gray-200/50 backdrop-blur-sm"
                 ),
                 class_name="w-full mb-8 sticky top-0 z-10 py-4 flex justify-center"
             ),
@@ -1236,7 +1252,7 @@ def proin_page() -> rx.Component:
             
             width="100%",
             max_width="1280px",
-            class_name="mx-auto px-6 pb-12"
+            class_name="mx-auto px-1 md:px-6 pb-12"
         ),
         class_name="flex-1 bg-gray-50/30 w-full"
     )

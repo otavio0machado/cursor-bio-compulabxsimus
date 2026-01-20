@@ -69,6 +69,45 @@ def breakdown_item(icon: str, label: str, value: str, color: str = "gray") -> rx
         class_name="bg-white border border-gray-100 rounded-xl p-4 hover:shadow-md transition-all flex-1"
     )
 
+def render_table(headers: list[str], data: list, columns_keys: list[str]) -> rx.Component:
+    """Renderiza uma tabela estilizada usando os componentes modernos do Reflex"""
+    return rx.box(
+        rx.table.root(
+            rx.table.header(
+                rx.table.row(
+                    *[
+                        rx.table.column_header_cell(
+                            h, 
+                            class_name="px-4 py-3 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+                        )
+                        for h in headers
+                    ]
+                )
+            ),
+            rx.table.body(
+                rx.foreach(
+                    data,
+                    lambda item, i: rx.table.row(
+                        *[
+                            rx.table.cell(
+                                item[key], 
+                                class_name="px-4 py-3 whitespace-nowrap text-sm text-gray-700"
+                            )
+                            for key in columns_keys
+                        ],
+                        class_name=rx.cond(
+                            i % 2 == 0, 
+                            "bg-white hover:bg-gray-50 transition-colors", 
+                            "bg-gray-50/50 hover:bg-gray-100 transition-colors"
+                        ),
+                    )
+                )
+            ),
+            class_name="min-w-full divide-y divide-gray-200"
+        ),
+        class_name="overflow-x-auto rounded-xl border border-gray-200 shadow-sm"
+    )
+
 
 def analise_page() -> rx.Component:
     """Página de análise comparativa - Design oficial aprimorado"""
@@ -139,7 +178,7 @@ def analise_page() -> rx.Component:
                             on_remove=State.clear_simus_file,
                             accepted_types="PDF/CSV",
                         ),
-                        columns="2",
+                        columns={"initial": "1", "sm": "2"},
                         spacing="4",
                         width="100%",
                     ),
@@ -236,7 +275,7 @@ def analise_page() -> rx.Component:
                     rx.box(
                         rx.vstack(
                             rx.hstack(
-                                rx.icon("bar-chart-2", size=20, color=Color.DEEP),
+                                rx.icon("chart_bar", size=20, color=Color.DEEP),
                                 rx.text(
                                     "Resumo da Análise",
                                     class_name="text-[#1B5E20] font-semibold text-lg"
@@ -249,7 +288,7 @@ def analise_page() -> rx.Component:
                                 metric_card("SIMUS Total", State.formatted_simus_total, "wallet", f"{State.simus_count} pacientes", "blue"),
                                 metric_card("Diferença", State.formatted_difference, "trending-down", "COMPULAB - SIMUS", "orange"),
                                 metric_card("Exames Faltantes", f"{State.missing_exams_count}", "triangle-alert", "no SIMUS", "red"),
-                                columns="4",
+                                columns={"initial": "1", "sm": "2", "lg": "4"},
                                 spacing="4",
                                 width="100%",
                                 class_name="mt-4"
@@ -271,10 +310,11 @@ def analise_page() -> rx.Component:
                                 spacing="2",
                                 align="center",
                             ),
-                            rx.hstack(
+                            rx.grid(
                                 breakdown_item("user-x", "Pacientes Faltantes", State.formatted_missing_patients_total, "orange"),
                                 breakdown_item("file-x", "Exames Faltantes", State.formatted_missing_exams_total, "red"),
-                                breakdown_item("diff", "Divergências de Valor", State.formatted_divergences_total, "blue"),
+                                breakdown_item("file-diff", "Divergências de Valor", State.formatted_divergences_total, "blue"),
+                                columns={"initial": "1", "sm": "3"},
                                 spacing="4",
                                 width="100%",
                                 class_name="mt-4"
@@ -289,7 +329,7 @@ def analise_page() -> rx.Component:
                         rx.tabs.list(
                             rx.tabs.trigger(
                                 rx.hstack(
-                                    rx.icon("triangle-alert", size=16),
+                                    rx.icon("triangle_alert", size=16),
                                     rx.text(f"Exames Faltantes ({State.missing_exams_count})"),
                                     spacing="2",
                                 ),
@@ -314,25 +354,19 @@ def analise_page() -> rx.Component:
                                 value="ai",
                                 class_name="data-[state=active]:bg-[#1B5E20] data-[state=active]:text-white px-4 py-2 rounded-lg transition-all text-sm font-medium"
                             ),
-                            class_name="bg-white border border-gray-200 p-1 rounded-xl flex gap-1 shadow-sm justify-center"
+                            class_name="bg-white border border-gray-200 p-1 rounded-xl flex flex-wrap gap-1 shadow-sm justify-center"
                         ),
                         rx.tabs.content(
                             rx.cond(
                                 State.missing_exams_count > 0,
-                                rx.box(
-                                    rx.data_table(
-                                        data=State.missing_exams,
-                                        columns=[
-                                            {"name": "patient", "label": "Paciente"},
-                                            {"name": "exam_name", "label": "Exame"},
-                                            {"name": "value", "label": "Valor (R$)"},
-                                        ],
-                                        pagination=True,
-                                        search=True,
-                                        sort=True,
+                                    rx.box(
+                                        render_table(
+                                            headers=["Paciente", "Exame", "Valor (R$)"],
+                                            data=State.missing_exams,
+                                            columns_keys=["patient", "exam_name", "value"]
+                                        ),
+                                        class_name="mt-4"
                                     ),
-                                    class_name="bg-white rounded-xl p-4 mt-4 border border-gray-100"
-                                ),
                                 rx.box(
                                     rx.hstack(
                                         rx.icon("circle-check", size=20, color="#10B981"),
@@ -348,22 +382,14 @@ def analise_page() -> rx.Component:
                         rx.tabs.content(
                             rx.cond(
                                 State.divergences_count > 0,
-                                rx.box(
-                                    rx.data_table(
-                                        data=State.value_divergences,
-                                        columns=[
-                                            {"name": "patient", "label": "Paciente"},
-                                            {"name": "exam_name", "label": "Exame"},
-                                            {"name": "compulab_value", "label": "COMPULAB"},
-                                            {"name": "simus_value", "label": "SIMUS"},
-                                            {"name": "difference", "label": "Diferença"},
-                                        ],
-                                        pagination=True,
-                                        search=True,
-                                        sort=True,
+                                    rx.box(
+                                        render_table(
+                                            headers=["Paciente", "Exame", "COMPULAB", "SIMUS", "Diferença"],
+                                            data=State.value_divergences,
+                                            columns_keys=["patient", "exam_name", "compulab_value", "simus_value", "difference"]
+                                        ),
+                                        class_name="mt-4"
                                     ),
-                                    class_name="bg-white rounded-xl p-4 mt-4 border border-gray-100"
-                                ),
                                 rx.box(
                                     rx.hstack(
                                         rx.icon("circle-check", size=20, color="#10B981"),
@@ -425,7 +451,7 @@ def analise_page() -> rx.Component:
                                     ),
                                     rx.box(
                                         rx.vstack(
-                                            rx.icon("bar-chart-2", size=20, color="#4CAF50"),
+                                            rx.icon("chart_bar", size=20, color="#4CAF50"),
                                             rx.text("CSV + PDF", class_name="text-xs font-medium text-gray-600"),
                                             spacing="0",
                                             align="center",
@@ -488,7 +514,7 @@ def analise_page() -> rx.Component:
                                     rx.vstack(
                                         # Header do resultado
                                         rx.hstack(
-                                            rx.icon("bar-chart-2", size=24, color="#1B5E20"),
+                                            rx.icon("chart_bar", size=24, color="#1B5E20"),
                                             rx.text(
                                                 "Divergências Encontradas",
                                                 class_name="text-green-800 font-bold"
@@ -599,12 +625,12 @@ def analise_page() -> rx.Component:
                             rx.cond(
                                 State.analysis_pdf != "",
                                 rx.hstack(
-                                    rx.icon("file-text", size=16, color="white"),
+                                    rx.icon("file_text", size=16, color="white"),
                                     rx.text("Gerar Novo PDF"),
                                     spacing="2",
                                 ),
                                 rx.hstack(
-                                    rx.icon("file-text", size=16, color="white"),
+                                    rx.icon("file_text", size=16, color="white"),
                                     rx.text("Gerar PDF"),
                                     spacing="2",
                                 ),

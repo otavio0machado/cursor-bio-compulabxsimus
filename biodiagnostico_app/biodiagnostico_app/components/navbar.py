@@ -42,86 +42,74 @@ def navbar_link(text: str, url: str, icon: str) -> rx.Component:
     )
 
 def navbar() -> rx.Component:
-    """Barra de navegação principal com estilos aprimorados"""
+    """Barra de navegação principal com estilos aprimorados e responsivos"""
     from ..styles import Spacing, Design
 
     return rx.box(
         rx.hstack(
-            # Logo / Brand com área de toque maior
+            # Logo / Brand
             rx.box(
                 rx.image(
                     src="/logo.jpg",
-                    height="50px",
+                    height=["35px", "45px", "50px"],
                     width="auto",
                     alt="Logo Biodiagnóstico",
                     object_fit="contain",
                 ),
                 cursor="pointer",
                 on_click=lambda: State.set_page("dashboard"),
-                padding=Spacing.XS,  # 8px - aumenta área de clique
+                padding=Spacing.XS,
                 border_radius=Design.RADIUS_MD,
                 transition="all 0.2s ease",
-                _hover={
-                    "opacity": 0.8,
-                    "bg": "#F9FAFB"
-                }
             ),
 
             rx.spacer(),
 
-            # Navigation Links com melhor espaçamento
+            # Desktop Navigation Links (Hidden on mobile)
             rx.hstack(
-                navbar_link("Dashboard", "dashboard", "layout-dashboard"),
-                navbar_link("Conversor PDF", "conversor", "file-text"),
-                navbar_link("Análise", "analise", "bar-chart-2"),
+                navbar_link("Dashboard", "dashboard", "layout_dashboard"),
+                navbar_link("Conversor PDF", "conversor", "file_text"),
+                navbar_link("Análise", "analise", "chart_bar"),
                 navbar_link("Proin QC", "proin", "activity"),
                 spacing="2",
-                display=["none", "flex", "flex"],
-                padding=Spacing.XS,  # 8px
+                display=["none", "none", "lg", "flex"], # Hide on mobile and tablet
+                padding=Spacing.XS,
                 border_radius=Design.RADIUS_XL,
-                bg="rgba(249, 250, 251, 0.7)",  # Gray-50 com transparência
+                bg="rgba(249, 250, 251, 0.7)",
                 border=f"1px solid {Color.BORDER}"
             ),
 
-            rx.spacer(),
+            rx.spacer(display=["none", "none", "lg", "flex"]),
 
-            # User Profile / Logout
+            # Right Side: Notifications, User & Mobile Menu
             rx.hstack(
-                # Notificações
+                # Notificações (Hidden on very small screens)
                 rx.box(
                     rx.icon("bell", size=20, color=Color.TEXT_SECONDARY),
-                    padding=Spacing.SM,  # 12px - área maior
+                    padding=Spacing.SM,
                     border_radius="full",
                     cursor="pointer",
-                    transition="all 0.2s ease",
-                    _hover={
-                        "bg": "#F3F4F6",
-                        "color": Color.PRIMARY
-                    }
+                    display=["none", "flex", "flex"],
+                    _hover={"bg": "#F3F4F6", "color": Color.PRIMARY}
                 ),
-                # Menu do usuário
+                
+                # User Menu
                 rx.menu.root(
                     rx.menu.trigger(
                         rx.hstack(
                             rx.avatar(fallback="AD", size="2", radius="full", cursor="pointer", bg=Color.PRIMARY, color="white"),
                             rx.vstack(
-                                rx.text("Admin User", font_size="0.875rem", font_weight="600", color=Color.TEXT_PRIMARY),
-                                rx.text("admin@bio.com", font_size="0.75rem", color=Color.TEXT_SECONDARY),
+                                rx.text("Admin", font_size="0.875rem", font_weight="600", color=Color.TEXT_PRIMARY),
                                 spacing="0",
-                                display=["none", "none", "flex"]
+                                display=["none", "none", "md", "flex"]
                             ),
-                            rx.icon("chevron-down", size=16, color=Color.TEXT_SECONDARY),
+                            rx.icon("chevron_down", size=16, color=Color.TEXT_SECONDARY),
                             spacing="2",
                             align="center",
-                            padding=f"{Spacing.XS} {Spacing.MD}",  # 8px 16px
+                            padding=f"{Spacing.XS} {Spacing.SM}",
                             border_radius="full",
                             cursor="pointer",
-                            transition="all 0.2s ease",
-                            border="1px solid transparent",
-                            _hover={
-                                "bg": "#F9FAFB",
-                                "border_color": Color.BORDER
-                            }
+                            _hover={"bg": "#F9FAFB"}
                         ),
                     ),
                     rx.menu.content(
@@ -130,58 +118,63 @@ def navbar() -> rx.Component:
                         rx.menu.item("Sair", color="red", on_select=State.logout),
                     ),
                 ),
-                spacing="4",
+
+                # Mobile Menu Trigger (Visible only on mobile/tablet)
+                rx.box(
+                    mobile_nav_trigger(),
+                    display=["flex", "flex", "lg", "none"]
+                ),
+                
+                spacing={"initial": "2", "sm": "4"},
                 align="center"
             ),
 
             width="100%",
             align="center",
-            padding_x=Spacing.LG,  # 24px
-            padding_y=Spacing.MD,  # 16px
-            bg="rgba(255, 255, 255, 0.95)",  # Mais opaco para melhor contraste
+            padding_x=[Spacing.MD, Spacing.LG],
+            padding_y=Spacing.SM,
+            bg="rgba(255, 255, 255, 0.95)",
             backdrop_filter="blur(12px)",
             border=f"1px solid {Color.BORDER}",
-            border_radius=Design.RADIUS_XL,  # 16px
+            border_radius=Design.RADIUS_XL,
             box_shadow=Design.SHADOW_DEFAULT,
         ),
         width="100%",
         position="sticky",
-        top="1rem",
+        top=["0.5rem", "1rem"],
         z_index="1000",
-        padding_x=[Spacing.MD, Spacing.XL, Spacing.XL],  # Responsivo: 16px -> 32px
+        padding_x=[Spacing.SM, Spacing.MD, Spacing.LG],
+    )
+
+def mobile_nav_trigger() -> rx.Component:
+    """Gatilho para o menu mobile (Hamburger)"""
+    from ..styles import Spacing, Design
+    
+    return rx.menu.root(
+        rx.menu.trigger(
+            rx.box(
+                rx.icon("menu", size=24, color=Color.TEXT_PRIMARY),
+                padding=Spacing.SM,
+                border_radius=Design.RADIUS_MD,
+                cursor="pointer",
+                bg="#F3F4F6",
+                _hover={"bg": "#E5E7EB"}
+            )
+        ),
+        rx.menu.content(
+            rx.menu.item(rx.hstack(rx.icon("layout_dashboard", size=18), rx.text("Dashboard", font_size="1rem")), on_select=lambda: State.set_page("dashboard"), padding="12px"),
+            rx.menu.item(rx.hstack(rx.icon("file_text", size=18), rx.text("Conversor PDF", font_size="1rem")), on_select=lambda: State.set_page("conversor"), padding="12px"),
+            rx.menu.item(rx.hstack(rx.icon("chart_bar", size=18), rx.text("Análise", font_size="1rem")), on_select=lambda: State.set_page("analise"), padding="12px"),
+            rx.menu.item(rx.hstack(rx.icon("activity", size=18), rx.text("Proin QC", font_size="1rem")), on_select=lambda: State.set_page("proin"), padding="12px"),
+            rx.menu.separator(),
+            rx.menu.item(rx.hstack(rx.icon("settings", size=18), rx.text("Configurações", font_size="1rem")), on_select=lambda: State.set_page("api"), padding="12px"),
+            rx.menu.item(rx.hstack(rx.icon("log_out", size=18), rx.text("Sair", font_size="1rem")), color="red", on_select=State.logout, padding="12px"),
+            size="2",
+            width="220px",
+        )
     )
 
 def mobile_nav() -> rx.Component:
-    """Mobile Navigation (Hamburger menu) com estilos aprimorados"""
-    from ..styles import Spacing, Design
+    """Mantido por retrocompatibilidade, mas agora vazio pois o menu está no navbar"""
+    return rx.fragment()
 
-    return rx.box(
-        rx.menu.root(
-            rx.menu.trigger(
-                rx.box(
-                    rx.icon("menu", size=24, color=Color.TEXT_PRIMARY),
-                    padding=Spacing.SM,  # 12px - área de toque maior
-                    border_radius=Design.RADIUS_MD,
-                    cursor="pointer",
-                    transition="all 0.2s ease",
-                    _hover={
-                        "bg": "#F3F4F6"
-                    }
-                )
-            ),
-            rx.menu.content(
-                rx.menu.item("Dashboard", on_select=lambda: State.set_page("dashboard")),
-                rx.menu.item("Conversor PDF", on_select=lambda: State.set_page("conversor")),
-                rx.menu.item("Análise", on_select=lambda: State.set_page("analise")),
-                rx.menu.item("Proin QC", on_select=lambda: State.set_page("proin")),
-                rx.menu.separator(),
-                rx.menu.item("Configurações", on_select=lambda: State.set_page("api")),
-                rx.menu.item("Sair", color="red", on_select=State.logout),
-            )
-        ),
-        display=["flex", "none", "none"],
-        padding=Spacing.MD,  # 16px
-        bg=Color.SURFACE,
-        border_bottom=f"1px solid {Color.BORDER}",
-        box_shadow=Design.SHADOW_SM
-    )

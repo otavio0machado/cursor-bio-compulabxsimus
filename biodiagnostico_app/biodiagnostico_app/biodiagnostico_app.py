@@ -29,11 +29,8 @@ def authenticated_layout() -> rx.Component:
     """Layout com navbar no topo - Design Moderno"""
     return rx.box(
         rx.vstack(
-            # Navbar no topo
+            # Navbar no topo (Contém logo e menu mobile/desktop)
             navbar(),
-            
-            # Mobile nav (hamburger menu para telas pequenas)
-            mobile_nav(),
             
             # Conteúdo principal
             rx.box(
@@ -41,8 +38,8 @@ def authenticated_layout() -> rx.Component:
                 width="100%",
                 max_width="1400px",
                 margin_x="auto",
-                padding_x=["1rem", "2rem", "3rem"],
-                padding_y="2rem",
+                padding_x=["0.75rem", "1.5rem", "3rem"], # Menos padding no mobile para aproveitar espaço
+                padding_y=["1rem", "2rem"], # Menos padding vertical no mobile
             ),
             
             spacing="0",

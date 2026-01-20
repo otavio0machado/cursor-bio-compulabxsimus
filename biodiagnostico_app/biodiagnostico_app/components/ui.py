@@ -151,7 +151,7 @@ def button(
     )
 
     normal_content = rx.hstack(
-        rx.cond(icon is not None, rx.icon(icon or "help-circle", size=18)),
+        rx.cond(icon is not None, rx.icon(icon or "circle_help", size=18)),
         rx.text(label),
         align="center",
         spacing="2"
@@ -356,7 +356,7 @@ def data_table(
                         rx.text(header, **{"font_weight": "600"}),
                         rx.cond(
                             sortable,
-                            rx.icon("arrow-up-down", size=14, color=Color.TEXT_SECONDARY)
+                            rx.icon("arrow_up_down", size=14, color=Color.TEXT_SECONDARY)
                         ),
                         spacing="2",
                         align="center"
@@ -430,9 +430,9 @@ def toast(
 
     # Mapeamento de status para cores e ícones
     status_config = {
-        "success": {"bg": Color.SUCCESS_BG, "color": Color.SUCCESS, "icon": "circle-check"},
-        "error": {"bg": Color.ERROR_BG, "color": Color.ERROR, "icon": "circle-x"},
-        "warning": {"bg": Color.WARNING_BG, "color": Color.WARNING, "icon": "alert-triangle"},
+        "success": {"bg": Color.SUCCESS_BG, "color": Color.SUCCESS, "icon": "circle_check"},
+        "error": {"bg": Color.ERROR_BG, "color": Color.ERROR, "icon": "circle_x"},
+        "warning": {"bg": Color.WARNING_BG, "color": Color.WARNING, "icon": "triangle_alert"},
         "info": {"bg": "#EFF6FF", "color": "#1D4ED8", "icon": "info"},
     }
 

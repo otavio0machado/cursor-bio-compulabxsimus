@@ -6,7 +6,7 @@ import reflex as rx
 from ..state import State
 from ..components.file_upload import file_upload_enhanced, upload_progress_indicator, file_type_badge
 from ..components import ui
-from ..styles import Color
+from ..styles import Color, Spacing
 
 
 def feature_card(icon: str, title: str, description: str) -> rx.Component:
@@ -90,32 +90,31 @@ def conversor_page() -> rx.Component:
             
             # Cards de funcionalidades
             rx.grid(
-                feature_card("file-text", "Extração Inteligente", "Extrai dados automaticamente dos PDFs"),
-                feature_card("refresh-cw", "Padronização", "Normaliza nomes de exames e pacientes"),
-                feature_card("bar-chart-2", "CSV Estruturado", "Gera arquivos prontos para análise"),
+                feature_card("file_text", "Extração Inteligente", "Extrai dados automaticamente dos PDFs"),
+                feature_card("refresh_cw", "Padronização", "Normaliza nomes de exames e pacientes"),
+                feature_card("chart_bar", "CSV Estruturado", "Gera arquivos prontos para análise"),
                 feature_card("zap", "Processamento Rápido", "Conversão em segundos"),
-                columns="4",
+                columns={"initial": "1", "sm": "2", "lg": "4"},
                 spacing="4",
                 width="100%",
-                class_name="max-w-4xl hidden md:grid"
+                class_name="max-w-4xl grid"
             ),
 
             
             # Container principal de upload
-            rx.box(
+            ui.card(
                 rx.vstack(
                     rx.hstack(
-                        rx.text("📁", class_name="text-xl"),
-                        rx.text(
-                            "Upload de Arquivos",
-                            class_name="text-[#1B5E20] font-semibold text-lg"
-                        ),
-                        spacing="2",
+                        rx.text("📁", font_size="1.5rem"),
+                        ui.heading("Upload de Arquivos", level=3, margin_bottom="0"),
+                        spacing="3",
                         align="center",
+                        margin_bottom=Spacing.XS,
                     ),
-                    rx.text(
+                    ui.text(
                         "Arraste seus arquivos ou clique para selecionar",
-                        class_name="text-gray-500 text-sm mb-4"
+                        size="body_secondary",
+                        margin_bottom=Spacing.MD
                     ),
                     
                     # Grid de uploads
@@ -144,7 +143,7 @@ def conversor_page() -> rx.Component:
                             accepted_types="PDF",
                             accept_dict={"application/pdf": [".pdf"]},
                         ),
-                        columns="2",
+                        columns={"initial": "1", "sm": "2"},
                         spacing="6",
                         width="100%",
                     ),
@@ -155,29 +154,24 @@ def conversor_page() -> rx.Component:
                     spacing="2",
                     width="100%",
                 ),
-                class_name="bg-white border border-gray-200 rounded-2xl p-6 mt-8 max-w-4xl w-full shadow-sm"
+                width="100%",
+                padding=Spacing.LG,
+                max_width="56rem",
+                margin_top=Spacing.LG,
             ),
             
             # Botão de conversão
-            rx.button(
-                rx.cond(
-                    State.is_generating_csv,
-                    rx.hstack(
-                        rx.spinner(size="1", color="white"),
-                        rx.text("Convertendo arquivos..."),
-                        spacing="2",
-                        align="center",
-                    ),
-                    rx.hstack(
-                        rx.text("🔄"),
-                        rx.text("Converter para CSV"),
-                        spacing="2",
-                        align="center",
-                    ),
-                ),
+            ui.button(
+                "Converter para CSV",
+                icon="refresh_cw",
                 on_click=State.generate_csvs,
-                disabled=~State.has_files | State.is_generating_csv,
-                class_name="bg-[#1B5E20] text-white px-8 py-3 rounded-xl font-semibold hover:bg-[#2E7D32] hover:shadow-lg transition-all mt-6 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none"
+                is_loading=State.is_generating_csv,
+                loading_text="Convertendo arquivos...",
+                disabled=~State.has_files,
+                margin_top=Spacing.LG,
+                size="3",
+                width="100%",
+                max_width="24rem",
             ),
             
             # Indicador de progresso
@@ -217,7 +211,7 @@ def conversor_page() -> rx.Component:
                 State.success_message != "",
                 rx.box(
                     rx.hstack(
-                        rx.icon("circle-check", size=20, color="#15803d"),
+                        rx.icon("circle_check", size=20, color="#15803d"),
                         rx.text(State.success_message, class_name="text-green-700"),
                         spacing="2",
                         align="center",
@@ -229,7 +223,7 @@ def conversor_page() -> rx.Component:
                 State.error_message != "",
                 rx.box(
                     rx.hstack(
-                        rx.icon("circle-x", size=20, color="#dc2626"),
+                        rx.icon("circle_x", size=20, color="#dc2626"),
                         rx.text(State.error_message, class_name="text-red-700"),
                         spacing="2",
                         align="center",
@@ -238,25 +232,24 @@ def conversor_page() -> rx.Component:
                 ),
             ),
             
+
             # Downloads dos CSVs
             rx.cond(
                 State.csv_generated,
-                rx.box(
+                ui.card(
                     rx.vstack(
                         rx.hstack(
-                            rx.text("🎉", class_name="text-2xl"),
-                            rx.text(
-                                "CSVs gerados com sucesso!",
-                                class_name="text-[#1B5E20] font-bold text-xl"
-                            ),
-                            spacing="2",
+                            rx.text("🎉", font_size="1.5rem"),
+                            ui.heading("CSVs gerados com sucesso!", level=3, color=Color.DEEP, margin_bottom="0"),
+                            spacing="3",
                             align="center",
                         ),
-                        rx.text(
+                        ui.text(
                             "Clique nos botões abaixo para baixar os arquivos",
-                            class_name="text-gray-500 text-sm"
+                            size="body_secondary",
+                            margin_bottom=Spacing.MD
                         ),
-                        rx.hstack(
+                        rx.grid(
                             rx.link(
                                 rx.button(
                                     rx.hstack(
@@ -293,7 +286,9 @@ def conversor_page() -> rx.Component:
                                 download="simus_data.csv",
                                 href=rx.Var.create(f"data:text/csv;charset=utf-8,{State.simus_csv}"),
                             ),
+                            columns={"initial": "1", "sm": "2"},
                             spacing="4",
+                            width="100%",
                             justify="center",
                         ),
                         # Botão para limpar e começar novo
@@ -309,32 +304,36 @@ def conversor_page() -> rx.Component:
                         spacing="4",
                         align="center",
                     ),
-                    class_name="bg-gradient-to-br from-green-50 to-lime-50 border border-green-200 rounded-2xl p-8 mt-6 max-w-4xl w-full shadow-sm"
+                    bg="linear-gradient(to bottom right, #f0fdf4, #ecfccb)",
+                    border_color="#bbf7d0",
+                    width="100%",
+                    max_width="56rem",
+                    padding=Spacing.LG,
+                    margin_top=Spacing.LG,
                 ),
             ),
             
             # Dica
             rx.cond(
                 ~State.csv_generated,
-                rx.box(
+                ui.card(
                     rx.hstack(
-                        rx.text("💡", class_name="text-lg"),
+                        rx.text("💡", font_size="1.25rem"),
                         rx.vstack(
-                            rx.text(
-                                "Dica: Os arquivos gerados terão os nomes de exames padronizados",
-                                class_name="text-gray-600 text-sm font-medium"
-                            ),
-                            rx.text(
-                                "Isso facilita a comparação entre COMPULAB e SIMUS",
-                                class_name="text-gray-500 text-xs"
-                            ),
+                            ui.text("Dica: Os arquivos gerados terão os nomes de exames padronizados", size="label", color=Color.TEXT_PRIMARY),
+                            ui.text("Isso facilita a comparação entre COMPULAB e SIMUS", size="caption"),
                             spacing="0",
                             align="start",
                         ),
                         spacing="3",
                         align="start",
                     ),
-                    class_name="bg-amber-50 border border-amber-200 rounded-xl p-4 mt-6 max-w-4xl w-full"
+                    bg=Color.WARNING_BG,
+                    border_color="#FDE68A", # amber-200
+                    width="100%",
+                    max_width="56rem",
+                    padding=Spacing.MD,
+                    margin_top=Spacing.LG,
                 ),
             ),
             
