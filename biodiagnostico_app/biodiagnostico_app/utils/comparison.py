@@ -16,8 +16,9 @@ def compare_patients(compulab_patients, simus_patients):
     """
     results = {
         'missing_patients': [],  # Pacientes no COMPULAB mas não no SIMUS
-        'missing_exams': [],  # Exames faltantes por paciente
-        'value_divergences': []  # Divergências de valores
+        'missing_exams': [],  # Exames faltantes por paciente (no SIMUS)
+        'value_divergences': [],  # Divergências de valores
+        'extra_simus_exams': []  # Exames no SIMUS mas não no COMPULAB
     }
     
     compulab_names = set(compulab_patients.keys())
@@ -128,15 +129,22 @@ def compare_patients(compulab_patients, simus_patients):
                         'simus_count': len(simus_matches)
                     })
         
-        # Opcional: Identificar exames no SIMUS que sobraram (não estão no COMPULAB)
-        # Por enquanto não estamos salvando isso para não mudar a lógica de negócio principal,
-        # mas poderíamos adicionar results['extra_simus_exams']
+        # Identificar exames no SIMUS que sobraram (não estão no COMPULAB)
+        for i, sim_exam in enumerate(simus_exam_list):
+            if i not in simus_used_indices:
+                results['extra_simus_exams'].append({
+                    'patient': patient,
+                    'exam_name': sim_exam['exam_name'],
+                    'value': sim_exam['value'],
+                    'code': sim_exam.get('code', '')
+                })
     
     
     # ORDENAR resultados finais para garantir consistência total
     results['missing_patients'].sort(key=lambda x: (x['patient'], x['total_value']))
     results['missing_exams'].sort(key=lambda x: (x['patient'], x['exam_name'], x['value']))
     results['value_divergences'].sort(key=lambda x: (x['patient'], x['exam_name'], x['difference']))
+    results['extra_simus_exams'].sort(key=lambda x: (x['patient'], x['exam_name'], x['value']))
     
     return results
 

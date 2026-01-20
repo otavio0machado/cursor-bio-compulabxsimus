@@ -71,6 +71,7 @@ app = rx.App(
         rx.el.link(rel="manifest", href="/manifest.json"),
         rx.el.meta(name="theme-color", content="#1B5E20"),
         rx.el.meta(name="apple-mobile-web-app-capable", content="yes"),
+        rx.el.meta(name="mobile-web-app-capable", content="yes"),
         rx.el.meta(name="apple-mobile-web-app-status-bar-style", content="black-translucent"),
     ],
     stylesheets=[

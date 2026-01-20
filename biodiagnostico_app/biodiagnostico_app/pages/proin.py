@@ -52,7 +52,7 @@ def dashboard_tab() -> rx.Component:
             rx.button(
                 rx.icon("refresh-cw", size=18),
                 rx.text("Atualizar", display=["none", "none", "block"]),
-                on_click=State.load_data_from_db,
+                on_click=State.load_data_from_db(True),
                 variant="ghost",
                 size="2",
                 class_name="gap-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl"
@@ -805,8 +805,87 @@ def relatorios_tab() -> rx.Component:
     """Aba de Relatórios - Gráfico Levey-Jennings"""
     return rx.vstack(
         rx.vstack(
+            ui.heading("Relatórios & Auditoria", level=2),
+            ui.text("Visualize gráficos ou exporte tabelas completas para auditoria", size="small", color=Color.TEXT_SECONDARY),
+            spacing="1",
+            align="start",
+            class_name="mb-6 w-full"
+        ),
+        
+        # Section: Exportação PDF
+        ui.card(
+            rx.vstack(
+                rx.hstack(
+                    rx.icon("file-text", size=20, color=Color.PRIMARY),
+                    ui.heading("Exportar Tabela QC (PDF)", level=3),
+                    spacing="2",
+                    align="center",
+                    class_name="mb-2"
+                ),
+                rx.grid(
+                    rx.box(
+                        ui.text("Período", size="label", class_name="mb-1"),
+                        ui.select(
+                            ["Mês Atual", "Mês Específico", "3 Meses", "6 Meses", "Ano Atual", "Ano Específico"],
+                            value=State.qc_report_type,
+                            on_change=State.set_qc_report_type
+                        )
+                    ),
+                    rx.cond(
+                        State.qc_report_type == "Mês Específico",
+                        rx.box(
+                            ui.text("Mês", size="label", class_name="mb-1"),
+                            ui.select(
+                                ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"],
+                                value=State.qc_report_month,
+                                on_change=State.set_qc_report_month,
+                                placeholder="Mês"
+                            )
+                        )
+                    ),
+                    rx.cond(
+                        (State.qc_report_type == "Mês Específico") | (State.qc_report_type == "Ano Específico"),
+                        rx.box(
+                            ui.text("Ano", size="label", class_name="mb-1"),
+                            ui.input(
+                                value=State.qc_report_year,
+                                on_change=State.set_qc_report_year,
+                                placeholder="Ano (ex: 2024)"
+                            )
+                        )
+                    ),
+                    rx.box(
+                         ui.button(
+                            "Baixar PDF",
+                            icon="download",
+                            on_click=State.generate_qc_report_pdf,
+                            is_loading=State.is_generating_qc_report,
+                            class_name="mt-6 w-full",
+                            variant="secondary"
+                        ),
+                    ),
+                    columns={"initial": "1", "sm": "2", "md": "4"},
+                    spacing="4",
+                    width="100%"
+                ),
+                rx.cond(
+                    State.qc_error_message != "",
+                    rx.callout(
+                        State.qc_error_message,
+                        icon="triangle_alert",
+                        color_scheme="red",
+                        class_name="mt-4 w-full"
+                    )
+                )
+            ),
+            class_name="mb-8 w-full border-l-4 border-l-blue-500"
+        ),
+
+        rx.divider(class_name="mb-8 border-gray-100"),
+
+        rx.vstack(
             ui.heading("Análise Levey-Jennings", level=2),
-            ui.text("Visualização de tendências e desvios padrão", size="small", color=Color.TEXT_SECONDARY),
+            ui.text("Visualização gráfica de tendências", size="small", color=Color.TEXT_SECONDARY),
             spacing="1",
             align="start",
             class_name="mb-6 w-full"
@@ -1101,7 +1180,7 @@ def importar_tab() -> rx.Component:
                             rx.vstack(
                                 rx.icon("file_spreadsheet", size=48, class_name="opacity-50"),
                                 ui.text("Arraste sua planilha aqui", font_weight="600"),
-                                ui.text("Suporta .xlsx e .xls", size="small"),
+                                ui.text("Suporta .xlsx, .xls e .pdf", size="small"),
                                 class_name="group-hover:scale-105 transition-transform",
                                 spacing="2",
                                 align="center"
@@ -1114,10 +1193,11 @@ def importar_tab() -> rx.Component:
                     id="excel_upload",
                     accept={
                         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
-                        "application/vnd.ms-excel": [".xls"]
+                        "application/vnd.ms-excel": [".xls"],
+                        "application/pdf": [".pdf"]
                     },
                     max_files=1,
-                    on_drop=State.handle_excel_upload(rx.upload_files(upload_id="excel_upload")),
+                    on_drop=State.handle_import_upload(rx.upload_files(upload_id="excel_upload")),
                     class_name="w-full h-64 border-2 border-dashed border-gray-300 rounded-2xl bg-gray-50 hover:bg-green-50 hover:border-green-300 transition-all cursor-pointer p-8 relative"
                 ),
                 
@@ -1126,25 +1206,59 @@ def importar_tab() -> rx.Component:
                     ui.button(
                         "Analisar Dados",
                         "search",
-                        on_click=State.analyze_excel,
-                        disabled=~State.has_excel_file | State.is_analyzing_excel,
+                        on_click=State.analyze_import_file,
+                        disabled=~State.has_excel_file | State.is_analyzing_excel | State.is_importing,
                         variant="ghost",
                         is_loading=State.is_analyzing_excel
                     ),
                     ui.button(
                         "Importar para o Sistema",
                         "upload",
-                        on_click=State.import_excel_to_qc,
-                        disabled=~State.excel_analyzed | State.is_analyzing_excel,
-                        variant="primary"
+                        on_click=State.import_data_to_qc,
+                        disabled=~State.excel_analyzed | State.is_analyzing_excel | State.is_importing,
+                        variant="primary",
+                        is_loading=State.is_importing
                     ),
                     spacing="4",
                     class_name="mt-6 justify-center w-full"
                 ),
 
-                # Mensagens Feedback
+                # Progress Bar
                 rx.cond(
-                    State.excel_success_message != "",
+                    State.is_analyzing_excel | State.is_importing,
+                    rx.vstack(
+                        rx.progress(
+                            value=State.qc_import_progress,
+                            is_indeterminate=State.qc_import_progress == 0,
+                            class_name="w-full h-2 mt-4"
+                        ),
+                        rx.text(
+                            State.excel_success_message, 
+                            size="1",
+                            color="gray",
+                            class_name="text-center w-full"
+                        ),
+                        width="100%",
+                        class_name="mt-4"
+                    )
+                ),
+
+
+
+                # Mensagens Feedback de Erro
+                rx.cond(
+                    (State.excel_error_message != "") & ~(State.is_analyzing_excel | State.is_importing),
+                    rx.callout(
+                        State.excel_error_message,
+                        icon="triangle_alert",
+                        color_scheme="red",
+                        class_name="mt-4 max-w-2xl mx-auto"
+                    )
+                ),
+
+                # Mensagens Feedback de Sucesso
+                rx.cond(
+                    (State.excel_success_message != "") & ~(State.is_analyzing_excel | State.is_importing),
                     rx.callout(
                         State.excel_success_message,
                         icon="circle_check",

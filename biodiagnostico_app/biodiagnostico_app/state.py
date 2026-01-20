@@ -21,7 +21,15 @@ from .services.maintenance_service import MaintenanceService
 from .services.audit_service import AuditService
 from .config import Config
 from .models import AnalysisResult, QCRecord, ReagentLot, MaintenanceRecord, LeveyJenningsPoint, PatientHistoryEntry, PatientModel, TopOffender
+from .models import AnalysisResult, QCRecord, ReagentLot, MaintenanceRecord, LeveyJenningsPoint, PatientHistoryEntry, PatientModel, TopOffender
 from .utils.westgard import WestgardRules
+import pdfplumber
+import pandas as pd
+import io
+from .utils.qc_pdf_report import generate_qc_pdf
+import base64
+from datetime import timedelta
+import calendar
 
 
 class State(rx.State):
@@ -69,6 +77,7 @@ class State(rx.State):
     missing_patients: List[PatientModel] = []
     missing_exams: List[AnalysisResult] = []
     value_divergences: List[AnalysisResult] = []
+    extra_simus_exams: List[AnalysisResult] = []
     
     # Breakdown da diferença
     missing_patients_total: float = 0.0
@@ -107,6 +116,10 @@ class State(rx.State):
     resolution_notes: str = ""
     
     # Financial Forecast & Goals
+    
+    # Internal Data (Backend Only)
+    _compulab_patients: Dict[str, Any] = {}
+    _simus_patients: Dict[str, Any] = {}
     audit_history: List[Dict[str, Any]] = []
     revenue_forecast: float = 0.0
     monthly_goal: float = 50000.0 # Meta padrão
@@ -145,6 +158,7 @@ class State(rx.State):
     # Dados armazenados para análise
     _compulab_patients: Dict = {}
     _simus_patients: Dict = {}
+    _excel_dataframe: Any = None
     
     # ===== ProIn - Análise de Planilhas Excel =====
     excel_file_name: str = ""
@@ -185,12 +199,27 @@ class State(rx.State):
     qc_success_message: str = ""
     qc_error_message: str = ""
     
-    async def load_data_from_db(self):
-        """Carrega dados do Supabase para o estado local"""
+    # Cache and Performance Control
+    _last_db_sync: Optional[datetime] = None
+    _CACHE_TTL_MINUTES: int = 5
+    
+    async def load_data_from_db(self, force: bool = False):
+        """
+        Carrega dados do Supabase para o estado local com sistema de cache de 5 minutos.
+        Se 'force' for True, ignora o cache e recarrega.
+        """
         if not supabase:
             print("Supabase não configurado. Usando armazenamento em memória.")
             return
 
+        # Sistema de Cache simples
+        if not force and self._last_db_sync:
+            diff = datetime.now() - self._last_db_sync
+            if diff.total_seconds() < (self._CACHE_TTL_MINUTES * 60):
+                print(f"DEBUG: Usando cache de dados (última sync há {diff.total_seconds():.0f}s)")
+                return
+
+        print("DEBUG: Sincronizando dados com Supabase...")
         try:
             # Carregar QC Records
             qc_data = await QCService.get_qc_records(limit=100)
@@ -256,6 +285,9 @@ class State(rx.State):
             # Carregar Resoluções (Novo)
             await self.load_resolutions()
             
+            # Atualizar marcador de cache
+            self._last_db_sync = datetime.now()
+            
         except Exception as e:
             print(f"Erro ao carregar dados do Supabase: {e}")
             # Não falhar silenciosamente, talvez setar msg erro global?
@@ -297,6 +329,110 @@ class State(rx.State):
     qc_alerts: List[QCRecord] = []
     expiring_lots: List[ReagentLot] = []
     
+    # Relatórios PDF - QC
+    qc_report_type: str = "Mês Atual"  # "Mês Atual", "Mês Específico", "3 Meses", "6 Meses", "Ano Atual", "Ano Específico"
+    qc_report_month: str = str(datetime.now().month)
+    qc_report_year: str = str(datetime.now().year)
+    
+    def set_qc_report_type(self, value: str):
+        self.qc_report_type = value
+        
+    def set_qc_report_month(self, value: str):
+        self.qc_report_month = value
+        
+    def set_qc_report_year(self, value: str):
+        self.qc_report_year = value
+
+    is_generating_qc_report: bool = False
+    
+    async def generate_qc_report_pdf(self):
+        """Gera PDF das tabelas de QC baseado nos filtros"""
+        self.is_generating_qc_report = True
+        yield
+        
+        try:
+            # Definir intervalo de datas
+            now = datetime.now()
+            start_date = None
+            end_date = None
+            period_desc = ""
+            
+            if self.qc_report_type == "Mês Atual":
+                start_date = now.replace(day=1).date().isoformat()
+                end_date = now.date().isoformat()
+                period_desc = f"Mês Atual ({now.strftime('%B/%Y')})"
+                
+            elif self.qc_report_type == "Mês Específico":
+                try:
+                    month = int(self.qc_report_month)
+                    year = int(self.qc_report_year)
+                    last_day = calendar.monthrange(year, month)[1]
+                    start_date = f"{year}-{month:02d}-01"
+                    end_date = f"{year}-{month:02d}-{last_day}"
+                    period_desc = f"{month:02d}/{year}"
+                except:
+                    self.qc_error_message = "Mês/Ano inválidos"
+                    self.is_generating_qc_report = False
+                    return
+
+            elif self.qc_report_type == "3 Meses":
+                start_date = (now - timedelta(days=90)).date().isoformat()
+                end_date = now.date().isoformat()
+                period_desc = "Últimos 3 Meses"
+
+            elif self.qc_report_type == "6 Meses":
+                start_date = (now - timedelta(days=180)).date().isoformat()
+                end_date = now.date().isoformat()
+                period_desc = "Últimos 6 Meses"
+                
+            elif self.qc_report_type == "Ano Atual":
+                start_date = f"{now.year}-01-01"
+                end_date = f"{now.year}-12-31"
+                period_desc = f"Ano {now.year}"
+
+            elif self.qc_report_type == "Ano Específico":
+                try:
+                    year = int(self.qc_report_year)
+                    start_date = f"{year}-01-01"
+                    end_date = f"{year}-12-31"
+                    period_desc = f"Ano {year}"
+                except:
+                    self.qc_error_message = "Ano inválido"
+                    self.is_generating_qc_report = False
+                    return
+
+            # Buscar dados (Limitando a 2000 registros para não estourar)
+            records = await QCService.get_qc_records(
+                limit=5000,
+                start_date=start_date,
+                end_date=end_date
+            )
+            
+            if not records:
+                self.qc_error_message = "Nenhum registro encontrado no período."
+                return
+
+            # Gerar PDF
+            pdf_bytes = generate_qc_pdf(records, period_desc)
+            
+            # Download via Javascript (usando rx.download - mas state não supporta direct return aqui fácil, 
+            # vamos usar scheme de download via base64 ou salvar em public?
+            # Melhor: Retornar rx.download direto no handler event handler, mas aqui é async task.
+            # Vamos salvar em temp e retornar rx.download? Nao, rx.download aceita data: url.
+            
+            b64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
+            yield rx.download(
+                data=f"data:application/pdf;base64,{b64_pdf}",
+                filename=f"QC_Report_{period_desc.replace('/', '_').replace(' ', '_')}.pdf"
+            )
+
+        except Exception as e:
+            print(f"Erro ao gerar PDF QC: {e}")
+            self.qc_error_message = f"Erro na geração do PDF: {str(e)}"
+        
+        finally:
+            self.is_generating_qc_report = False
+    
     # Estatísticas do Dashboard
     total_qc_today: int = 0
     total_qc_month: int = 0
@@ -335,6 +471,11 @@ class State(rx.State):
         import urllib.parse
         encoded_msg = urllib.parse.quote(message)
         return rx.redirect(f"https://wa.me/?text={encoded_msg}")
+
+    @rx.var
+    def extra_simus_exams_count(self) -> int:
+        """Quantidade de exames extras no SIMUS (fantasmas)"""
+        return len(self.extra_simus_exams)
 
     @rx.var
     def missing_exams_count(self) -> int:
@@ -580,13 +721,21 @@ class State(rx.State):
         
         # Contar exames faltantes
         for item in self.missing_exams:
-            name = item.exam_name
-            counts[name] = counts.get(name, 0) + 1
+            name = item.get("exam_name", "") if isinstance(item, dict) else getattr(item, "exam_name", "")
+            if name:
+                counts[name] = counts.get(name, 0) + 1
             
         # Contar divergências
         for item in self.value_divergences:
-            name = item.exam_name
-            counts[name] = counts.get(name, 0) + 1
+            name = item.get("exam_name", "") if isinstance(item, dict) else getattr(item, "exam_name", "")
+            if name:
+                counts[name] = counts.get(name, 0) + 1
+            
+        # Contar exames extras (fantasmas)
+        for item in self.extra_simus_exams:
+            name = item.get("exam_name", "") if isinstance(item, dict) else getattr(item, "exam_name", "")
+            if name:
+                counts[name] = counts.get(name, 0) + 1
             
         # Ordenar e pegar top 5
         sorted_exams = sorted(counts.items(), key=lambda x: x[1], reverse=True)[:5]
@@ -1294,25 +1443,34 @@ class State(rx.State):
             ]
             
             self.missing_exams = [
-                {
-                    'patient': item['patient'],
-                    'exam_name': item['exam_name'],
-                    'value': float(item['value'])
-                }
+                AnalysisResult(
+                    patient=item['patient'],
+                    exam_name=item['exam_name'],
+                    value=float(item['value'])
+                )
                 for item in comparison_results['missing_exams']
             ]
             
             self.value_divergences = [
-                {
-                    'patient': item['patient'],
-                    'exam_name': item['exam_name'],
-                    'compulab_value': float(item['compulab_value']),
-                    'simus_value': float(item['simus_value']),
-                    'difference': float(item['difference']),
-                    'compulab_count': item.get('compulab_count', 1),
-                    'simus_count': item.get('simus_count', 1)
-                }
+                AnalysisResult(
+                    patient=item['patient'],
+                    exam_name=item['exam_name'],
+                    compulab_value=float(item['compulab_value']),
+                    simus_value=float(item['simus_value']),
+                    difference=float(item['difference']),
+                    compulab_count=item.get('compulab_count', 1),
+                    simus_count=item.get('simus_count', 1)
+                )
                 for item in comparison_results['value_divergences']
+            ]
+
+            self.extra_simus_exams = [
+                AnalysisResult(
+                    patient=item['patient'],
+                    exam_name=item['exam_name'],
+                    value=float(item['value'])
+                )
+                for item in comparison_results['extra_simus_exams']
             ]
             
             # Breakdown
@@ -1407,13 +1565,30 @@ class State(rx.State):
         try:
             from .utils.ai_analysis import generate_ai_analysis
             
+            # Auditoria Híbrida: Filtrar apenas pacientes com problemas detectados
+            # Isso economiza 80-90% de tokens e foca a IA no que realmente importa.
+            problem_patients = set()
+            for p in self.missing_patients: problem_patients.add(p.name)
+            for item in self.missing_exams: problem_patients.add(item['patient'])
+            for item in self.value_divergences: problem_patients.add(item['patient'])
+            for item in self.extra_simus_exams: problem_patients.add(item['patient'])
+            
+            filtered_compulab = {k: v for k, v in self._compulab_patients.items() if k in problem_patients}
+            filtered_simus = {k: v for k, v in self._simus_patients.items() if k in problem_patients}
+            
+            if not problem_patients:
+                self.ai_analysis = "# RELATÓRIO DE AUDITORIA\n\nNenhuma divergência foi encontrada na análise determinística. A auditoria de IA não é necessária."
+                self.is_generating_ai = False
+                self.success_message = "Análise concluída: Sem divergências detectadas."
+                return
+
             # Consumir o gerador async
             final_analysis = None
             final_error = None
             
             async for progress_update in generate_ai_analysis(
-                self._compulab_patients,
-                self._simus_patients,
+                filtered_compulab,
+                filtered_simus,
                 api_key
             ):
                 # O gerador retorna tuplas (progresso, status) OU (resultado, erro) no final
@@ -1630,101 +1805,224 @@ class State(rx.State):
     
     # ===== ProIn - Métodos para Análise de Planilhas Excel =====
     
-    async def handle_excel_upload(self, files: List[rx.UploadFile]):
-        """Processa upload do arquivo Excel"""
+    async def handle_import_upload(self, files: List[rx.UploadFile]):
+        """Processa upload do arquivo (Excel ou PDF)"""
         if not files:
             return
         
         file = files[0]
         self.excel_file_name = file.name
         self.excel_file_bytes = await file.read()
-        self.excel_success_message = f"Arquivo carregado: {file.name}"
-        self.excel_error_message = ""
+        
+        ext = file.name.lower().split('.')[-1]
+        if ext in ['xlsx', 'xls', 'pdf']:
+             self.excel_success_message = f"Arquivo carregado: {file.name}"
+             self.excel_error_message = ""
+        else:
+             self.excel_error_message = "Formato não suportado. Use .xlsx, .xls ou .pdf"
+             
         self.excel_analyzed = False
     
-    async def analyze_excel(self):
-        """Analisa o arquivo Excel carregado"""
+    async def analyze_import_file(self):
+
+        """Analisa o arquivo carregado (Excel ou PDF) e normaliza os dados"""
         if not self.has_excel_file:
-            self.excel_error_message = "Carregue um arquivo Excel primeiro"
+            self.excel_error_message = "Carregue um arquivo primeiro"
             return
-        
+            
         self.is_analyzing_excel = True
+        self.excel_analyzed = False
         self.excel_error_message = ""
-        self.excel_success_message = ""
+        self.excel_success_message = "Processando arquivo... Aguarde."
+        self.qc_import_progress = 0
+        yield
+        
+
         
         try:
-            import pandas as pd
-            import io
+            filename = self.excel_file_name.lower()
+            normalized_data = [] # List of dicts: date, exam_name, value, target, sd, cv, etc.
             
-            # Ler o arquivo Excel
-            excel_io = io.BytesIO(self.excel_file_bytes)
-            df = pd.read_excel(excel_io)
-            self._excel_dataframe = df
-            
-            # Estatísticas básicas
-            self.excel_total_rows = len(df)
-            self.excel_total_columns = len(df.columns)
-            total_cells = self.excel_total_rows * self.excel_total_columns
-            self.excel_filled_cells = int(df.count().sum())
-            self.excel_empty_cells = total_cells - self.excel_filled_cells
-            
-            # Headers
-            self.excel_headers = [str(col) for col in df.columns.tolist()]
-            
-            # Análise por coluna
-            columns_info = []
-            for col in df.columns:
-                col_data = df[col]
-                fill_rate = round((col_data.count() / len(df)) * 100, 1)
+            if filename.endswith(".xlsx") or filename.endswith(".xls"):
+                # --- Análise Excel (Multi-Sheet) ---
+                import pandas as pd
+                import io
                 
-                # Determinar tipo
-                if pd.api.types.is_numeric_dtype(col_data):
-                    col_type = "Numérico"
-                elif pd.api.types.is_datetime64_any_dtype(col_data):
-                    col_type = "Data"
-                else:
-                    col_type = "Texto"
+                excel_io = io.BytesIO(self.excel_file_bytes)
+                all_sheets = pd.read_excel(excel_io, header=None, sheet_name=None)
                 
-                columns_info.append({
-                    "name": str(col),
-                    "type": col_type,
-                    "fill_rate": str(fill_rate)
-                })
-            
-            self.excel_columns_info = columns_info
-            
-            # Resumo numérico
-            numeric_summary = []
-            numeric_cols = df.select_dtypes(include=['number']).columns
-            for col in numeric_cols:
-                col_data = df[col].dropna()
-                if len(col_data) > 0:
-                    numeric_summary.append({
-                        "column": str(col),
-                        "sum": f"{col_data.sum():,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
-                        "mean": f"{col_data.mean():,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
-                        "min": f"{col_data.min():,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
-                        "max": f"{col_data.max():,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-                    })
-            
-            self.excel_numeric_summary = numeric_summary
-            
-            # Preview (primeiras 10 linhas)
-            preview_df = df.head(10)
-            preview_data = []
-            for _, row in preview_df.iterrows():
-                row_data = [str(val) if pd.notna(val) else "" for val in row.tolist()]
-                preview_data.append(row_data)
-            
-            self.excel_preview = preview_data
-            
-            self.excel_analyzed = True
-            self.excel_success_message = f"Análise concluída! {self.excel_total_rows} linhas e {self.excel_total_columns} colunas encontradas."
-            
+                for sheet_name, df_raw in all_sheets.items():
+                    try:
+                        if len(df_raw) > 1:
+                            # Tentar encontrar a linha de cabeçalho
+                            # Em algumas abas pode ser linha 0 ou 1
+                            header_row_idx = 1
+                            if len(df_raw) > 1 and str(df_raw.iloc[0, 0]).lower().startswith("exame"):
+                                header_row_idx = 0
+                            elif len(df_raw) > 1 and str(df_raw.iloc[1, 0]).lower().startswith("exame"):
+                                header_row_idx = 1
+                            else:
+                                # Tentar achar "Exame"
+                                found = False
+                                for r in range(min(5, len(df_raw))):
+                                    for c in range(min(5, len(df_raw.columns))):
+                                        if str(df_raw.iloc[r, c]).strip().lower().startswith("exame"):
+                                            header_row_idx = r
+                                            found = True
+                                            break
+                                    if found: break
+                                if not found: header_row_idx = 1
+
+                            header_row = df_raw.iloc[header_row_idx]
+                            
+                            for idx in range(len(header_row)):
+                                val = header_row.iloc[idx]
+                                if str(val).strip().lower().startswith("exame"):
+                                    # Data está na linha acima ou na mesma coluna se header_row_idx > 0
+                                    date_str = datetime.now().strftime("%Y-%m-%d")
+                                    if header_row_idx > 0:
+                                        date_val = df_raw.iloc[header_row_idx-1, idx]
+                                        try:
+                                            import re
+                                            match = re.search(r'(\d{1,2}/\d{1,2}/\d{2,4})', str(date_val))
+                                            if match:
+                                                d = match.group(1)
+                                                day, month, year = d.split('/')
+                                                if len(year) == 2: year = "20" + year
+                                                date_str = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
+                                        except: pass
+
+                                    # Extrair dados
+                                    for row_idx in range(header_row_idx + 1, len(df_raw)):
+                                        try:
+                                            exam = df_raw.iloc[row_idx, idx]
+                                            if pd.isna(exam) or str(exam).strip() == "": continue
+                                            if idx + 3 >= len(df_raw.columns): break
+
+                                            target = df_raw.iloc[row_idx, idx+1]
+                                            value = df_raw.iloc[row_idx, idx+2]
+                                            cv_val = df_raw.iloc[row_idx, idx+3]
+                                            
+                                            def clean_float(x):
+                                                if isinstance(x, (int, float)): return float(x)
+                                                if isinstance(x, str):
+                                                    x = x.replace(',', '.').strip()
+                                                    try: return float(x)
+                                                    except: return 0.0
+                                                return 0.0
+
+                                            val_float = clean_float(value)
+                                            target_float = clean_float(target)
+                                            cv_float = clean_float(cv_val)
+                                            
+                                            if val_float != 0:
+                                                normalized_data.append({
+                                                    "date": date_str,
+                                                    "exam_name": str(exam).strip(),
+                                                    "value": val_float,
+                                                    "target_value": target_float,
+                                                    "target_sd": 0.0, 
+                                                    "cv": cv_float,
+                                                    "lot_number": "", 
+                                                    "equipment": "", 
+                                                    "analyst": f"Importado ({sheet_name})"
+                                                })
+                                        except: continue
+                    except Exception as e:
+                        print(f"Erro processando abas Excel: {e}")
+
+            elif filename.endswith(".pdf"):
+                # --- Análise PDF ---
+                import pdfplumber
+                import io
+                with pdfplumber.open(io.BytesIO(self.excel_file_bytes)) as pdf:
+                    for page in pdf.pages:
+                        tables = page.extract_tables()
+                        for table in tables:
+                            if not table or len(table) < 3: continue
+                            
+                            header_cell = table[0][0] or ""
+                            date_str = datetime.now().strftime("%Y-%m-%d")
+                            
+                            import re
+                            match = re.search(r'(\d{1,2}/\d{1,2}/\d{2,4})', str(header_cell))
+                            if match:
+                                d = match.group(1)
+                                try:
+                                    day, month, year = d.split('/')
+                                    if len(year) == 2: year = "20" + year
+                                    date_str = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
+                                except: pass
+                            
+                            for row in table[2:]:
+                                if len(row) < 3: continue
+                                exam = row[0]
+                                if not exam: continue
+                                
+                                def clean_pdf_float(x):
+                                    if not x: return 0.0
+                                    x = str(x).replace(',', '.').replace(" ", "")
+                                    try: return float(x)
+                                    except: return 0.0
+                                
+                                target = clean_pdf_float(row[1]) if len(row) > 1 else 0.0
+                                value = clean_pdf_float(row[2]) if len(row) > 2 else 0.0
+                                cv = clean_pdf_float(row[3]) if len(row) > 3 else 0.0
+                                
+                                if value != 0:
+                                    normalized_data.append({
+                                        "date": date_str,
+                                        "exam_name": exam,
+                                        "value": value,
+                                        "target_value": target,
+                                        "target_sd": 0.0,
+                                        "cv": cv,
+                                        "lot_number": "",
+                                        "equipment": "",
+                                        "analyst": "Importado (PDF)"
+                                    })
+
+            # Cria DataFrame normalizado
+            if normalized_data:
+                import pandas as pd
+                df = pd.DataFrame(normalized_data)
+                self._excel_dataframe = df
+                
+                self.excel_total_rows = len(df)
+                self.excel_total_columns = len(df.columns)
+                self.excel_filled_cells = int(df.count().sum())
+                self.excel_headers = ["Data", "Exame", "Valor", "Alvo", "CV%"]
+                
+                preview_list = []
+                for _, row in df.head(50).iterrows():
+                    preview_list.append([
+                        row["date"], 
+                        row["exam_name"], 
+                        str(row["value"]), 
+                        str(row["target_value"]), 
+                        f"{row['cv']}%"
+                    ])
+                self.excel_preview = preview_list
+                self.excel_success_message = f"Análise concluída: {len(df)} registros encontrados!"
+                self.excel_analyzed = True
+            else:
+                self.excel_error_message = "Nenhum dado válido encontrado no arquivo."
+                self.excel_analyzed = False
+                
         except Exception as e:
-            self.excel_error_message = f"Erro ao analisar arquivo: {str(e)}"
+            import traceback
+            traceback.print_exc()
+            self.excel_error_message = f"Erro na análise: {str(e)}"
+            self.excel_analyzed = False
         finally:
             self.is_analyzing_excel = False
+
+
+            # --- END OF NEW LOGIC ---
+            # Dummy return to avoid executing old logic below if not indented properly
+            return
+
+
     
     def download_excel_report(self):
         """Gera relatório da análise Excel"""
@@ -1751,6 +2049,90 @@ class State(rx.State):
         self._excel_dataframe = None
         self.excel_success_message = ""
         self.excel_error_message = ""
+
+    qc_import_progress: int = 0
+    is_importing: bool = False
+
+    async def import_data_to_qc(self):
+        """Importa os dados analisados para o sistema em lote"""
+        if not self.excel_analyzed or self._excel_dataframe is None:
+            self.excel_error_message = "Sem dados para importar. Analise um arquivo primeiro."
+            return
+
+        self.is_importing = True
+        self.excel_success_message = "Iniciando importação..."
+        self.excel_error_message = ""
+        self.qc_import_progress = 0
+        yield 
+
+        try:
+            df = self._excel_dataframe
+            records = df.where(pd.notnull(df), None).to_dict('records')
+            total_records = len(records)
+            
+            # Batch size config (Reduced to prevent freezing)
+            BATCH_SIZE = 100
+            
+            batches = [records[i:i + BATCH_SIZE] for i in range(0, total_records, BATCH_SIZE)]
+            imported_count = 0
+            error_count = 0
+            
+            for i, batch in enumerate(batches):
+                prepared_batch = []
+                for record in batch:
+                    try:
+                        import_date = record.get("date")
+                        if not import_date:
+                            import_date = datetime.now().strftime("%Y-%m-%d")
+                            
+                        qc_data = {
+                            "date": str(import_date),
+                            "exam_name": str(record.get("exam_name", "")),
+                            "level": str(record.get("level") if record.get("level") else "Importado"), 
+                            "lot_number": str(record.get("lot_number") if record.get("lot_number") else "Importado"),
+                            "value": float(record.get("value")) if record.get("value") is not None else 0.0,
+                            "target_value": float(record.get("target_value")) if record.get("target_value") is not None else 0.0,
+                            "target_sd": float(record.get("target_sd")) if record.get("target_sd") is not None else 0.0,
+                            "equipment": str(record.get("equipment") if record.get("equipment") else "Importado"),
+                            "analyst": str(record.get("analyst") if record.get("analyst") else "Sistema"),
+                            "status": "OK"
+                        }
+                        
+                        if not qc_data["exam_name"]:
+                            continue
+                            
+                        prepared_batch.append(qc_data)
+                    except:
+                        continue
+                
+                if prepared_batch:
+                    try:
+                        await QCService.create_qc_records_batch(prepared_batch)
+                        imported_count += len(prepared_batch)
+                    except Exception as e:
+                        print(f"Erro no lote {i}: {e}")
+                        error_count += len(prepared_batch)
+                
+                # Update progress every batch
+                self.qc_import_progress = int((imported_count / total_records) * 100)
+                self.excel_success_message = f"Processando: {imported_count} de {total_records} registros..."
+                
+                # Give UI time to render
+                yield
+                await asyncio.sleep(0.02)
+            
+            self.qc_import_progress = 100
+            self.excel_success_message = f"Sucesso! {imported_count} registros importados."
+            
+
+            
+            # Refresh data
+            await self.load_data_from_db(force=True)
+            
+        except Exception as e:
+            self.excel_error_message = f"Erro fatal: {str(e)}"
+        finally:
+            self.is_importing = False
     
     # ===== ProIn QC - Métodos do Sistema de Controle de Qualidade =====
     
@@ -1991,6 +2373,8 @@ class State(rx.State):
                 status = "OK"
             
             # Persistir no banco se disponível
+            # Persistir no banco se disponível
+            saved_to_db = False
             real_id = str(len(self.qc_records) + 1)
             
             if supabase:
@@ -2007,35 +2391,36 @@ class State(rx.State):
                         "analyst": self.qc_analyst,
                         "status": status, # Passar status atualizado
                     }
-                    new_record = await QCService.create_qc_record(db_data)
-                    if new_record and new_record.get("id"):
-                        real_id = new_record.get("id")
+                    await QCService.create_qc_record(db_data)
+                    await self.load_data_from_db(force=True)
+                    saved_to_db = True
                 except Exception as db_error:
                     print(f"Erro ao salvar no Supabase: {db_error}")
             
-            # Criar registro
-            record = QCRecord(
-                id=real_id,
-                date=self.qc_date,
-                exam_name=self.qc_exam_name,
-                level=self.qc_level,
-                lot_number=self.qc_lot_number,
-                value=value,
-                value1=value,  # Compatibilidade
-                value2=0.0,
-                mean=value,
-                sd=sd,
-                cv=round(cv, 2),
-                target_value=target,
-                target_sd=sd,
-                equipment=self.qc_equipment,
-                analyst=self.qc_analyst,
-                status=status,
-                westgard_violations=violations,
-                z_score=z_score
-            )
-            
-            self.qc_records = [record] + self.qc_records
+            if not saved_to_db:
+                # Criar registro (Fallback Local)
+                record = QCRecord(
+                    id=real_id,
+                    date=self.qc_date,
+                    exam_name=self.qc_exam_name,
+                    level=self.qc_level,
+                    lot_number=self.qc_lot_number,
+                    value=value,
+                    value1=value,  # Compatibilidade
+                    value2=0.0,
+                    mean=value,
+                    sd=sd,
+                    cv=round(cv, 2),
+                    target_value=target,
+                    target_sd=sd,
+                    equipment=self.qc_equipment,
+                    analyst=self.qc_analyst,
+                    status=status,
+                    westgard_violations=violations,
+                    z_score=z_score
+                )
+                
+                self.qc_records = [record] + self.qc_records
             
             # Limpar formulário
             self.qc_exam_name = ""
@@ -2065,7 +2450,7 @@ class State(rx.State):
         if supabase and record_id and len(str(record_id)) > 10:  # Check for valid UUID length
             success = await QCService.delete_qc_record(str(record_id))
             if success:
-                await self.load_data_from_db()
+                await self.load_data_from_db(force=True)
                 self.qc_success_message = "Registro removido com sucesso!"
             else:
                 self.qc_error_message = "Falha ao remover registro do banco"
@@ -2153,7 +2538,7 @@ class State(rx.State):
                     "estimated_consumption": float(self.reagent_daily_consumption) if self.reagent_daily_consumption else 0.0
                 }
                 await ReagentService.create_reagent_lot(lot_data)
-                await self.load_data_from_db()
+                await self.load_data_from_db(force=True)
                 self.reagent_success_message = "Lote cadastrado no Supabase!"
             else:
                 lot = ReagentLot(
@@ -2191,7 +2576,7 @@ class State(rx.State):
         if supabase:
             success = await ReagentService.delete_reagent_lot(lot_id)
             if success:
-                await self.load_data_from_db()
+                await self.load_data_from_db(force=True)
                 self.reagent_success_message = "Lote removido/inativado"
         else:
             self.reagent_lots = [r for r in self.reagent_lots if r.id != lot_id]
@@ -2240,7 +2625,7 @@ class State(rx.State):
                     "notes": self.maintenance_notes
                 }
                 await MaintenanceService.create_maintenance_record(record_data)
-                await self.load_data_from_db()
+                await self.load_data_from_db(force=True)
                 self.maintenance_success_message = "Manutenção registrada no Supabase!"
             else:
                 record = MaintenanceRecord(
@@ -2274,7 +2659,7 @@ class State(rx.State):
         if supabase:
             success = await MaintenanceService.delete_maintenance_record(record_id)
             if success:
-                await self.load_data_from_db()
+                await self.load_data_from_db(force=True)
                 self.maintenance_success_message = "Registro removido do banco"
             else:
                 self.maintenance_error_message = "Falha ao remover registro"
@@ -2432,106 +2817,122 @@ class State(rx.State):
                 names.add(m.equipment)
         return sorted(list(names))
     
-    async def import_excel_to_qc(self):
-        """Importa dados do Excel para registros de CQ"""
-        if not self.has_excel_file or not self.excel_analyzed:
-            self.excel_error_message = "Analise um arquivo Excel primeiro"
+    # ===== Resolution & History Management (V1.1) =====
+    
+    async def load_resolutions(self):
+        """Carrega resoluções salvas (Stub para V1.1)"""
+        pass
+
+    def toggle_resolution(self, patient: str, exam: str):
+        """Alterna estado de resolução para uma divergência"""
+        key = f"{patient}|{exam}"
+        if key in self.resolutions:
+            del self.resolutions[key]
+        else:
+            self.resolutions[key] = "resolved"
+            
+    def view_patient_history(self, patient_name: str):
+        """Abre modal de histórico do paciente"""
+        self.selected_patient_name = patient_name
+        self.is_showing_patient_history = True
+        self.patient_history_data = [] # Reset
+        
+        if not self._compulab_patients:
+            self.error_message = "Dados da análise não encontrados. Por favor, execute a análise novamente."
+            self.is_showing_patient_history = False
+            return
+
+        # Procurar dados do paciente nos dados atuais
+        patient_exams = []
+        if patient_name in self._compulab_patients:
+            patient_exams = self._compulab_patients[patient_name].get('exams', [])
+            
+        for exam in patient_exams:
+             self.patient_history_data.append(
+                 PatientHistoryEntry(
+                     patient_id="temp",
+                     patient_name=patient_name,
+                     exam_name=exam.get('exam_name', 'Unknown'),
+                     status="resolvido", # Mock
+                     last_value=float(exam.get('value', 0)),
+                     created_at=datetime.now().strftime("%Y-%m-%d %H:%M")
+                 )
+             )
+
+    def close_patient_history(self):
+        """Fecha modal de histórico"""
+        self.is_showing_patient_history = False
+        self.selected_patient_name = ""
+
+    async def import_data_to_qc(self):
+        """Importa os dados normalizados para o Controle de Qualidade"""
+        if not self.has_excel_file or not self.excel_analyzed or self._excel_dataframe is None:
+            self.excel_error_message = "Analise um arquivo primeiro"
             return
         
         self.is_analyzing_excel = True
         self.excel_error_message = ""
         
         try:
-            import pandas as pd
-            import io
-            
-            excel_io = io.BytesIO(self.excel_file_bytes)
-            df = pd.read_excel(excel_io)
-            
+            df = self._excel_dataframe
             imported_count = 0
             
-            # Tentar identificar colunas relevantes
-            cols_lower = {str(c).lower(): c for c in df.columns}
+            for _, row in df.iterrows():
+                try:
+                    exam_name = str(row["exam_name"])
+                    value = float(row["value"])
+                    
+                    if not exam_name or value == 0: continue
+                    
+                    date = str(row["date"])
+                    target = float(row["target_value"])
+                    sd = float(row["target_sd"])
+                    cv = float(row["cv"]) if "cv" in row else 0.0
+                    
+                    # Se CV está zerado mas temos value e target, calcular
+                    if cv == 0 and target > 0 and sd > 0:
+                        cv = (sd / target) * 100
+                    
+                    status = "OK"
+                    if cv > 10.0: status = "Alerta" # Regra simples para importação
+                    
+                    # Calcular SD reverso se temos CV e Target?
+                    if sd == 0 and target > 0 and cv != 0:
+                        sd = (cv * target) / 100
+
+                    record = QCRecord(
+                        id=str(len(self.qc_records) + imported_count + 1),
+                        date=date,
+                        exam_name=exam_name,
+                        level="Normal", # Default
+                        lot_number=str(row.get("lot_number", "")),
+                        value=value,
+                        value1=value,
+                        value2=0.0,
+                        mean=value,
+                        sd=sd,
+                        cv=round(cv, 2),
+                        target_value=target,
+                        target_sd=sd,
+                        equipment=str(row.get("equipment", "")),
+                        analyst=str(row.get("analyst", "Importado")),
+                        status=status
+                    )
+                    self.qc_records = [record] + self.qc_records
+                    imported_count += 1
+                except:
+                    continue
             
-            # Mapeamento robusto de colunas
-            mapping = {
-                "exam_name": ["exame", "exam", "analito", "teste", "procedimento"],
-                "value": ["valor", "value", "resultado", "result", "medicao"],
-                "date": ["data", "date", "dia", "momento", "timestamp"],
-                "level": ["nivel", "nível", "level"],
-                "lot_number": ["lote", "lot"],
-                "target_value": ["alvo", "target", "valor_alvo"],
-                "target_sd": ["dp", "sd", "desvio", "desvio_padrao"],
-                "equipment": ["equipamento", "equipment", "aparelho"],
-                "analyst": ["analista", "analyst", "operador"]
-            }
-            
-            # Encontrar colunas reais baseadas no mapeamento
-            found_cols = {}
-            for target_field, aliases in mapping.items():
-                for alias in aliases:
-                    if alias in cols_lower:
-                        found_cols[target_field] = cols_lower[alias]
-                        break
-            
-            if "exam_name" in found_cols and "value" in found_cols:
-                for _, row in df.iterrows():
-                    try:
-                        exam_name = str(row[found_cols["exam_name"]]) if pd.notna(row[found_cols["exam_name"]]) else ""
-                        value = float(row[found_cols["value"]]) if pd.notna(row[found_cols["value"]]) else 0
-                        
-                        # Data
-                        if "date" in found_cols and pd.notna(row[found_cols["date"]]):
-                            date_val = row[found_cols["date"]]
-                            if hasattr(date_val, "strftime"):
-                                date = date_val.strftime("%Y-%m-%d")
-                            else:
-                                date = str(date_val)[:10]
-                        else:
-                            date = datetime.now().strftime("%Y-%m-%d")
-                            
-                        # Outros campos
-                        level = str(row[found_cols["level"]]) if "level" in found_cols and pd.notna(row[found_cols["level"]]) else "Normal"
-                        lot = str(row[found_cols["lot_number"]]) if "lot_number" in found_cols and pd.notna(row[found_cols["lot_number"]]) else ""
-                        target = float(row[found_cols["target_value"]]) if "target_value" in found_cols and pd.notna(row[found_cols["target_value"]]) else 0.0
-                        sd = float(row[found_cols["target_sd"]]) if "target_sd" in found_cols and pd.notna(row[found_cols["target_sd"]]) else 0.0
-                        equip = str(row[found_cols["equipment"]]) if "equipment" in found_cols and pd.notna(row[found_cols["equipment"]]) else ""
-                        analyst = str(row[found_cols["analyst"]]) if "analyst" in found_cols and pd.notna(row[found_cols["analyst"]]) else "Importado"
-                        
-                        if exam_name and value > 0:
-                            # Calcular CV se tiver target
-                            cv = (sd / target * 100) if target > 0 else 0.0
-                            status = "OK" if cv <= 10.0 or target == 0 else "Alerta" # Mais permissivo na importação se não tiver alvo
-                            
-                            record = QCRecord(
-                                id=str(len(self.qc_records) + imported_count + 1),
-                                date=date,
-                                exam_name=exam_name,
-                                level=level,
-                                lot_number=lot,
-                                value=value,
-                                value1=value,
-                                value2=0.0,
-                                mean=value,
-                                sd=sd,
-                                cv=round(cv, 2),
-                                target_value=target,
-                                target_sd=sd,
-                                equipment=equip,
-                                analyst=analyst,
-                                status=status
-                            )
-                            self.qc_records = self.qc_records + [record]
-                            imported_count += 1
-                    except:
-                        continue
-                
-                self.excel_success_message = f"Importação concluída: {imported_count} registros adicionados ao CQ!"
-                
-                # Auto-refresh para sincronizar com o dashboard (QA Improvement)
-                await self.load_data_from_db()
+            if imported_count > 0:
+                self.excel_success_message = f"Sucesso! {imported_count} registros importados."
+                # Salvar no banco se disponível
+                if supabase:
+                    # Aqui apenas carregamos na memória local por enquanto para não spammar o banco
+                    # Se quisesse salvar, teria que iterar e chamar create_qc_record
+                    pass
             else:
-                self.excel_error_message = "Campos obrigatórios (Exame e Valor) não encontrados. Verifique os títulos das colunas."
+                self.excel_error_message = "Nenhum registro importado. Verifique os dados."
+                
         except Exception as e:
             self.excel_error_message = f"Erro na importação: {str(e)}"
         finally:

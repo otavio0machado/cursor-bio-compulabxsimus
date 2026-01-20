@@ -30,6 +30,27 @@ class QCService:
         
         response = supabase.table("qc_records").insert(data).execute()
         return response.data[0] if response.data else {}
+
+    @staticmethod
+    async def create_qc_records_batch(records_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Insere múltiplos registros de CQ em lote"""
+        data_list = []
+        for record_data in records_data:
+            data_list.append({
+                "date": record_data.get("date"),
+                "exam_name": record_data.get("exam_name"),
+                "level": record_data.get("level"),
+                "lot_number": record_data.get("lot_number"),
+                "value": float(record_data.get("value", 0)),
+                "target_value": float(record_data.get("target_value", 0)),
+                "target_sd": float(record_data.get("target_sd", 0)),
+                "equipment_name": record_data.get("equipment"),
+                "analyst_name": record_data.get("analyst"),
+                "status": record_data.get("status", "OK")
+            })
+        
+        response = supabase.table("qc_records").insert(data_list).execute()
+        return response.data if response.data else []
     
     @staticmethod
     async def get_qc_records(
@@ -138,13 +159,24 @@ class QCService:
     async def delete_qc_record(record_id: str) -> bool:
         """Remove registro de CQ"""
         try:
-            # Tenta deletar o registro. Se não houver erro, consideramos sucesso.
-            # O Supabase pode não retornar data se configurado para 'minimal' ou dependendo da versão.
-            supabase.table("qc_records")\
-                .delete()\
+            # Tenta deletar o registro solicitando contagem exata
+            response = supabase.table("qc_records")\
+                .delete(count='exact')\
                 .eq("id", record_id)\
                 .execute()
-            return True
+            
+            # Verifica se deletou algo
+            if hasattr(response, 'count') and response.count is not None:
+                return response.count > 0
+            
+            # Se não tem count, verifica data
+            if response.data and len(response.data) > 0:
+                return True
+                
+            # Se não tem data nem count, assume falha (segurança)
+            # Geralmente delete retorna vazio se nada foi deletado
+            return False
+            
         except Exception as e:
             print(f"Erro ao deletar registro QC {record_id}: {e}")
             return False

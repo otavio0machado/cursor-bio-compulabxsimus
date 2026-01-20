@@ -44,8 +44,8 @@ def format_dataset_for_prompt(patients_dict):
             output += f"{patient.upper()},{exam_name},{exam_code},{val_str}\n"
     return output
 
-async def process_batch(client, system_prompt, chunk_patients, compulab_patients, simus_patients, batch_id, total_batches, retries=2):
-    """Processa um único batch (async) com retry"""
+async def process_batch(client, system_prompt, chunk_patients, compulab_patients, simus_patients, batch_id, total_batches, progress_callback=None, retries=3):
+    """Processa um único batch (async) com retry e backoff exponencial"""
     for attempt in range(retries + 1):
         try:
             # Filtrar dados para este chunk
@@ -75,7 +75,7 @@ Analyze this batch now and output ONLY the CSV lines."""
                     {"role": "user", "content": user_msg}
                 ],
                 temperature=0.0,
-                timeout=45.0 # Timeout de 45s por batch
+                timeout=60.0 # Timeout aumentado para 60s
             )
             
             content = response.choices[0].message.content.strip()
@@ -86,34 +86,36 @@ Analyze this batch now and output ONLY the CSV lines."""
             for line in lines:
                 line = line.strip()
                 if not line or line.startswith('---'): continue
-                
-                # Ignorar blocos de código markdown se presentes por engano
                 if "```" in line: continue
-                
-                # Ignorar cabeçalhos baseados nos nomes das colunas
                 if "tipo_divergencia" in line.lower() or "causa_raiz" in line.lower():
                     continue
                 
-                # Garantir que a linha tenha pelo menos alguns separadores ;
-                # Com 7 colunas, o esperado é 6 separadores, aceitamos 5 ou mais
                 if line.count(';') >= 5:
                     rows.append(line)
                 elif line.count(',') >= 5 and ';' not in line:
-                    # IA usou vírgula por engano? Vamos converter para ;
-                    # Cuidado para não quebrar nomes com vírgula (embora tenhamos tentado limpar no format_dataset)
                     line = line.replace(',', ';')
                     rows.append(line)
                     
-            return rows
+            return rows, None # Success
             
         except Exception as e:
+            error_msg = str(e)
+            is_rate_limit = "rate_limit" in error_msg.lower() or "429" in error_msg
+            
             if attempt < retries:
-                print(f"Aviso batch {batch_id} (tentativa {attempt+1}): {e}. Tentando novamente em {10 * (attempt + 1)}s...")
-                await asyncio.sleep(10 * (attempt + 1))
+                # Backoff exponencial: 5s, 15s, 35s...
+                wait_time = (2 ** attempt) * 5 + 5
+                if is_rate_limit:
+                    wait_time += 15 # Espera extra para rate limits
+                
+                if progress_callback:
+                    await progress_callback(f"Lote {batch_id} falhou ({attempt+1}/{retries}). Tentando em {wait_time}s...")
+                
+                await asyncio.sleep(wait_time)
             else:
-                print(f"Erro fatal no batch {batch_id} após {retries} retentativas: {e}")
-                return []
-    return []
+                return [], f"Batch {batch_id} falhou após {retries} tentativas: {error_msg}"
+    
+    return [], "Erro desconhecido"
 
 async def generate_ai_analysis(
     compulab_patients: dict,
@@ -178,10 +180,27 @@ Your task is to perform a deep comparison between Dataset A (COMPULAB - The Sour
         
         # Semáforo para não estourar rate limit (TPM 30k é baixo)
         sem = asyncio.Semaphore(2)
+        batch_errors = []
         
         async def sem_process_batch(batch_idx, chunk):
+            async def progress_cb(msg):
+                nonlocal completed_batches
+                # Não muda o % de progresso, mas atualiza o texto
+                progress = 5 + int((completed_batches / total_batches) * 90)
+                # Note: We can't easily yield from here because it's not a generator
+                # But we can store the message in a shared state or just print it for now 
+                # within this scope if we had access to the generator's yield.
+                # Since we don't, we'll just print to console for debug.
+                print(f"[RETRY] {msg}")
+
             async with sem:
-                return await process_batch(client, system_prompt, chunk, compulab_patients, simus_patients, batch_idx+1, total_batches)
+                res, error = await process_batch(
+                    client, system_prompt, chunk, compulab_patients, simus_patients, 
+                    batch_idx+1, total_batches, progress_callback=None # simplified for now
+                )
+                if error:
+                    batch_errors.append(error)
+                return res
 
         tasks = [asyncio.create_task(sem_process_batch(i, batch)) for i, batch in enumerate(batches)]
         
@@ -193,27 +212,41 @@ Your task is to perform a deep comparison between Dataset A (COMPULAB - The Sour
                 all_csv_rows.extend(res)
                 completed_batches += 1
                 progress = 5 + int((completed_batches / total_batches) * 90)
-                yield progress, f"Processado lote {completed_batches}/{total_batches}..."
+                
+                status_msg = f"Processado lote {completed_batches}/{total_batches}..."
+                if batch_errors:
+                    status_msg += f" ({len(batch_errors)} erros acumulados)"
+                
+                yield progress, status_msg
                 
         yield 98, "Consolidando relatório..."
         
+        if len(batch_errors) == total_batches:
+             yield 100, "Erro"
+             yield "", f"Todos os lotes de auditoria falharam: {batch_errors[0]}"
+             return
+             
         try:
              all_csv_rows.sort(key=lambda x: x.split(';')[0] if ';' in x else x)
         except:
              pass
 
         final_csv = "Paciente;Nome_Exame;Codigo_Exame;Valor_Compulab;Valor_Simus;Tipo_Divergencia;Sugestao_Causa_Raiz\n" + "\n".join(all_csv_rows)
+        
+        error_notice = ""
+        if batch_errors:
+            error_notice = f"\n\n> ⚠️ **Atenção:** {len(batch_errors)} lotes falharam durante o processamento. Os resultados podem estar incompletos.\n"
         total_divergences = len(all_csv_rows)
         
         final_report = f"""# RELATÓRIO DE AUDITORIA DE IA - BIODIAGNÓSTICO
 **Data:** {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}
-**Total de Divergências Encontradas:** {total_divergences}
+**Total de Divergências Encontradas:** {total_divergences}{error_notice}
 
 ## Detalhes das Divergências (CSV)
 {final_csv}
 
 ---
-*Este relatório foi gerado automaticamente por IA Audit Engine v2 (gpt-4o).*
+*Este relatório foi gerado automaticamente por IA Audit Engine v2.1. (Eng. & Perf. update).*
 """
         
         yield 100, "Concluído"

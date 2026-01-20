@@ -143,11 +143,20 @@ def generate_analysis_pdf(
         
         # Processar TODOS os pacientes faltantes
         for idx, item in enumerate(missing_patients):
-            patient_name = str(item.get('patient', ''))
+            # Handle both dicts and objects (PatientModel)
+            if isinstance(item, dict):
+                patient_name = str(item.get('patient', item.get('name', '')))
+                exams_count = str(item.get('exams_count', item.get('total_exams', 0)))
+                total_val = item.get('total_value', 0)
+            else:
+                patient_name = getattr(item, 'patient', getattr(item, 'name', ''))
+                exams_count = str(getattr(item, 'exams_count', getattr(item, 'total_exams', 0)))
+                total_val = getattr(item, 'total_value', 0)
+
             patients_data.append([
                 patient_name,
-                str(item.get('exams_count', 0)),
-                format_currency(item.get('total_value', 0))
+                exams_count,
+                format_currency(total_val)
             ])
         
         # Criar tabela com todos os dados
@@ -182,12 +191,20 @@ def generate_analysis_pdf(
         # Processar TODOS os exames faltantes
         total_exams = len(missing_exams)
         for idx, item in enumerate(missing_exams):
-            patient_name = str(item.get('patient', ''))
-            exam_name = str(item.get('exam_name', ''))
+            # Handle both dicts and objects (AnalysisResult)
+            if isinstance(item, dict):
+                patient_name = str(item.get('patient', ''))
+                exam_name = str(item.get('exam_name', ''))
+                val = item.get('value', 0)
+            else:
+                patient_name = getattr(item, 'patient', '')
+                exam_name = getattr(item, 'exam_name', '')
+                val = getattr(item, 'value', 0)
+
             exam_data.append([
                 patient_name,
                 exam_name,
-                format_currency(item.get('value', 0))
+                format_currency(val)
             ])
         
         # Criar tabela com todos os dados
@@ -220,14 +237,26 @@ def generate_analysis_pdf(
         
         # Processar TODAS as divergências
         for idx, item in enumerate(value_divergences):
-            patient_name = str(item.get('patient', ''))
-            exam_name = str(item.get('exam_name', ''))
+            # Handle both dicts and objects (AnalysisResult)
+            if isinstance(item, dict):
+                patient_name = str(item.get('patient', ''))
+                exam_name = str(item.get('exam_name', ''))
+                val_c = item.get('compulab_value', 0)
+                val_s = item.get('simus_value', 0)
+                diff = item.get('difference', 0)
+            else:
+                patient_name = getattr(item, 'patient', '')
+                exam_name = getattr(item, 'exam_name', '')
+                val_c = getattr(item, 'compulab_value', 0)
+                val_s = getattr(item, 'simus_value', 0)
+                diff = getattr(item, 'difference', 0)
+
             div_data.append([
                 patient_name,
                 exam_name,
-                format_currency(item.get('compulab_value', 0)),
-                format_currency(item.get('simus_value', 0)),
-                format_currency(item.get('difference', 0))
+                format_currency(val_c),
+                format_currency(val_s),
+                format_currency(diff)
             ])
         
         # Criar tabela com todos os dados

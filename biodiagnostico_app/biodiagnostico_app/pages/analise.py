@@ -95,8 +95,8 @@ def patient_history_modal() -> rx.Component:
                             lambda entry: rx.box(
                                 rx.hstack(
                                     rx.vstack(
-                                        rx.text(entry.exam_name, font_weight="bold", size="3"),
-                                        rx.text(entry.created_at.to(str)[:16], size="1", color="gray"),
+                                        rx.text(entry.exam_name, class_name="text-sm font-semibold text-gray-900"),
+                                        rx.text(entry.created_at.to(str)[:16], class_name="text-xs text-gray-500"),
                                         spacing="0",
                                         align="start",
                                     ),
@@ -106,12 +106,12 @@ def patient_history_modal() -> rx.Component:
                                         status=rx.cond(entry.status == "resolvido", "success", "warning")
                                     ),
                                     rx.vstack(
-                                        rx.text(f"Ref: R$ {entry.last_value}", size="1", color="gray"),
+                                        rx.text(f"Ref: R$ {entry.last_value}", class_name="text-xs font-medium text-gray-600"),
                                         align="end",
                                     ),
                                     width="100%",
                                     align="center",
-                                    class_name="p-3 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors"
+                                    class_name="p-4 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors"
                                 )
                             )
                         ),
@@ -161,10 +161,10 @@ def action_table(headers: list[str], data: list, columns_keys: list[str], is_div
                         *[
                             rx.table.cell(
                                 rx.cond(
-                                    key == "patient",
+                                    (key == "patient") | (key == "name"),
                                     rx.link(
                                         item[key],
-                                        class_name="text-blue-600 hover:text-blue-800 font-medium cursor-pointer",
+                                        class_name="text-blue-600 hover:text-blue-800 font-medium cursor-pointer underline decoration-blue-300 underline-offset-2",
                                         on_click=lambda: State.view_patient_history(item[key])
                                     ),
                                     item[key]
@@ -175,16 +175,13 @@ def action_table(headers: list[str], data: list, columns_keys: list[str], is_div
                         ],
                         rx.table.cell(
                             rx.hstack(
-                                rx.cond(
-                                    is_divergence,
-                                    rx.button(
-                                        rx.icon("circle", size=16),
-                                        on_click=lambda: State.toggle_resolution(item["patient"], item["exam_name"]),
-                                        variant="ghost",
-                                        color_scheme="gray",
-                                        size="1",
-                                    )
-                                ),
+                                rx.button(
+                                    rx.icon("circle", size=16),
+                                    on_click=lambda: State.toggle_resolution(item["patient"], item["exam_name"]),
+                                    variant="ghost",
+                                    color_scheme="gray",
+                                    size="1",
+                                ) if is_divergence else rx.fragment(),
                                 justify="end",
                             ),
                             align="right"
@@ -408,7 +405,8 @@ def analise_page() -> rx.Component:
                                 breakdown_item("user-x", "Pacientes Faltantes", State.formatted_missing_patients_total, "orange"),
                                 breakdown_item("file-x", "Exames Faltantes", State.formatted_missing_exams_total, "red"),
                                 breakdown_item("file-diff", "Divergências de Valor", State.formatted_divergences_total, "blue"),
-                                columns={"initial": "1", "sm": "3"},
+                                breakdown_item("ghost", "Extras no SIMUS", f"{State.extra_simus_exams_count} exames", "gray"),
+                                columns={"initial": "1", "sm": "2", "lg": "4"},
                                 spacing="4",
                                 width="100%",
                                 class_name="mt-4"
@@ -423,12 +421,21 @@ def analise_page() -> rx.Component:
                         rx.tabs.list(
                             rx.tabs.trigger(
                                 rx.hstack(
+                                    rx.icon("user-x", size=16),
+                                    rx.text(f"Pct Faltantes ({State.missing_patients_count})"),
+                                    spacing="2",
+                                ),
+                                value="patients_missing",
+                                class_name="data-[state=active]:bg-[#1B5E20] data-[state=active]:text-white px-4 py-2 rounded-lg transition-all text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                            ),
+                            rx.tabs.trigger(
+                                rx.hstack(
                                     rx.icon("triangle_alert", size=16),
                                     rx.text(f"Exames Faltantes ({State.missing_exams_count})"),
                                     spacing="2",
                                 ),
                                 value="missing",
-                                class_name="data-[state=active]:bg-[#1B5E20] data-[state=active]:text-white px-4 py-2 rounded-lg transition-all text-sm font-medium"
+                                class_name="data-[state=active]:bg-[#1B5E20] data-[state=active]:text-white px-4 py-2 rounded-lg transition-all text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                             ),
                             rx.tabs.trigger(
                                 rx.hstack(
@@ -437,7 +444,16 @@ def analise_page() -> rx.Component:
                                     spacing="2",
                                 ),
                                 value="divergences",
-                                class_name="data-[state=active]:bg-[#1B5E20] data-[state=active]:text-white px-4 py-2 rounded-lg transition-all text-sm font-medium"
+                                class_name="data-[state=active]:bg-[#1B5E20] data-[state=active]:text-white px-4 py-2 rounded-lg transition-all text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                            ),
+                            rx.tabs.trigger(
+                                rx.hstack(
+                                    rx.icon("ghost", size=16),
+                                    rx.text(f"No Simus (Ext) ({State.extra_simus_exams_count})"),
+                                    spacing="2",
+                                ),
+                                value="extras",
+                                class_name="data-[state=active]:bg-[#1B5E20] data-[state=active]:text-white px-4 py-2 rounded-lg transition-all text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                             ),
                             rx.tabs.trigger(
                                 rx.hstack(
@@ -446,9 +462,32 @@ def analise_page() -> rx.Component:
                                     spacing="2",
                                 ),
                                 value="ai",
-                                class_name="data-[state=active]:bg-[#1B5E20] data-[state=active]:text-white px-4 py-2 rounded-lg transition-all text-sm font-medium"
+                                class_name="data-[state=active]:bg-[#1B5E20] data-[state=active]:text-white px-4 py-2 rounded-lg transition-all text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                             ),
                             class_name="bg-white border border-gray-200 p-1 rounded-xl flex flex-wrap gap-1 shadow-sm justify-center"
+                        ),
+                        rx.tabs.content(
+                            rx.cond(
+                                State.missing_patients_count > 0,
+                                    rx.box(
+                                        action_table(
+                                            headers=["Paciente", "Exames", "Valor Total (R$)"],
+                                            data=State.missing_patients,
+                                            columns_keys=["name", "total_exams", "total_value"]
+                                        ),
+                                        class_name="mt-4"
+                                    ),
+                                rx.box(
+                                    rx.hstack(
+                                        rx.icon("circle-check", size=20, color="#10B981"),
+                                        rx.text("Todos os pacientes do COMPULAB estão no SIMUS!", class_name="text-green-700"),
+                                        spacing="2",
+                                        align="center",
+                                    ),
+                                    class_name="bg-green-50 border border-green-200 rounded-xl p-6 mt-4"
+                                ),
+                            ),
+                            value="patients_missing",
                         ),
                         rx.tabs.content(
                             rx.cond(
@@ -496,6 +535,30 @@ def analise_page() -> rx.Component:
                                 ),
                             ),
                             value="divergences",
+                        ),
+                        rx.tabs.content(
+                            rx.cond(
+                                State.extra_simus_exams_count > 0,
+                                    rx.box(
+                                        action_table(
+                                            headers=["Paciente", "Exame", "Valor (R$)"],
+                                            data=State.extra_simus_exams,
+                                            columns_keys=["patient", "exam_name", "value"],
+                                            is_divergence=True
+                                        ),
+                                        class_name="mt-4"
+                                    ),
+                                rx.box(
+                                    rx.hstack(
+                                        rx.icon("check-check", size=20, color="#10B981"),
+                                        rx.text("Nenhum exame extra ('fantasma') encontrado no SIMUS.", class_name="text-green-700"),
+                                        spacing="2",
+                                        align="center",
+                                    ),
+                                    class_name="bg-green-50 border border-green-200 rounded-xl p-6 mt-4"
+                                ),
+                            ),
+                            value="extras",
                         ),
                         rx.tabs.content(
                             rx.vstack(
