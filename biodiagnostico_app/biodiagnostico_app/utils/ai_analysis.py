@@ -85,16 +85,22 @@ Analyze this batch now and output ONLY the CSV lines."""
             lines = content.split('\n')
             for line in lines:
                 line = line.strip()
-                if not line: continue
-                # Ignorar cabeçalhos comuns ou blocos de código
-                if any(x in line.lower() for x in ["paciente;", "tipo_divergencia", "```"]):
+                if not line or line.startswith('---'): continue
+                
+                # Ignorar blocos de código markdown se presentes por engano
+                if "```" in line: continue
+                
+                # Ignorar cabeçalhos baseados nos nomes das colunas
+                if "tipo_divergencia" in line.lower() or "causa_raiz" in line.lower():
                     continue
                 
                 # Garantir que a linha tenha pelo menos alguns separadores ;
-                if line.count(';') >= 4:
+                # Com 7 colunas, o esperado é 6 separadores, aceitamos 5 ou mais
+                if line.count(';') >= 5:
                     rows.append(line)
-                elif line.count(',') >= 4 and ';' not in line:
-                    # IA usou vírgula por engano? Vamos converter
+                elif line.count(',') >= 5 and ';' not in line:
+                    # IA usou vírgula por engano? Vamos converter para ;
+                    # Cuidado para não quebrar nomes com vírgula (embora tenhamos tentado limpar no format_dataset)
                     line = line.replace(',', ';')
                     rows.append(line)
                     
@@ -129,26 +135,34 @@ async def generate_ai_analysis(
             
         client = openai.AsyncOpenAI(api_key=api_key)
         
-        # System Prompt do Auditor (OTIMIZADO v3.0)
+        # System Prompt do Auditor (OTIMIZADO v4.0)
         system_prompt = """
 # ROLE
-You are a Senior Medical Audit Specialist and Data Scientist. Compare Dataset A (COMPULAB) and Dataset B (SIMUS).
+You are an expert Medical Billing Auditor and Data Scientist at Laboratório Biodiagnóstico. 
+Your task is to perform a deep comparison between Dataset A (COMPULAB - The Source of Truth for performed exams) and Dataset B (SIMUS - The Billing System).
 
 # LOGIC RULES
-1. Match by PATIENT NAME + EXAM CODE/NAME.
-2. Ignore differences <= 0.05.
-3. Identify discrepancies and suggest a technical ROOT CAUSE.
+1. MATCHING: Match records by PATIENT NAME (can have slight variations) AND EXAM CODE or EXAM NAME.
+2. PRECISION: Ignore value differences smaller than R$ 0.10.
+3. BI-DIRECTIONAL ANALYSIS: 
+   - Identify exams in COMPULAB missing in SIMUS (Unbilled revenue).
+   - Identify exams in SIMUS missing in COMPULAB (Billing errors/Ghost exams).
+   - Identify value mismatches for the same exam.
 
-# TECHNICAL CAUSES TO CONSIDER
-- "Divergência de Tabela": When the value in A is significantly different from B (e.g., SIMUS outdated vs SIGTAP).
-- "Erro de Cadastro": Missing exams in one system usually indicate registration failure.
-- "Paciente Fantasma": Patient in COMPULAB but not in SIMUS (potential manual entry error).
-- "Exame Glosado/Não Integrado": Missing in COMPULAB but present in SIMUS.
+# TECHNICAL CAUSES TO CLASSIFY (Tipo_Divergencia)
+- "Divergência de Tabela": Values differ. Probably SIMUS has an outdated price list compared to COMPULAB (SIGTAP/Convenio).
+- "Erro de Cadastro": Exam exists in COMPULAB but not in SIMUS. Likely a technician forgot to enter it in the billing system.
+- "Paciente Fantasma": Patient exists in SIMUS but not in COMPULAB. High risk of fraud or manual entry error.
+- "Exame Não Integrado": Exam in SIMUS but missing in COMPULAB record.
+- "Código Divergente": Same exam name but different codes in A and B.
+- "Divergência de Quantidade": Different number of occurrences for the same exam for the same patient.
 
 # OUTPUT FORMAT (STRICT CSV)
 - Separator: Semicolon (;)
 - Columns: Paciente;Nome_Exame;Codigo_Exame;Valor_Compulab;Valor_Simus;Tipo_Divergencia;Sugestao_Causa_Raiz
-- NO Header, NO Markdown, NO conversational text. Just lines of data.
+- NO Header, NO Markdown, NO conversational text, NO code blocks. 
+- Output ONLY the data lines.
+- Be extremely clinical and technical in 'Sugestao_Causa_Raiz'.
 """
 
         all_csv_rows = []

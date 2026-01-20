@@ -607,25 +607,79 @@ def analise_page() -> rx.Component:
                                 rx.cond(
                                     State.ai_analysis != "",
                                     rx.vstack(
-                                        # Header do resultado
-                                        rx.hstack(
-                                            rx.icon("chart_bar", size=24, color="#1B5E20"),
-                                            rx.text(
-                                                "Divergências Encontradas",
-                                                class_name="text-green-800 font-bold"
+                                        # Resultado em Tabela (quando disponível)
+                                        rx.cond(
+                                            State.ai_analysis_data.length() > 0,
+                                            rx.box(
+                                                rx.table.root(
+                                                    rx.table.header(
+                                                        rx.table.row(
+                                                            rx.table.column_header_cell("Paciente", class_name="px-4 py-3 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"),
+                                                            rx.table.column_header_cell("Exame", class_name="px-4 py-3 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"),
+                                                            rx.table.column_header_cell("Código", class_name="px-4 py-3 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"),
+                                                            rx.table.column_header_cell("Compulab", class_name="px-4 py-3 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"),
+                                                            rx.table.column_header_cell("Simus", class_name="px-4 py-3 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"),
+                                                            rx.table.column_header_cell("Tipo", class_name="px-4 py-3 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"),
+                                                            rx.table.column_header_cell("Causa Raiz", class_name="px-4 py-3 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"),
+                                                        )
+                                                    ),
+                                                    rx.table.body(
+                                                        rx.foreach(
+                                                            State.ai_analysis_data,
+                                                            lambda item, i: rx.table.row(
+                                                                rx.table.cell(
+                                                                    rx.link(
+                                                                        item["Paciente"],
+                                                                        class_name="text-blue-600 hover:text-blue-800 font-medium cursor-pointer",
+                                                                        on_click=lambda: State.view_patient_history(item["Paciente"])
+                                                                    ),
+                                                                    class_name="px-4 py-3 whitespace-nowrap text-sm"
+                                                                ),
+                                                                rx.table.cell(item["Nome_Exame"], class_name="px-4 py-3 text-sm"),
+                                                                rx.table.cell(item["Codigo_Exame"], class_name="px-4 py-3 text-sm"),
+                                                                rx.table.cell(f"R$ {item['Valor_Compulab']}", class_name="px-4 py-3 text-sm font-medium text-green-700"),
+                                                                rx.table.cell(f"R$ {item['Valor_Simus']}", class_name="px-4 py-3 text-sm font-medium text-blue-700"),
+                                                                rx.table.cell(
+                                                                    ui.status_badge(
+                                                                        item["Tipo_Divergencia"],
+                                                                        status=rx.match(
+                                                                            item["Tipo_Divergencia"],
+                                                                            ("Divergência de Tabela", "warning"),
+                                                                            ("Erro de Cadastro", "error"),
+                                                                            ("Paciente Fantasma", "error"),
+                                                                            ("Exame Não Integrado", "orange"),
+                                                                            "gray"
+                                                                        )
+                                                                    ),
+                                                                    class_name="px-4 py-3"
+                                                                ),
+                                                                rx.table.cell(item["Sugestao_Causa_Raiz"], class_name="px-4 py-3 text-xs italic text-gray-600"),
+                                                                class_name=rx.cond(
+                                                                    i % 2 == 0, 
+                                                                    "bg-white hover:bg-gray-50 transition-colors", 
+                                                                    "bg-gray-50/50 hover:bg-gray-100 transition-colors"
+                                                                ),
+                                                            )
+                                                        )
+                                                    ),
+                                                    class_name="min-w-full divide-y divide-gray-200"
+                                                ),
+                                                class_name="overflow-x-auto rounded-xl border border-gray-200 shadow-sm mt-4",
+                                                style={"maxHeight": "600px"}
                                             ),
-                                            spacing="2",
-                                            align="center",
-                                        ),
-                                        # Resultado em Markdown (evita erro de hook)
-                                        rx.box(
-                                            rx.scroll_area(
-                                                rx.markdown(State.ai_analysis),
-                                                type="hover",
-                                                scrollbars="vertical",
-                                                style={"maxHeight": "400px"},
-                                            ),
-                                            class_name="bg-white rounded-xl p-4 border border-gray-100 mt-4 prose prose-sm max-w-none"
+                                            # Fallback para Markdown se o parsing falhar ou estiver vazio mas tiver texto
+                                            rx.cond(
+                                                State.ai_analysis != "",
+                                                rx.box(
+                                                    rx.scroll_area(
+                                                        rx.markdown(State.ai_analysis),
+                                                        type="hover",
+                                                        scrollbars="vertical",
+                                                        style={"maxHeight": "400px"},
+                                                    ),
+                                                    class_name="bg-white rounded-xl p-4 border border-gray-100 mt-4 prose prose-sm max-w-none"
+                                                ),
+                                            )
                                         ),
                                         # Download Buttons
                                         rx.hstack(

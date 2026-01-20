@@ -286,8 +286,8 @@ def generate_analysis_pdf(
                 if 'Paciente' in first_line and 'Nome_Exame' in first_line:
                     csv_content = '\n'.join(csv_lines)
                 else:
-                    # Adicionar header manualmente
-                    header = "Paciente;Nome_Exame;Codigo_Exame;Valor_Compulab;Valor_Simus;Tipo_Divergencia"
+                    # Adicionar header manualmente - deve bater com o prompt do utils/ai_analysis.py
+                    header = "Paciente;Nome_Exame;Codigo_Exame;Valor_Compulab;Valor_Simus;Tipo_Divergencia;Sugestao_Causa_Raiz"
                     csv_content = header + '\n' + '\n'.join(csv_lines)
                 
                 # Parsear CSV
@@ -298,9 +298,8 @@ def generate_analysis_pdf(
                 if csv_data:
                     # Formatar cabeçalho
                     header = csv_data[0]
-                    # Ajustar larguras baseado no conteúdo (estimativa)
-                    # Paciente;Nome_Exame;Codigo_Exame;Valor_Compulab;Valor_Simus;Tipo_Divergencia
-                    col_widths = [5*cm, 5*cm, 2*cm, 2.5*cm, 2.5*cm, 3*cm]
+                    # Ajustar larguras para acomodar a nova coluna (A4 largura total aprox 20cm util)
+                    col_widths = [3.5*cm, 3.5*cm, 1.8*cm, 2.0*cm, 2.0*cm, 2.5*cm, 4.0*cm]
                     
                     ai_table = Table(csv_data, colWidths=col_widths, repeatRows=1)
                     ai_table.setStyle(TableStyle([

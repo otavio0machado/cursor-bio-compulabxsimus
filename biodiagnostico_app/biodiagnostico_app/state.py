@@ -1452,8 +1452,8 @@ class State(rx.State):
                         if 'Paciente' in first_line and 'Nome_Exame' in first_line:
                             csv_content = '\n'.join(csv_lines)
                         else:
-                            # Adicionar header manualmente
-                            header = "Paciente;Nome_Exame;Codigo_Exame;Valor_Compulab;Valor_Simus;Tipo_Divergencia"
+                            # Adicionar header manualmente - deve bater com o prompt do utils/ai_analysis.py
+                            header = "Paciente;Nome_Exame;Codigo_Exame;Valor_Compulab;Valor_Simus;Tipo_Divergencia;Sugestao_Causa_Raiz"
                             csv_content = header + '\n' + '\n'.join(csv_lines)
                         
                         f = StringIO(csv_content)
