@@ -437,168 +437,138 @@ def analise_page() -> rx.Component:
                                     class_name="mb-4"
                                 ),
                                 
-                                # API Key / Action Area
+                                # Status + Progress
+                                rx.hstack(
+                                    rx.box(class_name="w-3 h-3 bg-green-500 rounded-full animate-pulse"),
+                                    rx.text("API Conectada", class_name="text-green-700 text-sm font-medium"),
+                                    spacing="2",
+                                ),
+                                
                                 rx.cond(
-                                    State.openai_api_key == "",
+                                    State.is_generating_ai,
                                     rx.box(
                                         rx.vstack(
                                             rx.hstack(
-                                                rx.icon("key", size=18, color="#D97706"),
-                                                rx.text("Configure sua API Key", class_name="text-amber-800 font-semibold"),
+                                                rx.spinner(size="1", color="green"),
+                                                rx.text(State.ai_loading_text, class_name="text-sm font-medium text-gray-700"),
                                                 spacing="2",
                                             ),
-                                            rx.input(
-                                                placeholder="sk-... (Cole sua API Key da OpenAI)",
-                                                type="password",
-                                                on_change=State.set_api_key,
-                                                class_name="w-full bg-white border-amber-300 rounded-lg"
+                                            rx.progress(
+                                                value=State.ai_loading_progress,
+                                                max=100,
+                                                class_name="w-full h-2 rounded-full",
+                                                color_scheme="green"
                                             ),
-                                            rx.link(
-                                                rx.text("🔑 Obter API Key grátis", class_name="text-sm text-amber-700 hover:text-amber-900"),
-                                                href="https://platform.openai.com/api-keys",
-                                                is_external=True,
+                                            spacing="2",
+                                            width="100%"
+                                        ),
+                                        class_name="bg-green-50 p-3 rounded-lg w-full"
+                                    ),
+                                ),
+                                
+                                # Main Button
+                                rx.button(
+                                    rx.hstack(
+                                        rx.cond(
+                                            State.is_generating_ai,
+                                            rx.spinner(size="1", color="white"),
+                                            rx.icon("rocket", size=18, color="white"),
+                                        ),
+                                        rx.text("Iniciar Auditoria Inteligente"),
+                                        spacing="2",
+                                    ),
+                                    on_click=State.generate_ai_analysis,
+                                    disabled=State.is_generating_ai,
+                                    class_name="bg-gradient-to-r from-emerald-500 to-green-600 text-white px-6 py-3 rounded-xl font-bold hover:from-emerald-600 hover:to-green-700 hover:shadow-lg transition-all w-full disabled:opacity-50"
+                                ),
+                                
+                                # Results Area
+                                rx.cond(
+                                    State.ai_analysis != "",
+                                    rx.vstack(
+                                        # Header do resultado
+                                        rx.hstack(
+                                            rx.icon("bar-chart-2", size=24, color="#1B5E20"),
+                                            rx.text(
+                                                "Divergências Encontradas",
+                                                class_name="text-green-800 font-bold"
+                                            ),
+                                            spacing="2",
+                                            align="center",
+                                        ),
+                                        # Resultado em Markdown (evita erro de hook)
+                                        rx.box(
+                                            rx.scroll_area(
+                                                rx.markdown(State.ai_analysis),
+                                                type="hover",
+                                                scrollbars="vertical",
+                                                style={"maxHeight": "400px"},
+                                            ),
+                                            class_name="bg-white rounded-xl p-4 border border-gray-100 mt-4 prose prose-sm max-w-none"
+                                        ),
+                                        # Download Buttons
+                                        rx.hstack(
+                                            rx.cond(
+                                                State.ai_analysis_csv != "",
+                                                rx.link(
+                                                    rx.button(
+                                                        rx.hstack(
+                                                            rx.icon("table", size=14, color="white"),
+                                                            rx.text("CSV"),
+                                                            spacing="1",
+                                                        ),
+                                                        class_name="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700"
+                                                    ),
+                                                    href=State.ai_analysis_csv,
+                                                    download="Auditoria_IA.csv",
+                                                ),
+                                            ),
+                                            rx.cond(
+                                                State.analysis_pdf != "",
+                                                rx.link(
+                                                    rx.button(
+                                                        rx.hstack(
+                                                            rx.icon("file-text", size=14, color="white"),
+                                                            rx.text("PDF"),
+                                                            spacing="1",
+                                                        ),
+                                                        class_name="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-green-700"
+                                                    ),
+                                                    href=State.analysis_pdf,
+                                                    download="Relatorio_IA.pdf",
+                                                ),
+                                                    rx.button(
+                                                        rx.hstack(
+                                                            rx.icon("file-plus", size=14),
+                                                            rx.text("Gerar PDF"),
+                                                            spacing="1",
+                                                        ),
+                                                        on_click=State.generate_pdf_report,
+                                                        class_name="border-2 border-green-600 text-green-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-green-50"
+                                                    ),
+                                                ),
+                                                # Botão Refazer Auditoria
+                                                rx.button(
+                                                    rx.hstack(
+                                                        rx.icon("rotate-ccw", size=14),
+                                                        rx.text("Refazer"),
+                                                        spacing="1",
+                                                    ),
+                                                    on_click=State.generate_ai_analysis,
+                                                    class_name="border-2 border-orange-500 text-orange-600 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-orange-50"
+                                                ),
+
+                                                spacing="2",
+                                                class_name="mt-3"
                                             ),
                                             spacing="3",
                                             width="100%",
                                         ),
-                                        class_name="bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-xl p-4"
                                     ),
-                                    rx.vstack(
-                                        # Status + Progress
-                                        rx.hstack(
-                                            rx.box(class_name="w-3 h-3 bg-green-500 rounded-full animate-pulse"),
-                                            rx.text("API Conectada", class_name="text-green-700 text-sm font-medium"),
-                                            spacing="2",
-                                        ),
-                                        
-                                        rx.cond(
-                                            State.is_generating_ai,
-                                            rx.box(
-                                                rx.vstack(
-                                                    rx.hstack(
-                                                        rx.spinner(size="1", color="green"),
-                                                        rx.text(State.ai_loading_text, class_name="text-sm font-medium text-gray-700"),
-                                                        spacing="2",
-                                                    ),
-                                                    rx.progress(
-                                                        value=State.ai_loading_progress,
-                                                        max=100,
-                                                        class_name="w-full h-2 rounded-full",
-                                                        color_scheme="green"
-                                                    ),
-                                                    spacing="2",
-                                                    width="100%"
-                                                ),
-                                                class_name="bg-green-50 p-3 rounded-lg w-full"
-                                            ),
-                                        ),
-                                        
-                                        # Main Button
-                                        rx.button(
-                                            rx.hstack(
-                                                rx.cond(
-                                                    State.is_generating_ai,
-                                                    rx.spinner(size="1", color="white"),
-                                                    rx.icon("rocket", size=18, color="white"),
-                                                ),
-                                                rx.text("Iniciar Auditoria Inteligente"),
-                                                spacing="2",
-                                            ),
-                                            on_click=State.generate_ai_analysis,
-                                            disabled=State.is_generating_ai,
-                                            class_name="bg-gradient-to-r from-emerald-500 to-green-600 text-white px-6 py-3 rounded-xl font-bold hover:from-emerald-600 hover:to-green-700 hover:shadow-lg transition-all w-full disabled:opacity-50"
-                                        ),
-                                        
-                                        # Results Area
-                                        rx.cond(
-                                            State.ai_analysis != "",
-                                            rx.vstack(
-                                                # Header do resultado
-                                                rx.hstack(
-                                                    rx.icon("bar-chart-2", size=24, color="#1B5E20"),
-                                                    rx.text(
-                                                        "Divergências Encontradas",
-                                                        class_name="text-green-800 font-bold"
-                                                    ),
-                                                    spacing="2",
-                                                    align="center",
-                                                ),
-                                                # Resultado em Markdown (evita erro de hook)
-                                                rx.box(
-                                                    rx.scroll_area(
-                                                        rx.markdown(State.ai_analysis),
-                                                        type="hover",
-                                                        scrollbars="vertical",
-                                                        style={"maxHeight": "400px"},
-                                                    ),
-                                                    class_name="bg-white rounded-xl p-4 border border-gray-100 mt-4 prose prose-sm max-w-none"
-                                                ),
-                                                # Download Buttons
-                                                rx.hstack(
-                                                    rx.cond(
-                                                        State.ai_analysis_csv != "",
-                                                        rx.link(
-                                                            rx.button(
-                                                                rx.hstack(
-                                                                    rx.icon("table", size=14, color="white"),
-                                                                    rx.text("CSV"),
-                                                                    spacing="1",
-                                                                ),
-                                                                class_name="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700"
-                                                            ),
-                                                            href=State.ai_analysis_csv,
-                                                            download="Auditoria_IA.csv",
-                                                        ),
-                                                    ),
-                                                    rx.cond(
-                                                        State.analysis_pdf != "",
-                                                        rx.link(
-                                                            rx.button(
-                                                                rx.hstack(
-                                                                    rx.icon("file-text", size=14, color="white"),
-                                                                    rx.text("PDF"),
-                                                                    spacing="1",
-                                                                ),
-                                                                class_name="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-green-700"
-                                                            ),
-                                                            href=State.analysis_pdf,
-                                                            download="Relatorio_IA.pdf",
-                                                        ),
-                                                        rx.button(
-                                                            rx.hstack(
-                                                                rx.icon("file-plus", size=14),
-                                                                rx.text("Gerar PDF"),
-                                                                spacing="1",
-                                                            ),
-                                                            on_click=State.generate_pdf_report,
-                                                            class_name="border-2 border-green-600 text-green-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-green-50"
-                                                        ),
-                                                    ),
-                                                    # Botão Refazer Auditoria
-                                                    rx.button(
-                                                        rx.hstack(
-                                                            rx.icon("rotate-ccw", size=14),
-                                                            rx.text("Refazer"),
-                                                            spacing="1",
-                                                        ),
-                                                        on_click=State.generate_ai_analysis,
-                                                        class_name="border-2 border-orange-500 text-orange-600 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-orange-50"
-                                                    ),
-                                                    spacing="2",
-                                                    class_name="mt-3"
-                                                ),
-                                                spacing="3",
-                                                width="100%",
-                                            ),
-                                        ),
-                                        spacing="4",
-                                        width="100%",
-                                    ),
+                                    spacing="2",
+                                    width="100%",
+                                    class_name="mt-4"
                                 ),
-                                spacing="2",
-                                width="100%",
-                                class_name="mt-4"
-                            ),
                             value="ai",
                         ),
                         default_value="missing",
