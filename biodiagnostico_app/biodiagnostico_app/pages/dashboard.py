@@ -1,249 +1,370 @@
 import reflex as rx
 from ..state import State
-from ..styles import Color
+from ..styles import Color, Design, Typography, Spacing
 from ..components import ui
 
-def quick_access_card(title: str, description: str, icon: str, page: str, color: str) -> rx.Component:
-    """Card de acesso rápido padronizado"""
-    return ui.card(
-        rx.vstack(
-            rx.box(
-                rx.icon(icon, size=32, color=f"var(--c-{color}-600)"),
-                class_name=f"text-{color}-600 bg-{color}-50 p-4 rounded-2xl mb-2"
+def quick_access_card(title: str, description: str, icon: str, page: str, delay: str = "0s") -> rx.Component:
+    """Card de acesso rápido padronizado com animação de entrada"""
+    return rx.box(
+        ui.card(
+            rx.vstack(
+                rx.box(
+                    rx.icon(icon, size=32, color=Color.PRIMARY),
+                    bg=Color.PRIMARY_LIGHT, p="4", border_radius=Design.RADIUS_LG, margin_bottom=Spacing.XS,
+                    transition="transform 0.3s ease",
+                    _group_hover={"transform": "scale(1.1) rotate(5deg)"}
+                ),
+                ui.heading(title, level=3),
+                ui.text(description, size="small", color=Color.TEXT_SECONDARY),
+                align_items="start",
+                spacing="2"
             ),
-            ui.heading(title, level=3),
-            ui.text(description, size="body"),
-            align_items="start",
-            spacing="2"
+            on_click=lambda: State.set_page(page),
+            cursor="pointer",
+            transition="all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+            _hover={
+                "box_shadow": Design.SHADOW_LG,
+                "transform": "translateY(-6px)",
+                "border_color": Color.PRIMARY
+            }
         ),
-        on_click=lambda: State.set_page(page),
-        class_name="cursor-pointer hover:shadow-lg transition-all duration-300 h-full group border-transparent hover:border-green-200"
+        animation=f"fadeInUp 0.6s ease-out {delay} both",
+        class_name="group"
+    )
+
+def hero_metric_card() -> rx.Component:
+    """Card de faturamento destaque com design premium"""
+    return rx.box(
+        rx.hstack(
+            # Coluna de texto
+            rx.vstack(
+                rx.hstack(
+                    rx.icon(tag="activity", size=14, color=Color.PRIMARY),
+                    rx.text("FATURAMENTO PROCESSADO", font_size="0.7rem", font_weight="700", color=Color.TEXT_SECONDARY, letter_spacing="0.15em"),
+                    align_items="center",
+                    style={"gap": "6px"}
+                ),
+                rx.text(State.formatted_compulab_total, font_size=["2rem", "2.5rem", "3rem"], font_weight="800", color=Color.DEEP, line_height="1.1"),
+                rx.hstack(
+                    rx.box(
+                        rx.icon(
+                            tag=rx.cond(State.financial_growth_day >= 0, "trending-up", "trending-down"),
+                            size=14, color="white"
+                        ),
+                        bg=rx.cond(State.financial_growth_day >= 0, Color.SUCCESS, Color.ERROR),
+                        p="1", border_radius="6px"
+                    ),
+                    rx.text(
+                        f"{State.financial_growth_day.to_string()}% vs ontem",
+                        font_size="0.875rem", font_weight="600",
+                        color=rx.cond(State.financial_growth_day >= 0, Color.SUCCESS, Color.ERROR)
+                    ),
+                    align_items="center",
+                    style={"gap": "8px"}
+                ),
+                align_items="start",
+                style={"gap": "8px"}
+            ),
+            rx.spacer(),
+            # Ícone destaque
+            rx.box(
+                rx.icon(tag="banknote", size=40, color="white"),
+                bg=Color.GRADIENT_PRIMARY,
+                p="4", border_radius="20px",
+                box_shadow=f"0 8px 24px -4px {Color.PRIMARY}60"
+            ),
+            width="100%",
+            align_items="center"
+        ),
+        bg=Color.SURFACE,
+        border=f"1px solid {Color.BORDER}",
+        border_radius="20px",
+        padding=Spacing.XL,
+        box_shadow=Design.SHADOW_MD,
+        transition="all 0.3s ease",
+        _hover={"box_shadow": Design.SHADOW_LG, "border_color": Color.PRIMARY},
+        animation="fadeInUp 0.5s ease-out both",
+        width="100%"
+    )
+
+def progress_card() -> rx.Component:
+    """Card de progresso da meta com animação"""
+    return rx.box(
+        rx.vstack(
+            rx.hstack(
+                rx.hstack(
+                    rx.icon(tag="target", size=16, color=Color.PRIMARY),
+                    rx.text("META MENSAL", font_size="0.7rem", font_weight="700", color=Color.TEXT_SECONDARY, letter_spacing="0.1em"),
+                    align_items="center",
+                    style={"gap": "6px"}
+                ),
+                rx.spacer(),
+                rx.box(
+                    rx.text(f"{State.goal_progress.to_string()}%", font_weight="800", color=Color.DEEP),
+                    bg=Color.PRIMARY_LIGHT,
+                    px="3", py="1",
+                    border_radius="full"
+                ),
+                width="100%",
+                align_items="center"
+            ),
+            # Barra de progresso animada
+            rx.box(
+                rx.box(
+                    bg=Color.GRADIENT_PRIMARY,
+                    border_radius="full",
+                    transition="width 1.5s cubic-bezier(0.4, 0, 0.2, 1)",
+                    width=State.goal_progress.to_string() + "%",
+                    height="100%",
+                    position="relative",
+                    overflow="hidden",
+                    _after={
+                        "content": '""',
+                        "position": "absolute",
+                        "top": "0", "left": "-100%",
+                        "width": "100%", "height": "100%",
+                        "background": "linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)",
+                        "animation": "shimmer 2s infinite"
+                    }
+                ),
+                width="100%", h="12px", bg=Color.BACKGROUND, border_radius="full", overflow="hidden", margin_y=Spacing.SM
+            ),
+            rx.hstack(
+                rx.text(State.formatted_compulab_total, font_size="0.8rem", color=Color.TEXT_LIGHT, font_weight="500"),
+                rx.spacer(),
+                rx.text(f"Meta: {State.formatted_monthly_goal}", font_size="0.8rem", color=Color.TEXT_LIGHT, font_weight="500"),
+                width="100%"
+            ),
+            width="100%",
+            style={"gap": "4px"}
+        ),
+        bg=Color.SURFACE,
+        border=f"1px solid {Color.BORDER}",
+        border_radius="16px",
+        padding=Spacing.LG,
+        animation="fadeInUp 0.6s ease-out 0.1s both",
+        width="100%"
     )
 
 def dashboard_page() -> rx.Component:
-    """Página Dashboard Principal - Refatorada com UI Kit"""
-    return rx.box(
-        rx.vstack(
-            # Welcome Banner
-            rx.box(
-                ui.animated_heading("Bem-vindo de volta", level=1),
-                class_name="py-8 w-full flex justify-center"
-            ),
-            
-            # === NOVA SECTION: Scoreboard & Top Offenders ===
-            rx.grid(
-                # Coluna 1: Financial & Stats combinados
-                rx.vstack(
-                    # Financial Card (Destaque)
-                    rx.box(
-                        rx.hstack(
-                            rx.vstack(
-                                rx.text("Faturamento Processado (Estimado)", class_name="text-sm font-medium text-gray-500"),
-                                rx.heading(State.formatted_compulab_total, size={"initial": "6", "sm": "8"}, class_name="text-gray-900"),
-                                rx.hstack(
-                                    rx.cond(
-                                        State.financial_growth_day >= 0,
-                                        rx.icon("trending-up", size=16, class_name="text-green-600"),
-                                        rx.icon("trending-down", size=16, class_name="text-red-600")
-                                    ),
-                                    rx.text(
-                                        f"{State.financial_growth_day:.1f}% vs dia anterior", 
-                                        class_name=rx.cond(State.financial_growth_day >= 0, "text-green-600 text-sm font-medium", "text-red-600 text-sm font-medium")
-                                    ),
-                                    align="center",
-                                    spacing="2"
-                                ),
-                                align="start",
-                                spacing="1"
-                            ),
-                            rx.spacer(),
-                            rx.box(
-                                rx.icon("dollar-sign", size=32, class_name="text-green-700"),
-                                class_name="bg-green-100 p-3 rounded-xl"
-                            ),
-                            width="100%",
-                            align="center"
-                        ),
-                        class_name="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100 w-full hover:shadow-md transition-shadow"
-                    ),
-                    
-                    # Termômetro de Meta (Novo)
-                    rx.box(
-                        rx.vstack(
-                            rx.hstack(
-                                rx.text("Progresso da Meta Mensal", class_name="text-xs font-bold text-gray-500 uppercase tracking-wider"),
-                                rx.spacer(),
-                                rx.text(f"{State.goal_progress:.1f}%", class_name="text-green-700 font-bold"),
-                                width="100%",
-                                align="center"
-                            ),
-                            # Barra de Progresso
-                            rx.box(
-                                rx.box(
-                                    class_name="h-full bg-gradient-to-r from-green-400 to-green-600 rounded-full transition-all duration-1000 ease-out",
-                                    width=f"{State.goal_progress}%"
-                                ),
-                                class_name="w-full h-3 bg-gray-100 rounded-full overflow-hidden shadow-inner mt-2"
-                            ),
-                            rx.hstack(
-                                rx.text(State.formatted_compulab_total, class_name="text-xs font-medium text-gray-400"),
-                                rx.spacer(),
-                                rx.text(f"Meta: {State.formatted_monthly_goal}", class_name="text-xs font-medium text-gray-400"),
-                                width="100%"
-                            ),
-                            width="100%",
-                            spacing="1"
-                        ),
-                        class_name="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 w-full"
-                    ),
-                    
-                    # Previsão (Forecast) Card (Novo)
-                    rx.box(
-                        rx.hstack(
-                            rx.vstack(
-                                rx.text("Previsão de Receita (Forecast)", class_name="text-xs font-bold text-blue-500 uppercase"),
-                                rx.heading(State.formatted_revenue_forecast, size={"initial": "5", "sm": "6"}, class_name="text-blue-900"),
-                                rx.text("Baseado na tendência dos últimos 6 meses", class_name="text-[10px] text-gray-400"),
-                                align="start",
-                                spacing="0"
-                            ),
-                            rx.spacer(),
-                            rx.box(
-                                rx.icon("trending-up", size=24, class_name="text-blue-600"),
-                                class_name="bg-blue-50 p-2 rounded-lg"
-                            ),
-                            width="100%",
-                            align="center"
-                        ),
-                        class_name="bg-gradient-to-br from-blue-50/50 to-white p-5 rounded-2xl shadow-sm border border-blue-100 w-full"
-                    ),
-                    
-                    # Mini Stats Grid
-                    rx.grid(
-                        ui.stat_card(
-                            "Aprovação CQ", 
-                            f"{State.dashboard_approval_rate}%", 
-                            "circle-check", 
-                            "success", 
-                            "Média mensal"
-                        ),
-                        ui.stat_card(
-                            "Manutenções", 
-                            f"{State.dashboard_pending_maintenances}", 
-                            "wrench", 
-                            "warning", 
-                            "Pendentes"
-                        ),
-                        ui.stat_card(
-                            "Pacientes", 
-                            f"{State.total_patients_count}", 
-                            "users", 
-                            "brand", 
-                            "Processados"
-                        ),
-                        ui.stat_card(
-                            "Divergências", 
-                            f"{State.divergences_count}", 
-                            "triangle-alert", 
-                            "error", 
-                            "Detectadas"
-                        ),
-                        columns={"initial": "1", "sm": "2"},
-                        spacing="4",
-                        width="100%"
-                    ),
-                    width="100%",
-                    spacing="4"
-                ),
-                
-                # Coluna 2: Top Offenders (Lista de problemas recorrentes)
+    """Dashboard Premium - Fase 4 UI/UX Refinement"""
+    
+    # CSS Animations injection
+    animations_css = """
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+    """
+    
+    return rx.fragment(
+        rx.script(f"if(!document.getElementById('dash-anim')){{ const s=document.createElement('style'); s.id='dash-anim'; s.textContent=`{animations_css}`; document.head.appendChild(s); }}"),
+        rx.box(
+            rx.vstack(
+                # Welcome Banner com animação
                 rx.box(
                     rx.vstack(
                         rx.hstack(
-                            rx.icon("octagon-alert", size=20, class_name="text-red-500"),
-                            ui.heading("Top Ofensores", level=3, font_size="1.1rem"),
-                            rx.spacer(),
-                            rx.badge("Divergências", color_scheme="red", variant="soft"),
-                            align="center",
-                            width="100%",
-                            class_name="mb-4"
+                            rx.text("👋", font_size="2rem"),
+                            rx.text("Bem-vindo de volta", style=Typography.H1, color=Color.DEEP),
+                            align_items="center",
+                            style={"gap": "12px"}
                         ),
-                        rx.cond(
-                            State.top_offenders.length() > 0,
-                            rx.vstack(
-                                rx.foreach(
-                                    State.top_offenders,
-                                    lambda item: rx.hstack(
-                                        rx.box(
-                                            rx.text(item["name"], class_name="font-medium text-gray-700 text-sm truncate"),
-                                            class_name="flex-1"
-                                        ),
-                                        rx.text(f"{item['count']}x", class_name="text-xs font-bold bg-red-100 text-red-700 px-2 py-1 rounded-md"),
-                                        width="100%",
-                                        align="center",
-                                        class_name="p-3 bg-gray-50 rounded-lg border border-transparent hover:border-gray-200 transition-colors"
-                                    )
-                                ),
-                                spacing="2",
-                                width="100%"
-                            ),
-                            rx.center(
-                                rx.vstack(
-                                    rx.icon("circle-check", size=40, class_name="text-green-300"),
-                                    rx.text("Nenhum ofensor detectado", class_name="text-gray-400 text-sm"),
-                                    align="center",
-                                    spacing="2"
-                                ),
-                                class_name="h-40 w-full bg-gray-50 rounded-xl border-2 border-dashed border-gray-100"
-                            )
-                        ),
-                        width="100%",
-                        height="100%"
+                        rx.text("Aqui está o resumo de hoje", style=Typography.BODY_SECONDARY, color=Color.TEXT_SECONDARY),
+                        align_items="center",
+                        style={"gap": "4px"}
                     ),
-                    class_name="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100 h-full"
+                    padding_y=Spacing.XL, width="100%", display="flex", justify_content="center",
+                    animation="fadeInUp 0.4s ease-out both"
                 ),
                 
-                columns={"initial": "1", "md": "2"},
-                spacing="6",
-                width="100%",
-                class_name="mb-10 max-w-6xl mx-auto w-full"
-            ),
-            
-            rx.divider(class_name="mb-10 max-w-6xl mx-auto"),
-            
-            # Quick Access Section
-            ui.heading("Acesso Rápido", level=2, class_name="mb-6 max-w-6xl mx-auto w-full text-center"),
-            rx.grid(
-                quick_access_card(
-                    "Conversor PDF",
-                    "Extração e padronização de relatórios do Compulab e Simus.",
-                    "file-text",
-                    "conversor",
-                    "blue"
+                # Main Grid - Scoreboard
+                rx.grid(
+                    # Coluna Esquerda - Métricas Financeiras
+                    rx.vstack(
+                        hero_metric_card(),
+                        progress_card(),
+                        
+                        # Forecast Card
+                        rx.box(
+                            rx.hstack(
+                                rx.vstack(
+                                    rx.hstack(
+                                        rx.icon(tag="sparkles", size=14, color=Color.PRIMARY),
+                                        rx.text("PREVISÃO DE RECEITA", font_size="0.65rem", font_weight="700", color=Color.PRIMARY, letter_spacing="0.15em"),
+                                        align_items="center",
+                                        style={"gap": "6px"}
+                                    ),
+                                    rx.text(State.formatted_revenue_forecast, font_size="1.75rem", font_weight="800", color=Color.DEEP),
+                                    rx.text("Baseado nos últimos 6 meses", font_size="0.75rem", color=Color.TEXT_LIGHT),
+                                    align_items="start",
+                                    style={"gap": "2px"}
+                                ),
+                                rx.spacer(),
+                                rx.box(
+                                    rx.icon(tag="chart-line", size=24, color=Color.PRIMARY),
+                                    bg=Color.PRIMARY_LIGHT, p="3", border_radius="12px"
+                                ),
+                                width="100%",
+                                align_items="center"
+                            ),
+                            bg=f"linear-gradient(135deg, {Color.PRIMARY_LIGHT} 0%, white 100%)",
+                            border=f"1px solid {Color.PRIMARY}30",
+                            border_radius="16px",
+                            padding=Spacing.LG,
+                            animation="fadeInUp 0.7s ease-out 0.2s both",
+                            width="100%"
+                        ),
+                        
+                        # Mini Stats Grid
+                        rx.grid(
+                            ui.stat_card("Aprovação CQ", rx.cond(State.dashboard_approval_rate > 0, State.dashboard_approval_rate.to_string() + "%", "100%"), "circle-check", "success", "Média mensal"),
+                            ui.stat_card("Manutenções", State.dashboard_pending_maintenances.to_string(), "wrench", "warning", "Pendentes"),
+                            ui.stat_card("Pacientes", State.total_patients_count.to_string(), "users", "primary", "Processados"),
+                            ui.stat_card("Divergências", State.divergences_count.to_string(), "triangle-alert", "error", "Detectadas"),
+                            columns={"initial": "1", "sm": "2"},
+                            spacing="4",
+                            width="100%"
+                        ),
+                        width="100%",
+                        spacing="4"
+                    ),
+                    
+                    # Coluna Direita - Top Ofensores
+                    rx.box(
+                        rx.vstack(
+                            rx.hstack(
+                                rx.box(
+                                    rx.icon(tag="octagon-alert", size=18, color="white"),
+                                    bg=Color.ERROR, p="2", border_radius="10px"
+                                ),
+                                rx.text("Top Ofensores", font_weight="700", color=Color.DEEP, font_size="1.1rem"),
+                                rx.spacer(),
+                                ui.status_badge("Divergências", status="error"),
+                                align_items="center",
+                                width="100%",
+                                style={"gap": "10px"}
+                            ),
+                            rx.divider(opacity=0.2, margin_y=Spacing.SM),
+                            rx.cond(
+                                State.top_offenders.length() > 0,
+                                rx.vstack(
+                                    rx.foreach(
+                                        State.top_offenders,
+                                        lambda item, i: rx.hstack(
+                                            rx.box(
+                                                rx.text(f"#{(i + 1).to_string()}", font_size="0.7rem", font_weight="800", color=Color.TEXT_LIGHT),
+                                                width="24px"
+                                            ),
+                                            rx.box(
+                                                rx.text(item.name, font_size="0.9rem", font_weight="500", color=Color.TEXT_PRIMARY,
+                                                       style={"max_width": "180px", "overflow": "hidden", "text_overflow": "ellipsis", "white_space": "nowrap"}),
+                                                flex="1"
+                                            ),
+                                            rx.box(
+                                                rx.text(f"{item.count.to_string()}×", font_size="0.8rem", font_weight="700", color=Color.ERROR),
+                                                bg=Color.ERROR_BG, px="3", py="1", border_radius="full"
+                                            ),
+                                            width="100%",
+                                            align_items="center",
+                                            padding=Spacing.MD, bg=Color.BACKGROUND, border_radius=Design.RADIUS_LG,
+                                            border=f"1px solid transparent",
+                                            _hover={"border_color": Color.ERROR, "bg": Color.ERROR_BG},
+                                            transition="all 0.2s ease"
+                                        )
+                                    ),
+                                    spacing="2",
+                                    width="100%"
+                                ),
+                                rx.center(
+                                    rx.vstack(
+                                        rx.box(
+                                            rx.icon(tag="party-popper", size=36, color=Color.SUCCESS),
+                                            bg=Color.SUCCESS_BG, p="4", border_radius="full"
+                                        ),
+                                        rx.text("Tudo em ordem!", font_weight="600", color=Color.SUCCESS),
+                                        rx.text("Nenhum ofensor detectado", font_size="0.8rem", color=Color.TEXT_LIGHT),
+                                        align_items="center",
+                                        spacing="2"
+                                    ),
+                                    height="200px", width="100%"
+                                )
+                            ),
+                            width="100%",
+                            height="100%"
+                        ),
+                        bg=Color.SURFACE,
+                        border=f"1px solid {Color.BORDER}",
+                        border_radius="20px",
+                        padding=Spacing.LG,
+                        height="100%",
+                        animation="fadeInUp 0.6s ease-out 0.15s both"
+                    ),
+                    
+                    columns={"initial": "1", "md": "2"},
+                    spacing="6",
+                    width="100%",
+                    max_width="6xl", margin_x="auto", margin_bottom=Spacing.XL
                 ),
-                quick_access_card(
-                    "Análise Cruzada",
-                    "Identificação de divergências financeiras e exames faltantes.",
-                    "chart-bar",
-                    "analise",
-                    "green"
+                
+                rx.divider(max_width="6xl", margin_x="auto", margin_bottom=Spacing.XL, opacity=0.2),
+                
+                # Quick Access Section
+                rx.box(
+                    rx.vstack(
+                        rx.hstack(
+                            rx.icon(tag="layout-grid", size=20, color=Color.PRIMARY),
+                            rx.text("Acesso Rápido", style=Typography.H2, color=Color.DEEP),
+                            align_items="center",
+                            style={"gap": "10px"}
+                        ),
+                        rx.text("Atalhos para as principais funções do sistema", font_size="0.9rem", color=Color.TEXT_SECONDARY),
+                        align_items="center",
+                        style={"gap": "4px"},
+                        margin_bottom=Spacing.LG
+                    ),
+                    animation="fadeInUp 0.8s ease-out 0.3s both"
                 ),
-                quick_access_card(
-                    "Gestão da Qualidade",
-                    "Controle ProIn, gráficos Levey-Jennings e gestão de reagentes.",
-                    "microscope",
-                    "proin",
-                    "purple"
+                rx.grid(
+                    quick_access_card(
+                        "Conversor PDF",
+                        "Extração e padronização de relatórios do Compulab e Simus.",
+                        "file-text",
+                        "conversor",
+                        "0.35s"
+                    ),
+                    quick_access_card(
+                        "Análise Cruzada",
+                        "Identificação de divergências financeiras e exames faltantes.",
+                        "chart-bar",
+                        "analise",
+                        "0.45s"
+                    ),
+                    quick_access_card(
+                        "Gestão da Qualidade",
+                        "Controle ProIn, gráficos Levey-Jennings e gestão de reagentes.",
+                        "beaker",
+                        "proin",
+                        "0.55s"
+                    ),
+                    columns={"initial": "1", "md": "3"},
+                    spacing="6",
+                    width="100%",
+                    max_width="6xl", margin_x="auto", margin_bottom="4rem"
                 ),
-                columns={"initial": "1", "md": "3"},
-                spacing="6",
-                width="100%",
-                class_name="mb-12 animate-fade-in-up delay-100 max-w-6xl mx-auto w-full"
-            ),
 
-            width="100%",
-            align="center",
-            padding_bottom="4rem"
-        ),
-        width="100%"
+                width="100%",
+                align_items="center",
+                padding_bottom="4rem"
+            ),
+            width="100%"
+        )
     )

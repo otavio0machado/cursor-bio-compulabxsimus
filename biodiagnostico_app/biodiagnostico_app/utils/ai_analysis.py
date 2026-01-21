@@ -543,6 +543,17 @@ Você receberá APENAS exames que apresentaram alguma divergência (valor, ausê
 - "Divergência de Valor": Paciente e exame existem em ambos, mas valor COMPULAB > SIMUS.
 - "Exame Fantasma": Exame no SIMUS mas não no COMPULAB (possível fraude).
 
+# DICTIONARY OF SYNONYMS (CRITICAL - ALWAYS CHECK THESE)
+Use this specific mapping to reconcile differences:
+- COMPULAB: "G O T" <--> SIMUS: "GOT" (Match confirmed)
+- COMPULAB: "G P T" <--> SIMUS: "GPT" (Match confirmed)
+- COMPULAB: "V. S. G." or "V S G" <--> SIMUS: "V S G" or "VHS" or "VELOCIDADE DE SEDIMENTACAO" (Match confirmed)
+- COMPULAB: "TIROXINA T4 RIE" <--> SIMUS: "TIROXINA" (Match confirmed)
+- COMPULAB: "TRIIODOTIRONINA T3 RIE" <--> SIMUS: "TRIIODOTIRONINA" (Match confirmed)
+- COMPULAB: "ANTIGENO PROSTATICO ESPECIFICO" <--> SIMUS: "ANTIGENO PROSTATICO ESPECIFICO" or "PSA" (Match confirmed)
+- COMPULAB: "CREATINOFOSFOQUINASE" <--> SIMUS: "CREATINOFOSFOQUINASE" or "CPK" (Match confirmed)
+- COMPULAB: "PROVA DO LATEX A.R." <--> SIMUS: "PROTEINA C REATIVA" (Match confirmed)
+
 # OUTPUT FORMAT (JSON Array)
 Return a valid JSON array of objects.
 Example:

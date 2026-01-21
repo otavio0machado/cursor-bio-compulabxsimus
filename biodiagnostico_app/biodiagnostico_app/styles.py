@@ -20,15 +20,19 @@ class Color:
     SURFACE = "#FFFFFF"      # Fundo de cards e containers
     TEXT_PRIMARY = "#111827" # Gray 900 - Quase preto para leitura
     TEXT_SECONDARY = "#4B5563" # Gray 600 - Texto de apoio
+    TEXT_LIGHT = "#9CA3AF"     # Gray 400 - Legendas e textos desativados
     BORDER = "#E5E7EB"       # Gray 200 - Bordas sutis
     
     # Status Colors
     ERROR = "#EF4444"        # Vermelho erro
     ERROR_BG = "#FEF2F2"     # Fundo erro
+    ERROR_LIGHT = "#FEF2F2"  # Alias para compatibilidade
     SUCCESS = "#10B981"      # Verde sucesso
     SUCCESS_BG = "#ECFDF5"   # Fundo sucesso
+    SUCCESS_LIGHT = "#ECFDF5" # Alias para compatibilidade
     WARNING = "#F59E0B"      # Amarelo alerta
     WARNING_BG = "#FFFBEB"   # Fundo alerta
+    WARNING_LIGHT = "#FFFBEB" # Alias para compatibilidade
 
     # Gradients
     GRADIENT_PRIMARY = "linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)"

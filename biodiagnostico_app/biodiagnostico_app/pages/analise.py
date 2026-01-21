@@ -3,141 +3,103 @@ Análise COMPULAB x SIMUS page
 Design moderno com upload aprimorado
 """
 import reflex as rx
+from typing import Any
 from ..state import State
 from ..components.file_upload import compact_upload_card, upload_progress_indicator, large_file_progress_indicator
 from ..components import ui
-from ..styles import Color, Design
+from ..styles import Color, Design, Typography, Spacing
 
-# Card de métrica com design premium e animação
-def metric_card(title: str, value: str, icon: str, subtitle: str = "", color: str = "green"):
-    color_map = {
+# Card de métrica com design premium e animação (Purificado)
+def metric_card(title: str, value: str, icon: str, subtitle: str = "", color_scheme: str = "green"):
+    colors = {
         "green": (Color.SUCCESS, Color.SUCCESS_BG),
-        "blue": ("#3B82F6", "#EFF6FF"),
+        "blue": (Color.PRIMARY, Color.PRIMARY_LIGHT),
         "orange": (Color.WARNING, Color.WARNING_BG),
         "red": (Color.ERROR, Color.ERROR_BG),
     }
-    
-    fg, bg = color_map.get(color, color_map["green"])
+    fg, bg = colors.get(color_scheme, colors["green"])
     
     return ui.card(
         rx.vstack(
             rx.hstack(
                 rx.box(
-                    rx.icon(icon, size=24, color=fg),
+                    rx.icon(tag=icon, size=24, color=fg),
                     padding="12px",
                     border_radius="16px",
                     background_color=bg,
-                    class_name="flex items-center justify-center",
+                    display="flex", align_items="center", justify_content="center"
                 ),
                 rx.spacer(),
-                rx.badge(
-                    "ATIVO", 
-                    variant="soft", 
-                    color_scheme=color,
-                    size="1",
-                    class_name="rounded-full px-2"
-                ),
+                ui.status_badge("ATIVO", status=color_scheme),
                 width="100%",
-                align="center",
+                align_items="center",
             ),
             rx.vstack(
-                rx.text(
-                    value, 
-                    font_size=["1.5rem", "1.75rem", "2rem"], 
-                    font_weight="800", 
-                    color=Color.DEEP, 
-                    line_height="1.2",
-                    letter_spacing="-0.02em"
-                ),
-                rx.text(
-                    title, 
-                    font_size="0.75rem", 
-                    font_weight="700", 
-                    color=Color.TEXT_SECONDARY,
-                    text_transform="uppercase",
-                    letter_spacing="0.05em"
-                ),
-                rx.text(subtitle, font_size="10px", color="gray", font_weight="500"),
-                spacing="1",
-                align="start",
+                rx.text(value, font_size=["1.5rem", "1.75rem", "2rem"], font_weight="800", color=Color.DEEP, line_height="1.1"),
+                rx.text(title, style=Typography.SMALL, color=Color.TEXT_SECONDARY, text_transform="uppercase"),
+                rx.cond(subtitle != "", rx.text(subtitle, font_size="10px", color=Color.TEXT_SECONDARY, font_weight="500")),
+                align_items="start",
+                style={"gap": "2px"},
             ),
-            spacing="4",
-            align="start",
+            style={"gap": Spacing.MD},
         ),
-        _hover={
-            "transform": "translateY(-4px)",
-            "box_shadow": Design.SHADOW_LG,
-            "border_color": f"{fg}40"
-        }
     )
 
-# Item de breakdown da diferença com design minimalista
-def breakdown_item(icon: str, label: str, value: str, color: str = "gray"):
-    color_map = {
-        "green": "text-green-600",
-        "blue": "text-blue-600",
-        "orange": "text-orange-600",
-        "red": "text-red-600",
-        "gray": "text-gray-600",
+# Item de breakdown da diferença com design minimalista (Purificado)
+def breakdown_item(icon: str, label: str, value: str, status: str = "default"):
+    status_map = {
+        "green": Color.SUCCESS,
+        "blue": Color.PRIMARY,
+        "orange": Color.WARNING,
+        "red": Color.ERROR,
+        "default": Color.TEXT_SECONDARY,
     }
-    fg_color = color_map.get(color, "text-gray-600")
+    fg_color = status_map.get(status, Color.TEXT_SECONDARY)
     
     return rx.box(
         rx.hstack(
             rx.box(
-                rx.icon(icon, size=18, color=fg_color),
-                class_name="bg-gray-50 p-2 rounded-xl"
+                rx.icon(tag=icon, size=18, color=fg_color),
+                bg=Color.BACKGROUND, padding="8px", border_radius="10px"
             ),
             rx.vstack(
-                rx.text(label, class_name="text-gray-400 text-[10px] font-bold uppercase tracking-widest"),
-                rx.text(value, class_name=f"text-sm font-bold {fg_color}"),
-                spacing="0",
-                align="start"
+                rx.text(label, style=Typography.CAPTION, font_weight="700", text_transform="uppercase", letter_spacing="0.1em"),
+                rx.text(value, font_weight="700", color=fg_color, font_size="0.875rem"),
+                align_items="start",
+                style={"gap": "0px"}
             ),
-            spacing="3",
-            align="center",
+            align_items="center",
+            style={"gap": Spacing.MD},
         ),
-        class_name="bg-white/50 border border-gray-100 p-3 rounded-2xl hover:bg-white transition-colors flex-1"
+        bg=Color.SURFACE,
+        border=f"1px solid {Color.BORDER}",
+        padding=Spacing.MD,
+        border_radius=Design.RADIUS_LG,
+        _hover={"bg": Color.PRIMARY_LIGHT, "border_color": Color.PRIMARY},
+        transition="all 0.2s ease",
+        flex="1",
     )
 
 
-# Modal para exibir o histórico do paciente com design de Timeline e Funcionalidades Avançadas
+# Modal para exibir o histórico do paciente com design de Timeline (Purificado)
 def patient_history_modal() -> rx.Component:
     return rx.dialog.root(
         rx.dialog.content(
             rx.dialog.title(
                 rx.hstack(
-                    rx.box(
-                        rx.icon("user", size=24, color="#1B5E20"),
-                        class_name="bg-green-50 p-2 rounded-xl"
-                    ),
+                    rx.box(rx.icon(tag="user", size=24, color=Color.PRIMARY), bg=Color.PRIMARY_LIGHT, p="2", border_radius="12px"),
                     rx.vstack(
-                        rx.text(
-                            State.selected_patient_name, 
-                            class_name="text-gray-900 font-black text-xl tracking-tight"
-                        ),
+                        rx.text(State.selected_patient_name, style=Typography.H4, color=Color.DEEP),
                         rx.hstack(
-                            rx.badge("PACIENTE", variant="surface", color_scheme="green"),
-                            rx.text(
-                                "ID: " + State.selected_patient_id, 
-                                class_name="text-gray-400 text-xs font-mono"
-                            ),
-                            spacing="2",
-                            align="center"
+                            ui.status_badge("PACIENTE", status="success"),
+                            rx.text("ID: " + State.selected_patient_id, style=Typography.CAPTION),
+                            style={"gap": "8px"}, align_items="center",
                         ),
-                        spacing="0",
-                        align="start"
+                        spacing="0", align_items="start"
                     ),
                     rx.spacer(),
-                    rx.dialog.close(
-                        rx.button(
-                            rx.icon("x", size=20),
-                            class_name="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400"
-                        ),
-                    ),
-                    width="100%",
-                    align="center",
-                    class_name="pb-4 border-b border-gray-100"
+                    rx.dialog.close(rx.button(rx.icon(tag="x", size=20), variant="ghost", color_scheme="gray", radius="full")),
+                    width="100%", align_items="center", padding_bottom=Spacing.MD, border_bottom=f"1px solid {Color.BORDER}"
                 )
             ),
             
@@ -145,38 +107,13 @@ def patient_history_modal() -> rx.Component:
                 rx.vstack(
                     # Stats Row
                     rx.grid(
-                        rx.box(
-                            rx.vstack(
-                                rx.text("Total Auditoria", class_name="text-[10px] font-bold text-gray-400 uppercase"),
-                                rx.text("R$ " + State.selected_patient_total_value, class_name="text-lg font-black text-emerald-600"),
-                                spacing="0", align="start"
-                            ),
-                            class_name="bg-emerald-50/50 p-3 rounded-2xl border border-emerald-100"
-                        ),
-                        rx.box(
-                            rx.vstack(
-                                rx.text("Exames", class_name="text-[10px] font-bold text-gray-400 uppercase"),
-                                rx.text(State.selected_patient_exams_count, class_name="text-lg font-black text-blue-600"),
-                                spacing="0", align="start"
-                            ),
-                            class_name="bg-blue-50/50 p-3 rounded-2xl border border-blue-100"
-                        ),
-                        rx.box(
-                            rx.vstack(
-                                rx.text("Status", class_name="text-[10px] font-bold text-gray-400 uppercase"),
-                                rx.badge("Em Analise", color_scheme="orange", variant="soft"),
-                                spacing="0", align="start"
-                            ),
-                            class_name="bg-orange-50/50 p-3 rounded-2xl border border-orange-100"
-                        ),
-                        columns="3",
-                        spacing="3",
-                        width="100%",
-                        class_name="mb-6"
+                        rx.box(rx.vstack(rx.text("Total Auditoria", style=Typography.CAPTION, font_weight="700"), rx.text("R$ " + State.selected_patient_total_value, font_size="1.25rem", font_weight="800", color=Color.SUCCESS), spacing="0", align_items="start"), bg=Color.PRIMARY_LIGHT, padding=Spacing.MD, border_radius=Design.RADIUS_LG, border=f"1px solid {Color.SUCCESS}40"),
+                        rx.box(rx.vstack(rx.text("Exames", style=Typography.CAPTION, font_weight="700"), rx.text(State.selected_patient_exams_count, font_size="1.25rem", font_weight="800", color=Color.PRIMARY), spacing="0", align_items="start"), bg=Color.BACKGROUND, padding=Spacing.MD, border_radius=Design.RADIUS_LG, border=f"1px solid {Color.BORDER}"),
+                        rx.box(rx.vstack(rx.text("Status", style=Typography.CAPTION, font_weight="700"), ui.status_badge("Em Analise", status="warning"), spacing="0", align_items="start"), bg=Color.WARNING_BG, padding=Spacing.MD, border_radius=Design.RADIUS_LG, border=f"1px solid {Color.WARNING}40"),
+                        columns="3", style={"gap": Spacing.MD}, width="100%", margin_bottom=Spacing.LG,
                     ),
 
-                    # Timeline Section
-                    rx.text("Timeline de Exames", class_name="text-sm font-bold text-gray-700 mb-2 px-1"),
+                    rx.text("Timeline de Exames", style=Typography.LABEL, color=Color.DEEP, margin_bottom=Spacing.SM),
                     
                     rx.scroll_area(
                         rx.vstack(
@@ -184,153 +121,141 @@ def patient_history_modal() -> rx.Component:
                                 State.patient_history_data,
                                 lambda exam, i: rx.box(
                                     rx.hstack(
-                                        # Indicador Lateral
-                                        rx.box(
-                                            class_name=rx.cond(
-                                                exam.status == "Divergente",
-                                                "w-1 bg-red-500 h-full rounded-full",
-                                                "w-1 bg-emerald-500 h-full rounded-full"
-                                            )
-                                        ),
+                                        rx.box(bg=rx.cond(exam.status == "Divergente", Color.ERROR, Color.SUCCESS), width="4px", height="auto", border_radius="full"),
                                         rx.vstack(
+                                            rx.hstack(rx.text(exam.exam_name, style=Typography.BODY, font_weight="700", color=Color.DEEP), rx.spacer(), rx.text("R$ " + exam.last_value.to_string(), style=Typography.BODY, font_weight="800", color=Color.TEXT_PRIMARY), width="100%"),
                                             rx.hstack(
-                                                rx.text(exam.exam_name, class_name="text-sm font-bold text-gray-900"),
-                                                rx.spacer(),
-                                                rx.text("R$ " + exam.last_value.to_string(), class_name="text-sm font-mono font-bold text-gray-700"),
-                                                width="100%",
+                                                rx.hstack(rx.icon(tag="calendar", size=12, color=Color.TEXT_SECONDARY), rx.text(exam.created_at, style=Typography.CAPTION), spacing="1", align_items="center"),
+                                                rx.hstack(rx.icon(tag="hash", size=12, color=Color.TEXT_SECONDARY), rx.text(exam.id, style=Typography.CAPTION, color=Color.TEXT_LIGHT), spacing="1", align_items="center"),
+                                                rx.badge(exam.status, color_scheme=rx.cond(exam.status == "Divergente", "red", "green"), size="1"),
+                                                spacing="3", align_items="center"
                                             ),
-                                            rx.hstack(
-                                                rx.hstack(
-                                                    rx.icon("calendar", size=12, color="#9CA3AF"),
-                                                    rx.text(exam.created_at, class_name="text-[11px] text-gray-500"),
-                                                    spacing="1",
-                                                    align="center"
-                                                ),
-                                                rx.hstack(
-                                                    rx.icon("hash", size=12, color="#9CA3AF"),
-                                                    rx.text(exam.id, class_name="text-[11px] text-gray-400 font-mono"),
-                                                    spacing="1",
-                                                    align="center"
-                                                ),
-                                                rx.badge(
-                                                    exam.status, 
-                                                    color_scheme=rx.cond(exam.status == "Divergente", "red", "green"),
-                                                    size="1"
-                                                ),
-                                                spacing="3",
-                                                align="center"
-                                            ),
-                                            
-                                            # Notas se houver
-                                            rx.cond(
-                                                exam.notes != "",
-                                                rx.box(
-                                                    rx.text("Nota: " + exam.notes, class_name="text-[10px] text-gray-500 italic"),
-                                                    class_name="bg-gray-50 p-2 rounded-lg mt-2",
-                                                    width="100%"
-                                                )
-                                            ),
-                                            spacing="1",
-                                            width="100%",
-                                            align="start",
-                                            class_name="pl-3"
+                                            rx.cond(exam.notes != "", rx.box(rx.text("Nota: " + exam.notes, style=Typography.CAPTION, font_style="italic"), bg=Color.BACKGROUND, p="2", border_radius="8px", margin_top="4px", width="100%")),
+                                            spacing="1", width="100%", align_items="start", padding_left=Spacing.SM
                                         ),
-                                        width="100%",
-                                        align="stretch",
-                                        class_name="py-3 px-2 border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors"
+                                        width="100%", align_items="stretch", padding_y=Spacing.SM, padding_x=Spacing.XS, border_bottom=f"1px solid {Color.BORDER}", _hover={"bg": Color.BACKGROUND}
                                     ),
                                     width="100%"
                                 )
                             ),
-                            width="100%",
-                            spacing="0",
+                            width="100%", spacing="0",
                         ),
-                        style={"maxHeight": "400px"},
-                        type="always",
-                        class_name="pr-4"
+                        style={"maxHeight": "400px"}, width="100%"
                     ),
-                    
                     width="100%",
                 ),
-                class_name="py-4"
+                padding_y=Spacing.MD
             ),
-            
-            class_name="max-w-xl rounded-[32px] p-8 bg-white/95 backdrop-blur-xl border border-white/20 shadow-2xl",
+            max_width="xl", border_radius=Design.RADIUS_XL, padding=Spacing.XL, bg=Color.SURFACE, border=f"1px solid {Color.BORDER}", box_shadow=Design.SHADOW_LG
         ),
+        open=State.is_showing_patient_history,
+        on_open_change=State.set_is_showing_patient_history,
     )
 
-# Tabela com ações (Ver Histórico / Resolver) - Design Refinado
+# Tabela com ações (Ver Histórico / Resolver) - Design Purificado
 def action_table(headers: list[str], data: list, columns_keys: list[str], patient_key: str = "patient", is_divergence: bool = False) -> rx.Component:
+    def render_row(item: Any, i: rx.Var[int]):
+        # Células de dados
+        cells = [
+            rx.table.cell(
+                rx.text(getattr(item, key), color=Color.TEXT_PRIMARY, font_size="0.875rem", font_weight="500"),
+                padding_x=Spacing.MD, padding_y=Spacing.SM
+            ) for key in columns_keys
+        ]
+        
+        # Botões de ação
+        actions = [
+            ui.button(
+                "",
+                icon="history",
+                on_click=lambda: State.view_patient_history(getattr(item, patient_key)),
+                variant="ghost",
+                padding="8px",
+            )
+        ]
+        
+        # Adicionar botão de resolução apenas se exam_name estiver presente
+        if "exam_name" in columns_keys:
+            # Construct resolution key safely using getattr
+            res_key = getattr(item, patient_key) + "|" + getattr(item, "exam_name")
+            is_resolved = State.resolutions[res_key] == "resolvido"
+            
+            actions.append(
+                ui.button(
+                    "",
+                    icon=rx.cond(is_resolved, "circle_check", "circle"),
+                    on_click=lambda: State.toggle_resolution(getattr(item, patient_key), getattr(item, "exam_name")),
+                    variant="ghost",
+                    color=rx.cond(is_resolved, Color.SUCCESS, Color.TEXT_SECONDARY),
+                    padding="8px",
+                )
+            )
+            
+        # Adicionar coluna de ações
+        cells.append(
+            rx.table.cell(
+                rx.hstack(
+                    *actions,
+                    style={"gap": Spacing.SM},
+                    justify="end"
+                ),
+                padding_x=Spacing.MD, padding_y=Spacing.SM
+            )
+        )
+        
+        return rx.table.row(
+            *cells,
+            bg=rx.cond(i % 2 == 0, Color.SURFACE, Color.BACKGROUND)
+        )
+
     return rx.box(
         rx.table.root(
             rx.table.header(
                 rx.table.row(
                     *[rx.table.column_header_cell(
-                        rx.text(header, class_name="text-gray-500 font-bold text-[11px] uppercase tracking-wider"),
-                        class_name="bg-gray-50/80 px-4 py-3 border-b border-gray-100"
+                        rx.text(header, style=Typography.CAPTION, font_weight="700", text_transform="uppercase", letter_spacing="0.05em", color=Color.TEXT_SECONDARY),
+                        bg=Color.BACKGROUND, padding_x=Spacing.MD, padding_y=Spacing.SM, border_bottom=f"1px solid {Color.BORDER}"
                     ) for header in headers],
                     rx.table.column_header_cell(
-                        rx.text("AÇÕES", class_name="text-gray-500 font-bold text-[11px] uppercase tracking-wider"),
-                        class_name="bg-gray-50/80 px-4 py-3 border-b border-gray-100 text-right"
+                        rx.text("AÇÕES", style=Typography.CAPTION, font_weight="700", text_transform="uppercase", letter_spacing="0.05em", color=Color.TEXT_SECONDARY),
+                        bg=Color.BACKGROUND, padding_x=Spacing.MD, padding_y=Spacing.SM, border_bottom=f"1px solid {Color.BORDER}", text_align="right"
                     )
                 )
             ),
             rx.table.body(
                 rx.foreach(
                     data,
-                    lambda item, i: rx.table.row(
-                        *[rx.table.cell(
-                            rx.text(item[key], class_name="text-gray-700 text-sm font-medium"),
-                            class_name="px-4 py-3"
-                        ) for key in columns_keys],
-                        rx.table.cell(
-                            rx.hstack(
-                                rx.button(
-                                    rx.icon("history", size=14, color="#1B5E20"),
-                                    on_click=lambda: State.view_patient_history(item[patient_key]),
-                                    class_name="bg-green-50 p-2 rounded-lg hover:bg-green-100 transition-colors"
-                                ),
-                                rx.button(
-                                    rx.icon("circle-check", size=14, color="#6B7280"),
-                                    class_name="bg-gray-50 p-2 rounded-lg hover:bg-gray-200 transition-colors"
-                                ),
-                                spacing="2",
-                                justify="end"
-                            ),
-                            class_name="px-4 py-3"
-                        ),
-                        class_name=rx.cond(i % 2 == 0, "bg-white", "bg-gray-50/30")
-                    )
+                    render_row
                 )
             ),
             variant="surface",
-            class_name="w-full border-none overflow-hidden rounded-2xl"
+            width="100%", border="none", border_radius=Design.RADIUS_LG, overflow="hidden"
         ),
-        class_name="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden"
+        bg=Color.SURFACE, border=f"1px solid {Color.BORDER}", border_radius=Design.RADIUS_LG, box_shadow=Design.SHADOW_SM, overflow="hidden"
     )
 
 
 def analise_page() -> rx.Component:
     """Página de análise comparativa - Design oficial aprimorado"""
     
-    # SVG compacto do Erlenmeyer
-    erlenmeyer_small = """
+    # SVG compacto do Erlenmeyer (Purificado)
+    erlenmeyer_small = f"""
         <svg viewBox="0 0 50 60" width="36" height="44">
             <path d="M18 8 L32 8 L32 22 L42 50 Q43 54 39 56 L11 56 Q7 54 8 50 L18 22 Z" 
-                  fill="none" stroke="#1B5E20" stroke-width="2"/>
-            <circle cx="25" cy="42" r="6" fill="#4CAF50" opacity="0.3"/>
+                  fill="none" stroke="{Color.DEEP}" stroke-width="2"/>
+            <circle cx="25" cy="42" r="6" fill="{Color.SUCCESS}" opacity="0.3"/>
         </svg>
     """
     
-    # SVG compacto dos Tubos
-    tubes_small = """
+    # SVG compacto dos Tubos (Purificado)
+    tubes_small = f"""
         <svg viewBox="0 0 60 60" width="36" height="44">
-            <rect x="12" y="10" width="10" height="40" rx="5" fill="none" stroke="#1B5E20" stroke-width="2"/>
-            <rect x="25" y="10" width="10" height="40" rx="5" fill="none" stroke="#1B5E20" stroke-width="2"/>
-            <rect x="38" y="10" width="10" height="40" rx="5" fill="none" stroke="#1B5E20" stroke-width="2"/>
-            <rect x="12" y="28" width="10" height="22" rx="5" fill="#4CAF50" opacity="0.3"/>
-            <rect x="25" y="24" width="10" height="26" rx="5" fill="#4CAF50" opacity="0.3"/>
-            <rect x="38" y="32" width="10" height="18" rx="5" fill="#4CAF50" opacity="0.3"/>
+            <rect x="12" y="10" width="10" height="40" rx="5" fill="none" stroke="{Color.DEEP}" stroke-width="2"/>
+            <rect x="25" y="10" width="10" height="40" rx="5" fill="none" stroke="{Color.DEEP}" stroke-width="2"/>
+            <rect x="38" y="10" width="10" height="40" rx="5" fill="none" stroke="{Color.DEEP}" stroke-width="2"/>
+            <rect x="12" y="28" width="10" height="22" rx="5" fill="{Color.SUCCESS}" opacity="0.3"/>
+            <rect x="25" y="24" width="10" height="26" rx="5" fill="{Color.SUCCESS}" opacity="0.3"/>
+            <rect x="38" y="32" width="10" height="18" rx="5" fill="{Color.SUCCESS}" opacity="0.3"/>
         </svg>
     """
     
@@ -339,133 +264,57 @@ def analise_page() -> rx.Component:
             # Animated Header
             rx.box(
                 ui.animated_heading("Análise COMPULAB × SIMUS", level=1),
-                class_name="py-12 w-full flex justify-center"
+                padding_y=Spacing.XL, width="100%", display="flex", justify_content="center"
             ),
             
             # Upload section
             rx.box(
                 rx.vstack(
                     rx.hstack(
-                        rx.text("📁", class_name="text-lg"),
-                        rx.text(
-                            "Upload de Arquivos",
-                            class_name="text-[#1B5E20] font-semibold"
-                        ),
-                        spacing="2",
-                        align="center",
+                        rx.text("📁", font_size="1.25rem"),
+                        rx.text("Upload de Arquivos", color=Color.PRIMARY, font_weight="700"),
+                        spacing="2", align_items="center",
                     ),
-                    rx.text(
-                        "Aceita arquivos PDF, CSV ou Excel/XSL",
-                        class_name="text-gray-500 text-xs mb-3"
-                    ),
+                    rx.text("Aceita arquivos PDF, CSV ou Excel/XSL", style=Typography.CAPTION, color=Color.TEXT_SECONDARY, margin_bottom=Spacing.MD),
                     rx.grid(
-                        compact_upload_card(
-                            title="COMPULAB",
-                            icon_svg=erlenmeyer_small,
-                            upload_id="compulab_analysis",
-                            file_name=State.compulab_file_name,
-                            file_size=State.compulab_file_size,
-                            on_upload=State.handle_compulab_upload,
-                            on_remove=State.clear_compulab_file,
-                            accepted_types="COMPLETO",
-                        ),
-                        compact_upload_card(
-                            title="SIMUS",
-                            icon_svg=tubes_small,
-                            upload_id="simus_analysis",
-                            file_name=State.simus_file_name,
-                            file_size=State.simus_file_size,
-                            on_upload=State.handle_simus_upload,
-                            on_remove=State.clear_simus_file,
-                            accepted_types="COMPLETO",
-                        ),
-                        columns={"initial": "1", "sm": "2"},
-                        spacing="4",
-                        width="100%",
+                        compact_upload_card(title="COMPULAB", icon_svg=erlenmeyer_small, upload_id="compulab_analysis", file_name=State.compulab_file_name, file_size=State.compulab_file_size, on_upload=State.handle_compulab_upload, on_remove=State.clear_compulab_file, accepted_types="COMPLETO"),
+                        compact_upload_card(title="SIMUS", icon_svg=tubes_small, upload_id="simus_analysis", file_name=State.simus_file_name, file_size=State.simus_file_size, on_upload=State.handle_simus_upload, on_remove=State.clear_simus_file, accepted_types="COMPLETO"),
+                        columns={"initial": "1", "sm": "2"}, spacing="4", width="100%",
                     ),
                     upload_progress_indicator(State.is_uploading, "Carregando arquivo..."),
-                    spacing="2",
-                    width="100%",
+                    spacing="2", width="100%",
                 ),
-                class_name="bg-white border border-gray-200 rounded-2xl p-5 mt-8 max-w-xl w-full shadow-sm"
+                bg=Color.SURFACE, border=f"1px solid {Color.BORDER}", border_radius=Design.RADIUS_XL, padding=Spacing.LG, margin_top=Spacing.LG, max_width="xl", width="100%", box_shadow=Design.SHADOW_SM
             ),
             
-            # Botão de análise
-            rx.button(
-                rx.cond(
-                    State.is_analyzing,
-                    rx.hstack(
-                        rx.spinner(size="1", color="white"),
-                        rx.text("Analisando dados..."),
-                        spacing="2",
-                        align="center",
-                    ),
-                    rx.hstack(
-                        rx.icon("search", size=18),
-                        rx.text("Analisar Faturamento"),
-                        spacing="2",
-                        align="center",
-                    ),
-                ),
-                on_click=State.run_analysis,
-                disabled=~State.has_files | State.is_analyzing,
-                class_name="bg-[#1B5E20] text-white px-8 py-3 rounded-xl font-semibold hover:bg-[#2E7D32] hover:shadow-lg transition-all mt-6 disabled:opacity-50 disabled:cursor-not-allowed"
-            ),
+            # Botão de análise (Purificado)
+            ui.button("Analisar Faturamento", icon="search", on_click=State.run_analysis, is_loading=State.is_analyzing, loading_text="Analisando dados...", disabled=~State.has_files, variant="primary", padding="1.5rem 3rem", margin_top=Spacing.LG),
             
             # Indicador de progresso
             rx.cond(
                 State.is_analyzing,
                 rx.box(
                     rx.vstack(
-                        rx.text(
-                            State.analysis_progress_percentage.to_string() + "%",
-                            class_name="text-[#1B5E20] text-3xl font-bold text-center"
-                        ),
-                        rx.text(
-                            State.analysis_stage,
-                            class_name="text-gray-600 text-sm text-center mt-1"
-                        ),
-                        # Barra de progresso
+                        rx.text(State.analysis_progress_percentage.to_string() + "%", color=Color.PRIMARY, font_size="2rem", font_weight="800", text_align="center"),
+                        rx.text(State.analysis_stage, style=Typography.SMALL, color=Color.TEXT_SECONDARY, text_align="center", margin_top="4px"),
                         rx.box(
-                            rx.box(
-                                class_name="h-full bg-[#4CAF50] rounded-full transition-all duration-300",
-                                width=rx.cond(
-                                    State.analysis_progress_percentage > 0,
-                                    State.analysis_progress_percentage.to_string() + "%",
-                                    "0%"
-                                ),
-                            ),
-                            class_name="w-full h-3 bg-gray-200 rounded-full overflow-hidden mt-4",
+                            rx.box(bg=Color.GRADIENT_PRIMARY, border_radius="full", transition="width 0.3s ease", width=rx.cond(State.analysis_progress_percentage > 0, State.analysis_progress_percentage.to_string() + "%", "0%"), height="100%"),
+                            width="100%", height="12px", bg=Color.BACKGROUND, border_radius="full", overflow="hidden", margin_top=Spacing.MD
                         ),
-                        spacing="2",
-                        align="center",
+                        spacing="0", align_items="center",
                     ),
-                    class_name="bg-white border border-gray-200 rounded-xl p-6 mt-4 max-w-4xl w-full shadow-sm"
+                    bg=Color.SURFACE, border=f"1px solid {Color.BORDER}", border_radius=Design.RADIUS_LG, padding=Spacing.LG, margin_top=Spacing.MD, max_width="4xl", width="100%", box_shadow=Design.SHADOW_SM
                 ),
             ),
             
             # Mensagens
             rx.cond(
                 State.success_message != "",
-                rx.box(
-                    rx.hstack(
-                        rx.icon("circle-check", size=20, color="#15803d"),
-                        rx.text(State.success_message, class_name="text-green-700"),
-                        spacing="2",
-                    ),
-                    class_name="bg-green-50 border border-green-200 rounded-xl p-4 mt-4 max-w-xl w-full"
-                ),
+                rx.callout(State.success_message, icon="circle_check", color_scheme="green", width="100%", max_width="xl", margin_top=Spacing.MD),
             ),
             rx.cond(
                 State.error_message != "",
-                rx.box(
-                    rx.hstack(
-                        rx.icon("circle-x", size=20, color="#dc2626"),
-                        rx.text(State.error_message, class_name="text-red-700"),
-                        spacing="2",
-                    ),
-                    class_name="bg-red-50 border border-red-200 rounded-xl p-4 mt-4 max-w-xl w-full"
-                ),
+                rx.callout(State.error_message, icon="triangle_alert", color_scheme="red", width="100%", max_width="xl", margin_top=Spacing.MD),
             ),
             
             # Resultados
@@ -475,35 +324,16 @@ def analise_page() -> rx.Component:
                     # Métricas principais
                     rx.box(
                         rx.vstack(
-                            rx.hstack(
-                                rx.box(
-                                    rx.icon("bar-chart-3", size=24, color=Color.DEEP),
-                                    class_name="p-2 bg-green-50 rounded-xl"
-                                ),
+                             rx.hstack(
+                                rx.box(rx.icon(tag="bar-chart-3", size=24, color=Color.PRIMARY), bg=Color.PRIMARY_LIGHT, p="2", border_radius="12px"),
                                 rx.vstack(
-                                    rx.text(
-                                        "Resumo Executivo da Análise",
-                                        class_name="text-gray-900 font-bold text-xl tracking-tight"
-                                    ),
-                                    rx.text(
-                                        "Consolidação financeira dos sistemas integrados",
-                                        class_name="text-gray-400 text-xs font-medium"
-                                    ),
-                                    spacing="0",
-                                    align="start",
+                                    rx.text("Resumo Executivo da Análise", style=Typography.H4, color=Color.DEEP),
+                                    rx.text("Consolidação financeira dos sistemas integrados", style=Typography.SMALL, color=Color.TEXT_SECONDARY),
+                                    spacing="0", align_items="start",
                                 ),
                                 rx.spacer(),
-                                rx.badge(
-                                    "CONCLUÍDO",
-                                    color_scheme="green",
-                                    variant="surface",
-                                    size="2",
-                                    class_name="rounded-full px-4"
-                                ),
-                                spacing="3",
-                                align="center",
-                                width="100%",
-                                class_name="mb-6"
+                                ui.status_badge("CONCLUÍDO", status="success"),
+                                style={"gap": Spacing.MD}, width="100%", margin_bottom=Spacing.LG
                             ),
                             
                             rx.grid(
@@ -512,7 +342,7 @@ def analise_page() -> rx.Component:
                                 metric_card("Diferença Bruta", State.formatted_difference, "git-compare", "COMPULAB - SIMUS", "orange"),
                                 metric_card("Alertas de Exame", State.missing_exams_count.to_string(), "circle-alert", "itens faltantes", "red"),
                                 columns={"initial": "1", "sm": "2", "lg": "4"},
-                                spacing="4",
+                                style={"gap": Spacing.MD},
                                 width="100%",
                             ),
                             
@@ -521,66 +351,59 @@ def analise_page() -> rx.Component:
                                 rx.vstack(
                                     rx.hstack(
                                         rx.vstack(
-                                            rx.text("Status da Auditoria Local", class_name="text-sm font-bold text-gray-700"),
-                                            rx.text("Divergências tratadas nesta sessão", class_name="text-[10px] text-gray-400 font-medium"),
-                                            spacing="0",
-                                            align="start",
+                                            rx.text("Status da Auditoria Local", style=Typography.LABEL, color=Color.DEEP),
+                                            rx.text("Divergências tratadas nesta sessão", style=Typography.CAPTION, color=Color.TEXT_SECONDARY),
+                                            spacing="0", align_items="start",
                                         ),
                                         rx.spacer(),
                                         rx.box(
-                                            rx.text(State.resolution_progress.to_string() + "%", class_name="text-lg font-black text-emerald-600"),
-                                            class_name="bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-100"
+                                            rx.text(State.resolution_progress.to_string() + "%", style=Typography.H4, color=Color.SUCCESS),
+                                            bg=Color.SUCCESS_LIGHT, px="3", py="1", border_radius="8px", border=f"1px solid {Color.SUCCESS}40"
                                         ),
-                                        width="100%",
-                                        align="center",
+                                        width="100%", align_items="center",
                                     ),
                                     rx.box(
                                         rx.box(
-                                            class_name="h-full bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full transition-all duration-1000 ease-in-out",
-                                            width=State.resolution_progress.to_string() + "%",
+                                            bg=Color.GRADIENT_PRIMARY, border_radius="full", transition="all 1s ease-in-out",
+                                            width=State.resolution_progress.to_string() + "%", height="100%"
                                         ),
-                                        class_name="w-full h-3 bg-gray-100 rounded-full overflow-hidden shadow-inner border border-gray-50",
+                                        width="100%", height="12px", bg=Color.BACKGROUND, border_radius="full", overflow="hidden", border=f"1px solid {Color.BORDER}"
                                     ),
-                                    spacing="3",
-                                    width="100%",
+                                    style={"gap": Spacing.MD}, width="100%",
                                 ),
-                                class_name="mt-8 p-6 bg-gray-50/50 border border-gray-100 rounded-3xl w-full"
+                                margin_top=Spacing.XL, padding=Spacing.LG, bg=Color.SURFACE, border=f"1px solid {Color.BORDER}", border_radius=Design.RADIUS_XL, width="100%"
                             ),
                             width="100%",
                         ),
-                        class_name="bg-white border border-gray-100 rounded-[32px] p-8 mt-12 w-full shadow-sm"
+                        bg=Color.SURFACE, border=f"1px solid {Color.BORDER}", border_radius=Design.RADIUS_XL, padding=Spacing.XL, margin_top=Spacing.XL, width="100%", box_shadow=Design.SHADOW_SM
                     ),
                     
                     # === DASHBOARD ANALÍTICO REFINADO ===
                     rx.box(
                         rx.vstack(
                             # Header com Total de Perda
-                            rx.hstack(
+                     rx.hstack(
                                 rx.vstack(
                                     rx.hstack(
-                                        rx.icon("layout-dashboard", size=22, color=Color.DEEP),
-                                        rx.text("Dashboard de Inteligência", class_name="text-gray-900 font-black text-xl tracking-tight"),
-                                        spacing="2",
-                                        align="center",
+                                        rx.icon(tag="layout-dashboard", size=22, color=Color.PRIMARY),
+                                        rx.text("Dashboard de Inteligência", style=Typography.H4, color=Color.DEEP),
+                                        align_items="center",
+                                        style={"gap": "8px"},
                                     ),
-                                    rx.text("Visualização analítica das divergências identificadas", class_name="text-gray-400 text-xs"),
-                                    spacing="0",
-                                    align="start",
+                                    rx.text("Visualização analítica das divergências identificadas", style=Typography.SMALL, color=Color.TEXT_SECONDARY),
+                                    spacing="0", align_items="start",
                                 ),
                                 rx.spacer(),
                                 # Card de Perda Total
                                 rx.box(
                                     rx.vstack(
-                                        rx.text("PERDA TOTAL IDENTIFICADA", class_name="text-[9px] font-bold text-red-400 uppercase tracking-widest"),
-                                        rx.text(State.formatted_total_leakage, class_name="text-2xl font-black text-red-600"),
-                                        spacing="0",
-                                        align="end",
+                                        rx.text("PERDA TOTAL IDENTIFICADA", style=Typography.CAPTION, font_weight="700", color=Color.ERROR),
+                                        rx.text(State.formatted_total_leakage, font_size="1.5rem", font_weight="800", color=Color.ERROR),
+                                        spacing="0", align_items="end",
                                     ),
-                                    class_name="bg-red-50/80 border border-red-100 px-4 py-2 rounded-2xl"
+                                    bg=Color.ERROR_BG, border=f"1px solid {Color.ERROR}40", px="4", py="2", border_radius="16px"
                                 ),
-                                width="100%",
-                                align="center",
-                                class_name="mb-6"
+                                width="100%", align_items="center", margin_bottom=Spacing.LG
                             ),
                             
                             # Grid com Gráficos Refinados
@@ -589,10 +412,9 @@ def analise_page() -> rx.Component:
                                 rx.box(
                                     rx.vstack(
                                         rx.hstack(
-                                            rx.icon("pie-chart", size=16, color="#6B7280"),
-                                            rx.text("Composição da Perda", class_name="text-sm font-bold text-gray-700"),
-                                            spacing="2",
-                                            align="center",
+                                            rx.icon(tag="pie-chart", size=16, color=Color.TEXT_SECONDARY),
+                                            rx.text("Composição da Perda", style=Typography.LABEL, color=Color.DEEP),
+                                            style={"gap": Spacing.SM}, align_items="center",
                                         ),
                                         rx.recharts.pie_chart(
                                             rx.recharts.pie(
@@ -604,7 +426,7 @@ def analise_page() -> rx.Component:
                                                 inner_radius=45,
                                                 outer_radius=75,
                                                 padding_angle=3,
-                                                stroke="#fff",
+                                                stroke="white",
                                                 label=True,
                                             ),
                                             rx.recharts.graphing_tooltip(),
@@ -616,25 +438,24 @@ def analise_page() -> rx.Component:
                                             width="100%",
                                             height=250,
                                         ),
-                                        width="100%",
-                                        spacing="3",
+                                        width="100%", style={"gap": Spacing.MD},
                                     ),
-                                    class_name="bg-white border border-gray-100 rounded-3xl p-5 shadow-sm hover:shadow-md transition-shadow"
+                                    bg=Color.SURFACE, border=f"1px solid {Color.BORDER}", border_radius=Design.RADIUS_XL, padding=Spacing.MD, box_shadow=Design.SHADOW_SM,
+                                    _hover={"box_shadow": Design.SHADOW_MD}, transition="all 0.2s ease"
                                 ),
                                 
                                 # Bar Chart - Top Exames
                                 rx.box(
                                     rx.vstack(
                                         rx.hstack(
-                                            rx.icon("bar-chart-2", size=16, color="#3B82F6"),
-                                            rx.text("Top Exames Problemáticos", class_name="text-sm font-bold text-gray-700"),
-                                            spacing="2",
-                                            align="center",
+                                            rx.icon(tag="bar-chart-2", size=16, color=Color.PRIMARY),
+                                            rx.text("Top Exames Problemáticos", style=Typography.LABEL, color=Color.DEEP),
+                                            style={"gap": Spacing.SM}, align_items="center",
                                         ),
                                         rx.recharts.bar_chart(
                                             rx.recharts.bar(
                                                 data_key="value",
-                                                fill="#3B82F6",
+                                                fill=Color.PRIMARY,
                                                 radius=[6, 6, 0, 0],
                                             ),
                                             rx.recharts.x_axis(
@@ -650,10 +471,10 @@ def analise_page() -> rx.Component:
                                             width="100%",
                                             height=250,
                                         ),
-                                        width="100%",
-                                        spacing="3",
+                                        width="100%", style={"gap": Spacing.MD},
                                     ),
-                                    class_name="bg-white border border-gray-100 rounded-3xl p-5 shadow-sm hover:shadow-md transition-shadow"
+                                    bg=Color.SURFACE, border=f"1px solid {Color.BORDER}", border_radius=Design.RADIUS_XL, padding=Spacing.MD, box_shadow=Design.SHADOW_SM,
+                                    _hover={"box_shadow": Design.SHADOW_MD}, transition="all 0.2s ease"
                                 ),
                                 columns={"initial": "1", "lg": "2"},
                                 spacing="4",
@@ -661,80 +482,75 @@ def analise_page() -> rx.Component:
                             ),
                             
                             # === CENTRAL DE AÇÕES (SIMPLIFICADA) ===
-                            rx.box(
+                             rx.box(
                                 rx.vstack(
                                     rx.hstack(
                                         rx.box(
-                                            rx.icon("lightbulb", size=18, color="white"),
-                                            class_name="bg-gradient-to-r from-amber-400 to-orange-500 p-2 rounded-lg shadow-sm"
+                                            rx.icon(tag="lightbulb", size=18, color="white"),
+                                            bg=Color.WARNING, p="2", border_radius="8px"
                                         ),
                                         rx.vstack(
-                                            rx.text("Central de Ações Recomendadas", class_name="text-gray-900 font-bold text-base"),
-                                            rx.text("Sugestões ordenadas por impacto financeiro", class_name="text-gray-400 text-[10px]"),
-                                            spacing="0",
-                                            align="start",
+                                            rx.text("Central de Ações Recomendadas", style=Typography.LABEL, color=Color.DEEP),
+                                            rx.text("Sugestões ordenadas por impacto financeiro", style=Typography.CAPTION, color=Color.TEXT_SECONDARY),
+                                            spacing="0", align_items="start",
                                         ),
                                         rx.spacer(),
-                                        spacing="3",
-                                        align="center",
+                                        style={"gap": Spacing.MD},
                                         width="100%",
+                                        align_items="center",
                                     ),
-                                    rx.divider(class_name="my-4 opacity-50"),
+                                    rx.divider(margin_y=Spacing.MD, opacity=0.3),
                                     rx.foreach(
                                         State.action_center_insights,
                                         lambda insight: rx.box(
                                             rx.hstack(
-                                                # Ícone
                                                 rx.box(
-                                                    rx.icon(insight["icon"], size=18, color="#F59E0B"),
-                                                    class_name="bg-amber-50 p-2.5 rounded-xl"
+                                                    rx.icon(tag=insight["icon"], size=18, color=Color.WARNING),
+                                                    bg=Color.WARNING_BG, p="2.5", border_radius="12px"
                                                 ),
-                                                # Texto
                                                 rx.vstack(
-                                                    rx.text(insight["title"], class_name="text-sm font-bold text-gray-800"),
-                                                    rx.text(insight["description"], class_name="text-[11px] text-gray-500 leading-relaxed"),
-                                                    spacing="1",
-                                                    align="start",
-                                                    class_name="flex-1"
+                                                    rx.text(insight["title"], style=Typography.SMALL, font_weight="700", color=Color.DEEP),
+                                                    rx.text(insight["description"], style=Typography.CAPTION, color=Color.TEXT_SECONDARY),
+                                                    spacing="1", align_items="start", flex="1"
                                                 ),
-                                                spacing="3",
-                                                align="center",
-                                                width="100%",
+                                                style={"gap": Spacing.MD}, align_items="center", width="100%",
                                             ),
-                                            class_name="p-4 bg-white border border-gray-100 rounded-2xl hover:border-amber-200 hover:shadow-sm transition-all mb-3"
+                                            bg=Color.SURFACE, border=f"1px solid {Color.BORDER}", padding=Spacing.MD, border_radius=Design.RADIUS_LG,
+                                            _hover={"border_color": Color.WARNING, "bg": Color.WARNING_BG},
+                                            margin_bottom=Spacing.SM, transition="all 0.2s ease"
                                         )
                                     ),
                                     width="100%",
                                 ),
-                                class_name="bg-gradient-to-br from-amber-50/50 to-orange-50/30 border border-amber-100/50 rounded-3xl p-5 mt-6"
+                                bg=Color.BACKGROUND, border=f"1px solid {Color.BORDER}", padding=Spacing.LG, border_radius=Design.RADIUS_XL, margin_top=Spacing.LG
                             ),
 
                             
                             # Breakdown numérico secundário
-                            rx.box(
+                             rx.box(
                                 rx.hstack(
-                                    rx.icon("calculator", size=16, color="#6B7280"),
-                                    rx.text("Resumo Numérico", class_name="text-sm font-bold text-gray-600"),
-                                    spacing="2",
-                                    align="center",
-                                    class_name="mb-3"
+                                    rx.icon(tag="calculator", size=16, color=Color.TEXT_SECONDARY),
+                                    rx.text("Resumo Numérico", style=Typography.SMALL, font_weight="700", color=Color.TEXT_SECONDARY),
+                                    align_items="center",
+                                    style={"gap": "8px"},
+                                    margin_bottom=Spacing.MD
                                 ),
                                 rx.grid(
                                     breakdown_item("users", "Pacientes Faltantes", State.formatted_missing_patients_total, "orange"),
-                                    breakdown_item("file-warning", "Exames Faltantes", State.formatted_missing_exams_total, "red"),
+                                    breakdown_item("file_warning", "Exames Faltantes", State.formatted_missing_exams_total, "red"),
                                     breakdown_item("coins", "Divergências Valor", State.formatted_divergences_total, "blue"),
-                                    breakdown_item("circle-plus", "Extras no SIMUS", State.extra_simus_exams_count.to_string() + " exames", "gray"),
+                                    breakdown_item("circle_plus", "Extras no SIMUS", State.extra_simus_exams_count.to_string() + " exames", "default"),
                                     columns={"initial": "2", "lg": "4"},
-                                    spacing="3",
+                                    style={"gap": Spacing.MD},
                                     width="100%",
                                 ),
-                                class_name="mt-6"
+                                margin_top=Spacing.LG
                             ),
                             
 
                             width="100%",
                         ),
-                        class_name="bg-gradient-to-br from-slate-50 to-white border border-gray-100 rounded-[32px] p-6 mt-8 w-full shadow-sm"
+                        bg=Color.BACKGROUND, border=f"1px solid {Color.BORDER}", border_radius=Design.RADIUS_XL, padding=Spacing.XL, margin_top=Spacing.LG, box_shadow=Design.SHADOW_SM
                     ),
 
 
@@ -756,8 +572,8 @@ def analise_page() -> rx.Component:
                             State.analysis_active_tab == "patients_missing",
                             rx.cond(
                                 State.missing_patients_count > 0,
-                                action_table(headers=["Paciente", "Exames", "Valor Total (R$)"], data=State.missing_patients, columns_keys=["name", "total_exams", "total_value"], patient_key="name"),
-                                rx.box(rx.hstack(rx.icon("circle-check", size=20, color="#10B981"), rx.text("Todos os pacientes do COMPULAB estão no SIMUS!", class_name="text-green-700"), spacing="2", align="center"), class_name="bg-green-50 border border-green-200 rounded-xl p-6 mt-4")
+                                action_table(headers=["Paciente", "Exames", "Valor Total (R$)"], data=State.missing_patients, columns_keys=["patient", "exams_count", "total_value"], patient_key="patient"),
+                                rx.box(rx.hstack(rx.icon(tag="circle_check", size=20, color=Color.SUCCESS), rx.text("Todos os pacientes do COMPULAB estão no SIMUS!", color=Color.SUCCESS, font_weight="500"), spacing="2", align_items="center"), bg=Color.SUCCESS_BG, border=f"1px solid {Color.SUCCESS}40", border_radius=Design.RADIUS_LG, padding=Spacing.LG, margin_top=Spacing.MD)
                             )
                         ),
                         rx.cond(
@@ -765,7 +581,7 @@ def analise_page() -> rx.Component:
                             rx.cond(
                                 State.missing_exams_count > 0,
                                 action_table(headers=["Paciente", "Exame", "Valor (R$)"], data=State.missing_exams, columns_keys=["patient", "exam_name", "value"]),
-                                rx.box(rx.hstack(rx.icon("circle-check", size=20, color="#10B981"), rx.text("Todos os exames do COMPULAB estão no SIMUS!", class_name="text-green-700"), spacing="2", align="center"), class_name="bg-green-50 border border-green-200 rounded-xl p-6 mt-4")
+                                rx.box(rx.hstack(rx.icon(tag="circle_check", size=20, color=Color.SUCCESS), rx.text("Todos os exames do COMPULAB estão no SIMUS!", color=Color.SUCCESS, font_weight="500"), spacing="2", align_items="center"), bg=Color.SUCCESS_BG, border=f"1px solid {Color.SUCCESS}40", border_radius=Design.RADIUS_LG, padding=Spacing.LG, margin_top=Spacing.MD)
                             )
                         ),
                         rx.cond(
@@ -773,7 +589,7 @@ def analise_page() -> rx.Component:
                             rx.cond(
                                 State.divergences_count > 0,
                                 action_table(headers=["Paciente", "Exame", "COMPULAB", "SIMUS", "Diferença"], data=State.value_divergences, columns_keys=["patient", "exam_name", "compulab_value", "simus_value", "difference"], is_divergence=True),
-                                rx.box(rx.hstack(rx.icon("circle-check", size=20, color="#10B981"), rx.text("Não há divergências de valor!", class_name="text-green-700"), spacing="2", align="center"), class_name="bg-green-50 border border-green-200 rounded-xl p-6 mt-4")
+                                rx.box(rx.hstack(rx.icon(tag="circle_check", size=20, color=Color.SUCCESS), rx.text("Não há divergências de valor!", color=Color.SUCCESS, font_weight="500"), spacing="2", align_items="center"), bg=Color.SUCCESS_BG, border=f"1px solid {Color.SUCCESS}40", border_radius=Design.RADIUS_LG, padding=Spacing.LG, margin_top=Spacing.MD)
                             )
                         ),
                         rx.cond(
@@ -781,7 +597,7 @@ def analise_page() -> rx.Component:
                             rx.cond(
                                 State.extra_simus_exams_count > 0,
                                 action_table(headers=["Paciente", "Exame", "Valor SIMUS"], data=State.extra_simus_exams, columns_keys=["patient", "exam_name", "simus_value"]),
-                                rx.box(rx.hstack(rx.icon("check-check", size=20, color="#10B981"), rx.text("Nenhum exame extra ('fantasma') encontrado no SIMUS.", class_name="text-green-700"), spacing="2", align="center"), class_name="bg-green-50 border border-green-200 rounded-xl p-6 mt-4")
+                                rx.box(rx.hstack(rx.icon(tag="check_check", size=20, color=Color.SUCCESS), rx.text("Nenhum exame extra ('fantasma') encontrado no SIMUS.", color=Color.SUCCESS, font_weight="500"), spacing="2", align_items="center"), bg=Color.SUCCESS_BG, border=f"1px solid {Color.SUCCESS}40", border_radius=Design.RADIUS_LG, padding=Spacing.LG, margin_top=Spacing.MD)
                             )
                         ),
                         rx.cond(
@@ -791,17 +607,17 @@ def analise_page() -> rx.Component:
                                     # Header Premium
                                     rx.box(
                                         rx.hstack(
-                                            rx.box(rx.icon("bot", size=24, color="white"), class_name="bg-white/20 p-2 rounded-xl"),
+                                            rx.box(rx.icon(tag="bot", size=24, color="white"), bg="rgba(255,255,255,0.1)", p="2", border_radius="12px"),
                                             rx.vstack(
-                                                rx.text("Auditoria Inteligente (Beta)", class_name="text-white font-bold text-lg tracking-tight"),
-                                                rx.text("Análise profunda de padrões via GPT-4 Turbo", class_name="text-white/80 text-[10px] uppercase font-medium tracking-widest"),
-                                                spacing="0", align="start"
+                                                rx.text("Auditoria Inteligente (Beta)", style=Typography.H4, color="white"),
+                                                rx.text("Análise profunda de padrões via GPT-4 Turbo", style=Typography.CAPTION, color="white", opacity=0.8, letter_spacing="0.1em", text_transform="uppercase"),
+                                                spacing="0", align_items="start"
                                             ),
                                             rx.spacer(),
                                             rx.badge("IA ATIVA", variant="soft", color_scheme="green", size="1"),
-                                            spacing="3", align="center"
+                                            style={"gap": Spacing.MD}, align_items="center"
                                         ),
-                                        class_name="bg-gradient-to-r from-emerald-600 to-teal-700 p-6 rounded-2xl mb-6 shadow-md"
+                                        bg=Color.GRADIENT_PRIMARY, padding=Spacing.LG, border_radius=Design.RADIUS_LG, margin_bottom=Spacing.LG, box_shadow=Design.SHADOW_MD
                                     ),
                                     
                                     rx.cond(
@@ -809,21 +625,21 @@ def analise_page() -> rx.Component:
                                         rx.box(
                                             rx.vstack(
                                                 rx.hstack(
-                                                    rx.spinner(size="1", color="green"),
-                                                    rx.text(State.ai_loading_text, class_name="text-sm font-medium text-gray-700"),
+                                                    rx.spinner(size="1", color=Color.SUCCESS),
+                                                    rx.text(State.ai_loading_text, style=Typography.BODY, color=Color.TEXT_PRIMARY),
                                                     spacing="2",
                                                 ),
-                                                rx.progress(value=State.ai_loading_progress, max=100, class_name="w-full h-2 rounded-full", color_scheme="green"),
+                                                rx.progress(value=State.ai_loading_progress, max=100, color_scheme="green", width="100%", height="8px", border_radius="full"),
                                                 spacing="2", width="100%"
                                             ),
-                                            class_name="bg-green-50 p-4 rounded-xl w-full mb-4 border border-green-100"
+                                            bg=Color.SUCCESS_BG, padding=Spacing.MD, border_radius=Design.RADIUS_LG, margin_bottom=Spacing.MD, border=f"1px solid {Color.SUCCESS}40"
                                         ),
                                     ),
 
                                     # Seletor de Modelo e Provedor
                                     rx.box(
                                         rx.vstack(
-                                            rx.text("Modelo de IA", class_name="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2"),
+                                            rx.text("Modelo de IA", style=Typography.CAPTION, font_weight="700", color=Color.TEXT_SECONDARY, text_transform="uppercase", margin_bottom=Spacing.SM),
                                             
                                             # Seletor de Provedor (Macro)
                                             ui.segmented_control(
@@ -842,32 +658,22 @@ def analise_page() -> rx.Component:
                                                     ["gpt-4o", "gpt-4-turbo"],
                                                     value=State.ai_model,
                                                     on_change=State.set_ai_model,
-                                                    class_name="w-full mt-2 p-2 border border-gray-200 rounded-xl bg-white text-sm"
+                                                    width="100%", margin_top=Spacing.SM
                                                 ),
                                                 rx.select(
                                                     ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro", "gemini-3-pro-preview", "gemini-3-flash-preview"],
                                                     value=State.ai_model,
                                                     on_change=State.set_ai_model,
-                                                    class_name="w-full mt-2 p-2 border border-gray-200 rounded-xl bg-white text-sm"
+                                                    width="100%", margin_top=Spacing.SM
                                                 )
                                             ),
                                             
-                                            width="100%",
-                                            align="start"
+                                            width="100%", align_items="start"
                                         ),
-                                        class_name="mb-6 w-full"
+                                        margin_bottom=Spacing.LG, width="100%"
                                     ),
 
-                                    rx.button(
-                                        rx.hstack(
-                                            rx.cond(State.is_generating_ai, rx.spinner(size="1", color="white"), rx.icon("rocket", size=18, color="white")),
-                                            rx.text("Iniciar Auditoria Inteligente"),
-                                            spacing="2"
-                                        ),
-                                        on_click=State.generate_ai_analysis,
-                                        disabled=State.is_generating_ai,
-                                        class_name="bg-gradient-to-r from-emerald-500 to-green-600 text-white px-6 py-3 rounded-xl font-bold hover:shadow-lg transition-all w-full disabled:opacity-50"
-                                    ),
+                                    ui.button("Iniciar Auditoria Inteligente", icon="rocket", on_click=State.generate_ai_analysis, is_loading=State.is_generating_ai, variant="primary", width="100%"),
 
                                     rx.cond(
                                         State.ai_analysis != "",
@@ -878,46 +684,39 @@ def analise_page() -> rx.Component:
                                                     type="hover"
                                                 ),
                                                 style={"maxHeight": "500px"},
-                                                class_name="bg-white rounded-xl p-6 border border-gray-100 mt-6 prose prose-sm max-w-none shadow-sm"
+                                                bg=Color.SURFACE, border=f"1px solid {Color.BORDER}", border_radius=Design.RADIUS_LG, padding=Spacing.LG, margin_top=Spacing.LG, box_shadow=Design.SHADOW_SM, width="100%"
                                             ),
                                             rx.hstack(
                                                 rx.cond(
                                                     State.ai_analysis_csv != "",
-                                                    rx.link(
-                                                        rx.button(rx.hstack(rx.icon("table", size=14), rx.text("CSV"), spacing="1"), class_name="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700"),
-                                                        href=State.ai_analysis_csv, download="Auditoria_IA.csv"
-                                                    ),
+                                                    ui.button("Download CSV", icon="table", on_click=lambda: rx.download(url=State.ai_analysis_csv), variant="secondary"),
                                                 ),
-                                                rx.button(rx.hstack(rx.icon("rotate-ccw", size=14), rx.text("Refazer"), spacing="1"), on_click=State.generate_ai_analysis, class_name="border-2 border-orange-500 text-orange-600 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-orange-50"),
-                                                spacing="2", class_name="mt-4"
+                                                ui.button("Refazer Auditoria", icon="rotate-ccw", on_click=State.generate_ai_analysis, variant="ghost"),
+                                                spacing="2", margin_top=Spacing.MD
                                             ),
                                             width="100%"
                                         ),
                                     ),
-                                    width="100%", class_name="mt-2"
+                                    width="100%", margin_top=Spacing.SM
                                 ),
                                 width="100%"
                             )
                         ),
                         width="100%",
-                        padding_top="1rem"
+                        padding_top=Spacing.MD
                     ),
                     
-                    # Ações do Relatório Final
+                    # Ações do Relatório Final (Aspirado)
                     rx.hstack(
                         rx.cond(
                             State.analysis_pdf != "",
-                            rx.link(
-                                rx.button(rx.hstack(rx.icon("download", size=16), rx.text("Download PDF"), spacing="2"), class_name="bg-[#1B5E20] text-white px-6 py-2 rounded-lg hover:shadow-lg transition-all font-semibold"),
-                                download="analise_faturamento.pdf",
-                                href=State.analysis_pdf
-                            ),
+                            ui.button("Download PDF", icon="download", on_click=lambda: rx.download(url=State.analysis_pdf), variant="primary"),
                         ),
-                        rx.button(rx.hstack(rx.icon("file-text", size=16), rx.text("Gerar PDF"), spacing="2"), on_click=State.generate_pdf_report, class_name="bg-[#1B5E20] text-white px-6 py-2 rounded-lg hover:shadow-lg transition-all font-semibold"),
-                        rx.button(rx.hstack(rx.icon("refresh-cw", size=16), rx.text("Nova Análise"), spacing="2"), on_click=State.clear_all_files, class_name="bg-white border border-gray-300 text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-50 transition-all font-medium"),
-                        spacing="3",
-                        justify="center",
-                        class_name="mt-10"
+                        ui.button("Gerar PDF", icon="file-text", on_click=State.generate_pdf_report, variant="secondary"),
+                        ui.button("Nova Análise", icon="refresh-cw", on_click=State.clear_all_files, variant="secondary"),
+                        style={"gap": Spacing.MD},
+                        justify_content="center",
+                        margin_top=Spacing.XL,
                     ),
                     width="100%",
                     max_width="5xl",
@@ -926,9 +725,9 @@ def analise_page() -> rx.Component:
             
             patient_history_modal(),
             spacing="0",
-            align="center",
+            align_items="center",
             width="100%",
-            class_name="py-8 px-4"
+            padding_y=Spacing.XL, padding_x=Spacing.MD
         ),
         width="100%",
     )

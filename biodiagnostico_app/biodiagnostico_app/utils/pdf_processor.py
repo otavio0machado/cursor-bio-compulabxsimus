@@ -42,6 +42,7 @@ EXAM_NAME_MAPPING = {
     'DOSAGEM DE HORMONIO TIREOESTIMULANTE TSH': 'TIREOTROFINA (TSH)',
     'DOSAGEM DE TIROXINA LIVRE (T4 LIVRE)': 'TIROXINA LIVRE (T4 LIVRE)',
     'DOSAGEM DE TIROXINA LIVRE T4 LIVRE': 'TIROXINA LIVRE (T4 LIVRE)',
+    'DOSAGEM DE TIROXINA LIVRE (T4)': 'TIROXINA LIVRE (T4 LIVRE)',
     'DOSAGEM DE TIROXINA (T4)': 'TIROXINA (T4)',
     
     # Glicose e Lipídios
@@ -67,6 +68,7 @@ EXAM_NAME_MAPPING = {
     # Marcadores Tumorais
     'DOSAGEM DE ANTIGENO PROSTATICO ESPECIFICO (PSA)': 'ANTIGENO PROSTATICO ESPECIFICO',
     'DOSAGEM DE ANTIGENO PROSTATICO ESPECIFICO PSA': 'ANTIGENO PROSTATICO ESPECIFICO',
+    'PSA': 'ANTIGENO PROSTATICO ESPECIFICO',
     'DOSAGEM DE FRACAO PROSTATICA DA FOSFATASE ACIDA': 'FOSFATASE ACIDA PROSTATICA',
     
     # Urocultura
@@ -105,12 +107,12 @@ EXAM_NAME_MAPPING = {
     'DOSAGEM DE ANDROSTENEDIONA': 'ANDROSTENEDIONA',
     
     # Proteínas
-    'DOSAGEM DE PROTEINA C REATIVA': 'PROTEINA C REATIVA',
+    'DOSAGEM DE PROTEINA C REATIVA': 'PROVA DO LATEX A.R.',
     'DOSAGEM DE PROTEINAS TOTAIS E FRACOES': 'PROTEÍNAS TOTAIS E FRAÇÕES',
     
     # Coagulação
-    'DETERMINAÇÃO DE VELOCIDADE DE HEMOSSEDIMENTAÇÃO (VHS)': 'V. S. G.',
-    'DETERMINACAO DE VELOCIDADE DE HEMOSSEDIMENTACAO VHS': 'V. S. G.',
+    'DETERMINAÇÃO DE VELOCIDADE DE HEMOSSEDIMENTAÇÃO (VHS)': 'V S G',
+    'DETERMINACAO DE VELOCIDADE DE HEMOSSEDIMENTACAO VHS': 'V S G',
     'DETERMINAÇÃO DE TEMPO E ATIVIDADE DA PROTROMBINA (TAP)': 'TEMPO DE PROTROMBINA',
     'DETERMINACAO DE TEMPO E ATIVIDADE DA PROTROMBINA TAP': 'TEMPO DE PROTROMBINA',
     'DETERMINAÇÃO DE TEMPO DE TROMBOPLASTINA PARCIAL ATIVADA (TTP ATIVADA)': 'TEMPO DE TROMBOPLASTINA ATIVADO (TTPA)',
@@ -144,6 +146,7 @@ EXAM_NAME_MAPPING = {
     # Outros
     'DOSAGEM DE CREATINOFOSFOQUINASE (CPK)': 'CREATINOFOSFOQUINASE',
     'DOSAGEM DE CREATINOFOSFOQUINASE CPK': 'CREATINOFOSFOQUINASE',
+    'CPK': 'CREATINOFOSFOQUINASE',
     'DOSAGEM DE LIPASE': 'LIPASE',
     'DOSAGEM DE AMILASE': 'AMILASE',
     'ANTIBIOGRAMA': 'ANTIBIOGRAMA',
@@ -152,6 +155,8 @@ EXAM_NAME_MAPPING = {
     'PESQUISA DE SANGUE OCULTO NAS FEZES': 'SANGUE OCULTO',
     
     # Novos Sinônimos (Solicitados pelo Usuário)
+    'GOT': 'G O T',
+    'GPT': 'G P T',
     'CLEARANCE DE CREATININA': 'DEPURACAO DA CREATININA ENDOGENA',
     'CONTAGEM DE PLAQUETAS': 'PLAQUETAS',
     'DETERMINACAO DE CAPACIDADE DE FIXACAO DO FERRO': 'CAPACIDADE FERROPEXICA',
@@ -165,6 +170,7 @@ EXAM_NAME_MAPPING = {
     'DOSAGEM DE PARATORMONIO': 'PARATORMONIO',
     'DOSAGEM DE TIREOGLOBULINA': 'TIREOGLOBULINA',
     'DOSAGEM DE TRIIODOTIRONINA': 'TRIIODOTIRONINA T3 RIE',
+    'TRIIODOTIRONINA': 'TRIIODOTIRONINA T3 RIE',
     'DOSAGEM DE ZINCO': 'ZINCO',
     'PESQUISA DE ANTICORPOS ANTIESTREPTOLISINA O': 'ANTIESTREPTOLISINA O',
     'PESQUISA DE ANTICORPOS ANTIINSULINA': 'ANTICORPOS ANTI INSULINA',
@@ -174,6 +180,7 @@ EXAM_NAME_MAPPING = {
     'PESQUISA LABORATORIAL DE ANTICORPOS CONTRA O VIRUS DA HEPATITE C (PARA POPULACAO GERAL/EM GESTANTE)': 'ANTI HCV',
     'SANGUE OCULTO': 'PESQUISA DE SANGUE OCULTO FEZES',
     'TIROXINA': 'TIROXINA T4 RIE',
+    'PROTEINA C REATIVA': 'PROVA DO LATEX A.R.',
 }
 
 
@@ -226,19 +233,14 @@ def normalize_exam_name(exam_name):
     }
     for old, new in replacements.items():
         exam_name = exam_name.replace(old, new)
-    exam_name = re.sub(r'\([^)]*\)', '', exam_name)
-    exam_name = re.sub(r'[^\w\s]', ' ', exam_name)
+    
+    # Manter parênteses pois o usuário solicitou nomenclaturas específicas como (T4 LIVRE)
+    # exam_name = re.sub(r'\([^)]*\)', '', exam_name) 
+    
+    exam_name = re.sub(r'[^\w\s\(\)]', ' ', exam_name) # Permite ( e )
     exam_name = ' '.join(exam_name.split())
-    return exam_name
-
-
-def normalize_exam_name_for_comparison(exam_name):
-    """Normaliza nome do exame removendo palavras genéricas para comparação inteligente"""
-    if not exam_name:
-        return ""
     
-    normalized = normalize_exam_name(exam_name)
-    
+    # Remover palavras genéricas para o nome ficar limpo na exibição
     generic_words = [
         'DOSAGEM DE', 'DOSAGEM', 'DETERMINACAO DE', 'DETERMINACAO',
         'ANALISE DE', 'ANALISE', 'AVALIACAO DE', 'AVALIACAO',
@@ -252,13 +254,35 @@ def normalize_exam_name_for_comparison(exam_name):
     
     for word in generic_words:
         pattern_start = r'^' + re.escape(word) + r'\s+'
-        normalized = re.sub(pattern_start, '', normalized, flags=re.IGNORECASE)
-        pattern_mid = r'\s+' + re.escape(word) + r'\s+'
-        normalized = re.sub(pattern_mid, ' ', normalized, flags=re.IGNORECASE)
-        pattern_end = r'\s+' + re.escape(word) + r'$'
-        normalized = re.sub(pattern_end, '', normalized, flags=re.IGNORECASE)
+        exam_name = re.sub(pattern_start, '', exam_name, flags=re.IGNORECASE)
     
+    # Normalizações específicas de acrônimos (Solicitado: sem separação)
+    exam_name = exam_name.replace('G O T', 'GOT')
+    exam_name = exam_name.replace('G P T', 'GPT')
+    
+    # Renomeações específicas solicitadas pelo usuário
+    if 'TIROXINA LIVRE' in exam_name:
+        if '(T4)' in exam_name or 'T4' in exam_name:
+             if '(T4 LIVRE)' not in exam_name:
+                 exam_name = exam_name.replace('(T4)', '(T4 LIVRE)').replace('T4', '(T4 LIVRE)')
+                 exam_name = ' '.join(exam_name.split()) # Limpar espaços extras
+    
+    return exam_name.strip()
+
+
+def normalize_exam_name_for_comparison(exam_name):
+    """Normaliza nome do exame removendo parênteses para comparação inteligente"""
+    if not exam_name:
+        return ""
+    
+    # normalize_exam_name já removeu as palavras genéricas e normalizou GOT/GPT
+    normalized = normalize_exam_name(exam_name)
+    
+    # Remover parênteses apenas para a COMPARAÇÃO interna
+    normalized = re.sub(r'\([^)]*\)', '', normalized)
+    normalized = re.sub(r'[^\w\s]', ' ', normalized)
     normalized = ' '.join(normalized.split())
+    
     return normalized
 
 
@@ -802,6 +826,8 @@ def generate_excel_from_pdfs(compulab_pdf_bytes, simus_pdf_bytes, progress_callb
                     progress_callback(45 + exam_progress, f"Organizando dados COMPULAB... {processed_exams}/{total_exams} exames")
         
         compulab_df = pd.DataFrame(compulab_rows)
+        if not compulab_df.empty:
+            compulab_df = compulab_df.sort_values(by=['Paciente', 'Nome_Exame'], ascending=[True, True])
         
         # Estágio 3: Processando SIMUS (55-90%)
         if progress_callback:
@@ -846,6 +872,8 @@ def generate_excel_from_pdfs(compulab_pdf_bytes, simus_pdf_bytes, progress_callb
                     progress_callback(90 + exam_progress, f"Organizando dados SIMUS... {processed_simus_exams}/{total_simus_exams} exames")
         
         simus_df = pd.DataFrame(simus_rows)
+        if not simus_df.empty:
+            simus_df = simus_df.sort_values(by=['Paciente', 'Nome_Exame'], ascending=[True, True])
         
         # Estágio 4: Gerando Excels (95-98%)
         if progress_callback:

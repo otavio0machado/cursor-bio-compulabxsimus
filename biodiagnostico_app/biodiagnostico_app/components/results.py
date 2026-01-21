@@ -1,9 +1,6 @@
-"""
-Results display components for Biodiagnóstico App
-"""
 import reflex as rx
 from ..state import State
-
+from ..styles import Color, Design, Spacing, Typography
 
 def metric_card(
     title: str,
@@ -14,22 +11,19 @@ def metric_card(
     delta_positive: bool = True
 ) -> rx.Component:
     """Card de métrica individual com design moderno e acessível - usa ícones Lucide"""
-    from ..styles import Color, Design, Spacing, Typography
-
     return rx.box(
         rx.hstack(
-            # Ícone Lucide em container com fundo
+            # Ícone Lucide em container com fundo (Fase 1: Usando Primary Light)
             rx.box(
-                rx.icon(icon, size=32, color=Color.PRIMARY),  # Ícone Lucide 32px
-                padding=Spacing.MD,  # 16px
-                border_radius=Design.RADIUS_XL,  # 16px
-                bg=f"{Color.PRIMARY}15",  # 8% opacity verde
+                rx.icon(tag=icon, size=32, color=Color.PRIMARY),
+                padding=Spacing.MD,
+                border_radius=Design.RADIUS_XL,
+                bg=Color.PRIMARY_LIGHT,
                 display="flex",
                 align_items="center",
                 justify_content="center"
             ),
             rx.vstack(
-                # Título com tipografia aprimorada
                 rx.text(
                     title,
                     **Typography.LABEL,
@@ -37,20 +31,18 @@ def metric_card(
                     letter_spacing="0.05em",
                     color=Color.TEXT_SECONDARY
                 ),
-                # Valor com hierarquia visual clara
                 rx.text(
                     value,
-                    font_size=["1.75rem", "2rem", "2.25rem"],  # Responsivo: 28px -> 36px
+                    font_size=["1.75rem", "2rem", "2.25rem"],
                     font_weight="800",
                     line_height="1.2",
                     color=Color.DEEP
                 ),
-                # Delta (variação) com cor condicional
                 rx.cond(
                     delta is not None,
                     rx.text(
                         delta,
-                        font_size="0.875rem",  # 14px
+                        font_size="0.875rem",
                         font_weight="600",
                         color=rx.cond(
                             delta_positive,
@@ -59,7 +51,6 @@ def metric_card(
                         )
                     ),
                 ),
-                # Texto auxiliar
                 rx.cond(
                     help_text != "",
                     rx.text(
@@ -68,60 +59,57 @@ def metric_card(
                         color=Color.TEXT_SECONDARY
                     ),
                 ),
-                spacing="1",
-                align="start",
+                align_items="start",
+                style={"gap": "4px"}, # Fase 2: Usando gap para precisão
             ),
-            spacing=Spacing.LG,  # 24px
-            align="center",
+            align_items="center",
+            style={"gap": Spacing.LG}, # Fase 2: CORREÇÃO DE BUG (gap em vez de spacing)
         ),
-        # Card com novos estilos
         bg=Color.SURFACE,
-        padding=Spacing.LG,  # 24px
-        border_radius=Design.RADIUS_XL,  # 16px
+        padding=Spacing.LG,
+        border_radius=Design.RADIUS_XL,
         box_shadow=Design.SHADOW_DEFAULT,
         border=f"1px solid {Color.BORDER}",
         transition="all 0.3s ease",
         _hover={
             "box_shadow": Design.SHADOW_LG,
             "transform": "translateY(-4px)",
-            "border_color": f"{Color.PRIMARY}40"  # Border verde sutil no hover
+            "border_color": Color.PRIMARY
         }
     )
 
-
 def results_summary() -> rx.Component:
     """Resumo dos resultados da análise"""
-    from ..styles import Color
-
     return rx.cond(
         State.has_analysis,
         rx.vstack(
             rx.hstack(
-                rx.icon("trending-up", size=28, color=Color.PRIMARY),
+                rx.icon(tag="trending_up", size=28, color=Color.PRIMARY),
                 rx.text(
                     "Resumo da Análise",
-                    class_name="text-green-800 font-bold text-xl"
+                    style=Typography.H4, # Fase 1: Removido class_name manual
+                    color=Color.DEEP
                 ),
-                spacing="3",
-                align="center",
+                align_items="center",
+                style={"gap": "12px"},
             ),
             rx.grid(
                 metric_card(
                     title="COMPULAB Total",
                     value=State.formatted_compulab_total,
-                    icon="wallet",  # Carteira representando valores COMPULAB
+                    icon="wallet",
                     help_text=f"{State.compulab_count} pacientes",
                 ),
                 metric_card(
                     title="SIMUS Total",
                     value=State.formatted_simus_total,
-                    icon="coins",  # Moedas representando valores SIMUS
+                    icon="coins",
                     help_text=f"{State.simus_count} pacientes",
                 ),
                 metric_card(
                     title="Diferença Total",
                     value=State.formatted_difference,
-                    icon="trending-down",  # Gráfico de tendência
+                    icon="trending_down",
                     help_text="COMPULAB - SIMUS",
                     delta=f"{State.difference_percent:.1f}%",
                     delta_positive=State.difference >= 0,
@@ -129,18 +117,17 @@ def results_summary() -> rx.Component:
                 metric_card(
                     title="Exames Faltantes",
                     value=f"{State.missing_exams_count}",
-                    icon="triangle-alert",  # Aviso
+                    icon="triangle_alert", # Fase 2: Nome de ícone correto
                     help_text="no SIMUS",
                 ),
-                columns="4",
-                spacing="4",
+                columns={"initial": "1", "sm": "2", "md": "4"}, # Fase 2: Breakpoints dict
+                style={"gap": Spacing.LG},
                 width="100%",
             ),
-            spacing="4",
+            style={"gap": Spacing.LG},
             width="100%",
         ),
     )
-
 
 def breakdown_section() -> rx.Component:
     """Seção de explicação da diferença"""
@@ -149,99 +136,115 @@ def breakdown_section() -> rx.Component:
         rx.box(
             rx.vstack(
                 rx.hstack(
-                    rx.text("🧭", class_name="text-2xl"),
+                    rx.text("🧭", font_size="1.5rem"),
                     rx.text(
                         "Por que existe essa diferença?",
-                        class_name="text-green-800 font-bold text-xl"
+                        style=Typography.H4,
+                        color=Color.DEEP
                     ),
-                    spacing="3",
-                    align="center",
+                    align_items="center",
+                    style={"gap": "12px"},
                 ),
-                rx.text(
-                    "Detalhes sobre a composição da diferença total",
-                    class_name="text-gray-600"
-                ),
+                # Resumo em cards grid
                 rx.grid(
                     rx.box(
                         rx.vstack(
-                            rx.text("👤", class_name="text-2xl"),
-                            rx.text("Pacientes Faltantes", class_name="text-gray-600 text-sm"),
+                            rx.text("👤", font_size="1.5rem"),
+                            rx.text("Pacientes Faltantes", style=Typography.SMALL, color=Color.TEXT_SECONDARY),
                             rx.text(
                                 f"R$ {State.missing_patients_total:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
-                                class_name="text-green-800 font-bold text-lg"
+                                style=Typography.H5,
+                                color=Color.DEEP
                             ),
-                            spacing="1",
-                            align="center",
+                            align_items="center",
+                            style={"gap": "4px"},
                         ),
-                        class_name="bg-white p-4 rounded-xl border border-green-100"
+                        bg=Color.SURFACE,
+                        padding=Spacing.MD,
+                        border_radius=Design.RADIUS_LG,
+                        border=f"1px solid {Color.BORDER}",
                     ),
                     rx.box(
                         rx.vstack(
-                            rx.text("📝", class_name="text-2xl"),
-                            rx.text("Exames Faltantes", class_name="text-gray-600 text-sm"),
+                            rx.text("📝", font_size="1.5rem"),
+                            rx.text("Exames Faltantes", style=Typography.SMALL, color=Color.TEXT_SECONDARY),
                             rx.text(
                                 f"R$ {State.missing_exams_total:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
-                                class_name="text-green-800 font-bold text-lg"
+                                style=Typography.H5,
+                                color=Color.DEEP
                             ),
-                            spacing="1",
-                            align="center",
+                            align_items="center",
+                            style={"gap": "4px"},
                         ),
-                        class_name="bg-white p-4 rounded-xl border border-green-100"
+                        bg=Color.SURFACE,
+                        padding=Spacing.MD,
+                        border_radius=Design.RADIUS_LG,
+                        border=f"1px solid {Color.BORDER}",
                     ),
                     rx.box(
                         rx.vstack(
-                            rx.text("💸", class_name="text-2xl"),
-                            rx.text("Divergências", class_name="text-gray-600 text-sm"),
+                            rx.text("💸", font_size="1.5rem"),
+                            rx.text("Divergências", style=Typography.SMALL, color=Color.TEXT_SECONDARY),
                             rx.text(
                                 f"R$ {State.divergences_total:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
-                                class_name="text-green-800 font-bold text-lg"
+                                style=Typography.H5,
+                                color=Color.DEEP
                             ),
-                            spacing="1",
-                            align="center",
+                            align_items="center",
+                            style={"gap": "4px"},
                         ),
-                        class_name="bg-white p-4 rounded-xl border border-green-100"
+                        bg=Color.SURFACE,
+                        padding=Spacing.MD,
+                        border_radius=Design.RADIUS_LG,
+                        border=f"1px solid {Color.BORDER}",
                     ),
                     rx.box(
                         rx.vstack(
-                            rx.text("✅", class_name="text-2xl"),
-                            rx.text("Total Explicado", class_name="text-gray-600 text-sm"),
+                            rx.text("✅", font_size="1.5rem"),
+                            rx.text("Total Explicado", style=Typography.SMALL, color=Color.TEXT_SECONDARY),
                             rx.text(
                                 f"R$ {State.explained_total:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
-                                class_name="text-green-800 font-bold text-lg"
+                                style=Typography.H5,
+                                color=Color.DEEP
                             ),
-                            spacing="1",
-                            align="center",
+                            align_items="center",
+                            style={"gap": "4px"},
                         ),
-                        class_name="bg-white p-4 rounded-xl border border-green-100"
+                        bg=Color.SURFACE,
+                        padding=Spacing.MD,
+                        border_radius=Design.RADIUS_LG,
+                        border=f"1px solid {Color.BORDER}",
                     ),
                     rx.box(
                         rx.vstack(
-                            rx.text("❓", class_name="text-2xl"),
-                            rx.text("Diferença Residual", class_name="text-gray-600 text-sm"),
+                            rx.text("❓", font_size="1.5rem"),
+                            rx.text("Diferença Residual", style=Typography.SMALL, color=Color.TEXT_SECONDARY),
                             rx.text(
                                 f"R$ {State.residual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
-                                class_name="text-orange-600 font-bold text-lg"
+                                style=Typography.H5,
+                                color=Color.ERROR
                             ),
-                            spacing="1",
-                            align="center",
+                            align_items="center",
+                            style={"gap": "4px"},
                         ),
-                        class_name="bg-white p-4 rounded-xl border border-orange-100"
+                        bg=Color.SURFACE,
+                        padding=Spacing.MD,
+                        border_radius=Design.RADIUS_LG,
+                        border=f"1px solid {Color.ERROR}40",
                     ),
-                    columns="5",
-                    spacing="3",
+                    columns={"initial": "1", "sm": "3", "md": "5"},
+                    style={"gap": Spacing.MD},
                     width="100%",
                 ),
-                rx.text(
-                    "A diferença total é explicada pela soma: pacientes faltantes + exames faltantes + divergências de valores.",
-                    class_name="text-gray-500 text-sm italic mt-2"
-                ),
-                spacing="4",
+                padding=Spacing.LG,
+                border_radius=Design.RADIUS_XL,
+                background_image=f"linear-gradient(to br, {Color.BACKGROUND}, {Color.PRIMARY_LIGHT})",
+                style={"gap": Spacing.LG},
                 width="100%",
             ),
-            class_name="bg-gradient-to-br from-green-50 to-lime-50 p-6 rounded-2xl mt-6"
+            margin_top=Spacing.XL,
         ),
     )
-
 
 def missing_exams_table() -> rx.Component:
     """Tabela de exames faltantes"""
@@ -250,13 +253,14 @@ def missing_exams_table() -> rx.Component:
         rx.box(
             rx.vstack(
                 rx.hstack(
-                    rx.text("⚠️", class_name="text-2xl"),
+                    rx.box(rx.icon(tag="triangle_alert", color=Color.WARNING), padding="8px", bg=Color.WARNING_BG, border_radius="8px"),
                     rx.text(
                         f"Exames Faltantes ({State.missing_exams_count})",
-                        class_name="text-green-800 font-bold text-lg"
+                        style=Typography.H4,
+                        color=Color.DEEP
                     ),
-                    spacing="3",
-                    align="center",
+                    align_items="center",
+                    style={"gap": "12px"},
                 ),
                 rx.data_table(
                     data=State.missing_exams,
@@ -269,13 +273,17 @@ def missing_exams_table() -> rx.Component:
                     search=True,
                     sort=True,
                 ),
-                spacing="4",
+                style={"gap": Spacing.LG},
                 width="100%",
             ),
-            class_name="bg-white p-6 rounded-2xl shadow-lg border border-orange-100 mt-6"
+            padding=Spacing.LG,
+            bg=Color.SURFACE,
+            border_radius=Design.RADIUS_XL,
+            box_shadow=Design.SHADOW_DEFAULT,
+            border=f"1px solid {Color.BORDER}",
+            margin_top=Spacing.XL,
         ),
     )
-
 
 def divergences_table() -> rx.Component:
     """Tabela de divergências de valores"""
@@ -284,13 +292,14 @@ def divergences_table() -> rx.Component:
         rx.box(
             rx.vstack(
                 rx.hstack(
-                    rx.text("💰", class_name="text-2xl"),
+                    rx.box(rx.icon(tag="coins", color=Color.PRIMARY), padding="8px", bg=Color.PRIMARY_LIGHT, border_radius="8px"),
                     rx.text(
                         f"Divergências de Valores ({State.divergences_count})",
-                        class_name="text-green-800 font-bold text-lg"
+                        style=Typography.H4,
+                        color=Color.DEEP
                     ),
-                    spacing="3",
-                    align="center",
+                    align_items="center",
+                    style={"gap": "12px"},
                 ),
                 rx.data_table(
                     data=State.value_divergences,
@@ -305,277 +314,148 @@ def divergences_table() -> rx.Component:
                     search=True,
                     sort=True,
                 ),
-                spacing="4",
+                style={"gap": Spacing.LG},
                 width="100%",
             ),
-            class_name="bg-white p-6 rounded-2xl shadow-lg border border-yellow-100 mt-6"
+            padding=Spacing.LG,
+            bg=Color.SURFACE,
+            border_radius=Design.RADIUS_XL,
+            box_shadow=Design.SHADOW_DEFAULT,
+            border=f"1px solid {Color.BORDER}",
+            margin_top=Spacing.XL,
         ),
     )
-
 
 def ai_analysis_section() -> rx.Component:
     """Seção de análise por IA - Design Premium"""
     return rx.box(
         rx.vstack(
-            # Header Premium com Gradiente
+            # Header Premium
             rx.box(
-                rx.vstack(
-                    rx.hstack(
-                        rx.box(
-                            rx.text("🤖", class_name="text-3xl"),
-                            class_name="bg-white/20 p-3 rounded-xl backdrop-blur-sm"
-                        ),
-                        rx.vstack(
-                            rx.text(
-                                "Auditoria Inteligente",
-                                class_name="text-white font-bold text-xl tracking-tight"
-                            ),
-                            rx.text(
-                                "Análise automatizada por IA OpenAI",
-                                class_name="text-white/80 text-sm"
-                            ),
-                            spacing="0",
-                            align="start",
-                        ),
-                        spacing="4",
-                        align="center",
+                rx.hstack(
+                    rx.box(
+                        rx.icon(tag="bot", size=24, color="white"),
+                        padding="10px",
+                        bg="rgba(255,255,255,0.2)",
+                        border_radius="12px",
+                        backdrop_filter="blur(4px)"
                     ),
-                    width="100%",
+                    rx.vstack(
+                        rx.text("Auditoria Inteligente", style=Typography.H4, color="white"),
+                        rx.text("Análise automatizada por IA OpenAI", style=Typography.SMALL, color="rgba(255,255,255,0.8)"),
+                        align_items="start",
+                        style={"gap": "0px"},
+                    ),
+                    align_items="center",
+                    style={"gap": Spacing.MD},
+                    padding=Spacing.LG,
                 ),
-                class_name="bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600 p-5 rounded-t-2xl"
+                background_image=Color.GRADIENT_PRIMARY,
+                border_radius=f"{Design.RADIUS_XL} {Design.RADIUS_XL} 0 0",
+                width="100%",
             ),
             
             # Corpo do Card
             rx.box(
                 rx.vstack(
-                    # Features da IA
-                    rx.hstack(
+                    # Features da IA (Grid Responsivo conforme Guardrail #2)
+                    rx.grid(
                         rx.box(
                             rx.vstack(
-                                rx.text("⚡", class_name="text-2xl"),
-                                rx.text("Análise Paralela", class_name="text-xs font-medium text-gray-700"),
-                                spacing="1",
-                                align="center",
+                                rx.icon(tag="zap", size=20, color=Color.PRIMARY),
+                                rx.text("Análise Paralela", style=Typography.SMALL, text_align="center"),
+                                align_items="center",
+                                style={"gap": "4px"},
                             ),
-                            class_name="bg-gray-50 p-3 rounded-xl flex-1 text-center"
+                            bg=Color.BACKGROUND, padding=Spacing.MD, border_radius=Design.RADIUS_LG,
                         ),
                         rx.box(
                             rx.vstack(
-                                rx.text("🎯", class_name="text-2xl"),
-                                rx.text("Precisão 0.02", class_name="text-xs font-medium text-gray-700"),
-                                spacing="1",
-                                align="center",
+                                rx.icon(tag="target", size=20, color=Color.PRIMARY),
+                                rx.text("Precisão 0.02", style=Typography.SMALL, text_align="center"),
+                                align_items="center",
+                                style={"gap": "4px"},
                             ),
-                            class_name="bg-gray-50 p-3 rounded-xl flex-1 text-center"
+                            bg=Color.BACKGROUND, padding=Spacing.MD, border_radius=Design.RADIUS_LG,
                         ),
                         rx.box(
                             rx.vstack(
-                                rx.text("📊", class_name="text-2xl"),
-                                rx.text("CSV + PDF", class_name="text-xs font-medium text-gray-700"),
-                                spacing="1",
-                                align="center",
+                                rx.icon(tag="file_check", size=20, color=Color.PRIMARY),
+                                rx.text("CSV + PDF", style=Typography.SMALL, text_align="center"),
+                                align_items="center",
+                                style={"gap": "4px"},
                             ),
-                            class_name="bg-gray-50 p-3 rounded-xl flex-1 text-center"
+                            bg=Color.BACKGROUND, padding=Spacing.MD, border_radius=Design.RADIUS_LG,
                         ),
-                        spacing="3",
+                        columns={"initial": "3"},
+                        style={"gap": Spacing.MD},
                         width="100%",
-                        class_name="mb-4"
                     ),
                     
-                    # API Key Config ou Status
+                    # API Key ou Status
                     rx.cond(
                         State.openai_api_key == "",
                         rx.box(
                             rx.vstack(
                                 rx.hstack(
-                                    rx.text("🔐", class_name="text-xl"),
-                                    rx.text(
-                                        "Configure sua API Key",
-                                        class_name="text-amber-800 font-semibold"
-                                    ),
-                                    spacing="2",
+                                    rx.icon(tag="key", size=18, color=Color.WARNING),
+                                    rx.text("Configure sua API Key", style=Typography.LABEL, color=Color.DEEP),
+                                    align_items="center",
+                                    style={"gap": "8px"},
                                 ),
                                 rx.input(
-                                    placeholder="sk-... (Cole sua API Key da OpenAI)",
+                                    placeholder="sk-...",
                                     type="password",
                                     on_change=State.set_api_key,
-                                    class_name="w-full bg-white border-amber-300 focus:border-amber-500 rounded-lg"
+                                    border_radius=Design.RADIUS_MD,
+                                    min_height="44px",
                                 ),
-                                rx.link(
-                                    rx.hstack(
-                                        rx.text("🔑"),
-                                        rx.text("Obter API Key grátis", class_name="text-sm"),
-                                        spacing="1",
-                                    ),
-                                    href="https://platform.openai.com/api-keys",
-                                    is_external=True,
-                                    class_name="text-amber-700 hover:text-amber-900 font-medium"
-                                ),
-                                spacing="3",
+                                style={"gap": Spacing.MD},
                                 width="100%",
                             ),
-                            class_name="bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-xl p-4"
+                            bg=Color.WARNING_BG, padding=Spacing.LG, border_radius=Design.RADIUS_LG, width="100%",
                         ),
                         rx.vstack(
-                            # Status Conectado
                             rx.hstack(
-                                rx.box(
-                                    rx.text("✓", class_name="text-white text-xs font-bold"),
-                                    class_name="bg-green-500 w-5 h-5 rounded-full flex items-center justify-center"
-                                ),
-                                rx.text("API OpenAI conectada", class_name="text-green-700 font-medium text-sm"),
-                                spacing="2",
+                                rx.icon(tag="circle_check", size=18, color=Color.SUCCESS),
+                                rx.text("API OpenAI conectada", style=Typography.SMALL, color=Color.SUCCESS),
+                                align_items="center",
+                                style={"gap": "8px"},
                             ),
-                            
-                            # Progress Bar (quando carregando)
-                            rx.cond(
-                                State.is_generating_ai,
-                                rx.box(
-                                    rx.vstack(
-                                        rx.hstack(
-                                            rx.spinner(size="1", color="green"),
-                                            rx.text(State.ai_loading_text, class_name="text-sm font-medium text-gray-700"),
-                                            spacing="2",
-                                        ),
-                                        rx.progress(
-                                            value=State.ai_loading_progress,
-                                            max=100,
-                                            class_name="w-full h-2 rounded-full",
-                                            color_scheme="green"
-                                        ),
-                                        spacing="2",
-                                        width="100%"
-                                    ),
-                                    class_name="bg-green-50 p-3 rounded-lg w-full"
-                                ),
-                            ),
-                            
-                            # Botão Principal
+                            # Botão de Auditoria
                             rx.button(
                                 rx.hstack(
-                                    rx.cond(
-                                        State.is_generating_ai,
-                                        rx.spinner(size="1", color="white"),
-                                        rx.text("🚀", class_name="text-lg"),
-                                    ),
+                                    rx.cond(State.is_generating_ai, rx.spinner(size="1"), rx.icon(tag="rocket", size=18)),
                                     rx.text("Iniciar Auditoria Inteligente"),
-                                    spacing="2",
-                                    align="center",
+                                    align_items="center",
+                                    style={"gap": "8px"},
                                 ),
                                 on_click=State.generate_ai_analysis,
                                 disabled=State.is_generating_ai | ~State.has_analysis,
-                                class_name="bg-gradient-to-r from-emerald-500 to-green-600 text-white px-6 py-4 rounded-xl font-bold text-lg hover:from-emerald-600 hover:to-green-700 hover:shadow-xl transition-all w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                                background_image=Color.GRADIENT_PRIMARY,
+                                color="white",
+                                width="100%",
+                                padding="1.5rem",
+                                border_radius=Design.RADIUS_LG,
+                                _hover={"opacity": 0.9, "transform": "translateY(-2px)"},
+                                transition="all 0.2s ease",
                             ),
-                            spacing="4",
                             width="100%",
+                            style={"gap": Spacing.MD},
                         ),
                     ),
-                    spacing="4",
-                    width="100%",
+                    style={"gap": Spacing.LG},
+                    padding=Spacing.LG,
                 ),
-                class_name="bg-white p-5 rounded-b-2xl border-x border-b border-gray-100"
+                bg=Color.SURFACE,
+                border_radius=f"0 0 {Design.RADIUS_XL} {Design.RADIUS_XL}",
+                border_x=f"1px solid {Color.BORDER}",
+                border_bottom=f"1px solid {Color.BORDER}",
+                width="100%",
             ),
-            spacing="0",
+            style={"gap": "0px"},
             width="100%",
         ),
-        
-        # Results Section
-        rx.cond(
-            State.ai_analysis != "",
-            rx.vstack(
-                rx.vstack(
-                    rx.cond(
-                        State.ai_analysis_data,
-                        # Se tiver dados estruturados, mostrar tabela
-                        rx.box(
-                            rx.vstack(
-                                rx.text(
-                                    f"Divergências Encontradas ({State.ai_analysis_data.length})",
-                                    class_name="text-green-800 font-bold mb-4"
-                                ),
-                                rx.data_table(
-                                    data=State.ai_analysis_data,
-                                    columns=[
-                                        {"name": "Paciente", "label": "Paciente"},
-                                        {"name": "Nome_Exame", "label": "Exame"},
-                                        {"name": "Valor_Compulab", "label": "Compulab"},
-                                        {"name": "Valor_Simus", "label": "Simus"},
-                                        {"name": "Tipo_Divergencia", "label": "Divergência"},
-                                    ],
-                                    pagination=True,
-                                    search=True,
-                                    sort=True,
-                                    class_name="w-full"
-                                ),
-                                spacing="2",
-                                width="100%"
-                            ),
-                            class_name="bg-white rounded-xl p-6 border border-green-100 mt-4 shadow-sm w-full overflow-x-auto"
-                        ),
-                        # Senão, mostrar markdown (fallback)
-                        rx.box(
-                            rx.markdown(State.ai_analysis),
-                            class_name="bg-white rounded-xl p-6 border border-green-100 mt-4 prose prose-green max-w-none shadow-sm"
-                        )
-                    ),
-                    # Botões de Download (Horizontal)
-                    rx.hstack(
-                        # CSV Download
-                        rx.cond(
-                            State.ai_analysis_csv != "",
-                            rx.link(
-                                rx.button(
-                                    rx.hstack(
-                                        rx.text("📊"),
-                                        rx.text("Baixar CSV"),
-                                        spacing="2",
-                                    ),
-                                    class_name="bg-blue-600 text-white px-4 py-3 rounded-xl font-semibold hover:bg-blue-700 shadow-md transition-all"
-                                ),
-                                href=State.ai_analysis_csv,
-                                download="Auditoria_IA.csv",
-                                is_external=False,
-                            ),
-                        ),
-                        # PDF Download
-                        rx.cond(
-                            State.analysis_pdf != "",
-                            rx.link(
-                                rx.button(
-                                    rx.hstack(
-                                        rx.text("📄"),
-                                        rx.text("Baixar PDF"),
-                                        spacing="2",
-                                    ),
-                                    class_name="bg-green-600 text-white px-4 py-3 rounded-xl font-semibold hover:bg-green-700 shadow-md transition-all"
-                                ),
-                                href=State.analysis_pdf,
-                                download="Relatorio_Auditoria_IA.pdf",
-                                is_external=False,
-                            ),
-                            rx.button(
-                                rx.hstack(
-                                    rx.text("⚙️"),
-                                    rx.text("Gerar PDF"),
-                                    spacing="2",
-                                ),
-                                on_click=State.generate_pdf_report,
-                                class_name="bg-white text-green-700 border-2 border-green-600 px-4 py-3 rounded-xl font-semibold hover:bg-green-50 transition-all"
-                            )
-                        ),
-                        spacing="4",
-                        width="100%",
-                        justify="center",
-                        class_name="mt-4",
-                    ),
-                    width="100%",
-                ),
-            ),
-            spacing="4",
-            width="100%",
-        ),
-        spacing="6",
+        margin_top=Spacing.XL,
         width="100%",
-        class_name="shadow-xl rounded-2xl overflow-hidden bg-white"
     )
-

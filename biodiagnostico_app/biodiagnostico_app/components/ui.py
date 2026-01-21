@@ -2,78 +2,39 @@ import reflex as rx
 from ..styles import Color, Design, Typography, Animation, Spacing
 
 """
-Biblioteca de Componentes Centralizada - Biodiagnóstico 2.0
-Use estes componentes para garantir consistência visual em toda a aplicação.
-
-Inclui:
-- Tipografia responsiva com hierarquia clara
-- Componentes de formulário acessíveis (mínimo 44px de altura)
-- Sistema de espaçamento consistente
-- Tabelas modernas com alternância de cores
-- Sistema de notificações toast
-- Estados vazios e spinners de carregamento
+Biblioteca de Componentes Centralizada - Biodiagnóstico 2.0 (PURIFICADA)
+Versão 2.1 - Protocolo Aspirador ativado.
 """
 
 def heading(text: str, level: int = 1, color: str = None, **props) -> rx.Component:
-    """Cabeçalho padronizado (H1-H4)"""
+    """Cabeçalho padronizado (H1-H5) usando tokens oficiais"""
     styles = {
         1: Typography.H1,
         2: Typography.H2,
         3: Typography.H3,
         4: Typography.H4,
+        5: Typography.H5,
     }
     style = styles.get(level, Typography.H1).copy()
     if color:
         style["color"] = color
-        
     style.update(props)
     return rx.text(text, **style)
 
-def animated_heading(text: str, level: int = 1, color: str = None, delay: int = 100, **props) -> rx.Component:
-    """Cabeçalho com animação palavra por palavra (Frame Motion like)"""
-    words = text.split(" ")
-    
-    # Reuse heading styles logic
-    styles = {
-        1: Typography.H1,
-        2: Typography.H2,
-        3: Typography.H3,
-        4: Typography.H4,
+def animated_heading(text: str, level: int = 1, color: str = None, animation: str = "fade-in-up", **props) -> rx.Component:
+    """Cabeçalho com animação integrada do Design System"""
+    anim_classes = {
+        "fade-in": "animate-fade-in",
+        "fade-in-up": "animate-fade-in-up",
+        "slide-up": "animate-slide-up",
+        "pulse": "animate-pulse-subtle",
     }
-    style = styles.get(level, Typography.H1).copy()
-    if color:
-        style["color"] = color
-    style.update(props)
-    
-    return rx.hstack(
-        *[
-            rx.text(
-                word,
-                **style,
-                opacity="0",
-                animation_name="fadeInUp",
-                animation_duration="0.6s",
-                animation_fill_mode="forwards",
-                animation_timing_function="ease-out",
-                style={"animationDelay": f"{i * delay}ms"}
-            ) for i, word in enumerate(words)
-        ],
-        spacing="3",
-        justify="center",
-        wrap="wrap",
-        width="100%"
-    )
+    class_name = anim_classes.get(animation, "animate-fade-in-up")
+    return heading(text, level=level, color=color, class_name=class_name, **props)
 
-def text(content: str, size: str = "body", color: str = None, **props) -> rx.Component:
-    """
-    Texto de corpo padronizado com múltiplas opções de tamanho
-
-    Args:
-        content: Conteúdo do texto
-        size: Tamanho do texto (body, body_large, body_secondary, small, caption, label, label_large)
-        color: Cor personalizada (opcional)
-    """
-    styles = {
+def text(content: str, size: str = "body", **props) -> rx.Component:
+    """Texto padronizado usando o Design System"""
+    sizes = {
         "body": Typography.BODY,
         "body_large": Typography.BODY_LARGE,
         "body_secondary": Typography.BODY_SECONDARY,
@@ -82,47 +43,38 @@ def text(content: str, size: str = "body", color: str = None, **props) -> rx.Com
         "label": Typography.LABEL,
         "label_large": Typography.LABEL_LARGE,
     }
-    style = styles.get(size, Typography.BODY).copy()
-    if color:
-        style["color"] = color
-
+    style = sizes.get(size, Typography.BODY).copy()
     style.update(props)
     return rx.text(content, **style)
 
 def card(*children, **props) -> rx.Component:
-    """Container card padrão com sombra e bordas arredondadas"""
+    """Container card premium com sombras e bordas do design system"""
     from ..styles import CARD_STYLE
-
     base_style = CARD_STYLE.copy()
-    base_style["_hover"] = {"box_shadow": Design.SHADOW_MD, "transform": "translateY(-2px)"}
-
-    # Merge styles handling duplicates carefully (props take precedence)
-    final_style = base_style.copy()
-    final_style.update(props)
-
-    return rx.box(*children, **final_style)
+    # Adicionando interatividade premium da Skill de UI
+    base_style.update({
+        "transition": "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        "_hover": {
+            "box_shadow": Design.SHADOW_MD, 
+            "transform": "translateY(-4px)",
+            "border_color": Color.PRIMARY
+        }
+    })
+    base_style.update(props)
+    return rx.box(*children, **base_style)
 
 def button(
     label: str,
     icon: str = None,
-    variant: str = "primary",  # primary, secondary, ghost, danger
+    variant: str = "primary",  
     on_click = None,
     is_loading: bool = False,
     loading_text: str = "Carregando...",
     **props
 ) -> rx.Component:
-    """Botão unificado com variantes"""
+    """Botão unificado com variantes purificadas"""
     from ..styles import BUTTON_PRIMARY_STYLE, BUTTON_SECONDARY_STYLE
 
-    # Base styles with display and gap
-    base_style = {
-        "display": "flex",
-        "align_items": "center",
-        "justify_content": "center",
-        "gap": "0.5rem",
-    }
-
-    # Variant styles using new style constants
     variants = {
         "primary": {**BUTTON_PRIMARY_STYLE},
         "secondary": {**BUTTON_SECONDARY_STYLE},
@@ -130,61 +82,40 @@ def button(
             "bg": "transparent",
             "color": Color.TEXT_SECONDARY,
             "padding_x": "0.75rem",
-            "_hover": {"bg": "#F3F4F6", "color": Color.DEEP},
+            "_hover": {"bg": Color.PRIMARY_LIGHT, "color": Color.DEEP},
         },
         "danger": {
-            "bg": "#FEF2F2",
-            "color": "#DC2626",
-            "border": "1px solid #FECACA",
-            "_hover": {"bg": "#FEE2E2", "border_color": "#FCA5A5"},
+            "bg": Color.ERROR_BG,
+            "color": Color.ERROR,
+            "border": f"1px solid {Color.ERROR}40",
+            "_hover": {"bg": Color.ERROR, "color": "white", "border_color": Color.ERROR},
         }
     }
     
     current_variant = variants.get(variant, variants["primary"])
     
-    # Content construction
-    loading_content = rx.hstack(
-        rx.spinner(size="1", color="current"),
-        rx.text(loading_text),
-        align="center",
-        spacing="2"
-    )
-
-    normal_content = rx.hstack(
-        rx.cond(icon is not None, rx.icon(icon or "circle_help", size=18)),
-        rx.text(label),
-        align="center",
-        spacing="2"
-    )
-        
-    # Merge disabled state
     user_disabled = props.pop("disabled", False)
     should_disable = is_loading | user_disabled
 
-    # Merge styles
-    final_style = base_style.copy()
-    final_style.update(current_variant)
+    final_style = current_variant.copy()
     final_style.update(props)
 
-    # Added shine effect element for primary button
-    shine_effect = rx.box(
-        position="absolute",
-        top="0",
-        left="-100%",
-        width="100%",
-        height="100%",
-        background_image="linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)",
-        transition="all 0.6s ease",
-        _hover={"left": "100%"},
-        class_name="hover-shine" if variant == "primary" else ""
-    )
-
     return rx.button(
-        rx.box(
-            rx.cond(is_loading, loading_content, normal_content),
-            z_index="1"
+        rx.cond(
+            is_loading,
+            rx.hstack(
+                rx.spinner(size="1"),
+                rx.text(loading_text),
+                align="center",
+                style={"gap": "8px"}
+            ),
+            rx.hstack(
+                rx.cond(icon != None, rx.icon(tag=icon, size=18)),
+                rx.text(label),
+                align="center",
+                style={"gap": "8px"}
+            )
         ),
-        rx.cond(variant == "primary", shine_effect, rx.fragment()),
         on_click=on_click,
         disabled=should_disable,
         **final_style
@@ -196,14 +127,14 @@ def form_field(label: str, control: rx.Component, required: bool = False, error:
         rx.hstack(
             rx.text(label, **Typography.LABEL),
             rx.cond(required, rx.text("*", color=Color.ERROR, font_size="0.875rem")),
-            spacing="1",
+            style={"gap": "4px"},
         ),
         control,
         rx.cond(
             error != "",
             rx.text(error, color=Color.ERROR, font_size="0.75rem"),
         ),
-        spacing="1",
+        style={"gap": "4px"},
         width="100%",
         align_items="start",
     )
@@ -211,431 +142,177 @@ def form_field(label: str, control: rx.Component, required: bool = False, error:
 def input(placeholder: str = "", **props) -> rx.Component:
     """Input text padronizado com estilos acessíveis (min 44px)"""
     from ..styles import INPUT_STYLE
-
     base_style = INPUT_STYLE.copy()
     base_style["placeholder"] = placeholder
     base_style.update(props)
-
     return rx.input(**base_style)
 
 def select(items, placeholder: str = "Selecione...", value=None, on_change=None, **props) -> rx.Component:
     """Select padronizado com estilos acessíveis (min 44px)"""
-    # Estilo base usando os novos padrões
     base_style = {
         "border": f"1px solid {Color.BORDER}",
         "border_radius": Design.RADIUS_LG,
-        "min_height": "44px",  # Acessibilidade WCAG
+        "min_height": "44px",
         "bg": Color.SURFACE,
-        "padding": f"{Spacing.SM} {Spacing.MD}",  # 12px 16px
+        "padding": f"{Spacing.SM} {Spacing.MD}",
         "width": "100%",
-        "cursor": "pointer",
         "color": Color.TEXT_PRIMARY,
-        "font_size": "1rem",  # 16px - evita zoom no iOS
+        "font_size": "1rem",
         "transition": "all 0.2s ease-in-out",
-        "_focus": {
-            "border_color": f"{Color.TEXT_SECONDARY} !important",
-            "outline": "none !important",
-            "box_shadow": "none !important",
-        },
-        "_focus_visible": {
-            "border_color": f"{Color.TEXT_SECONDARY} !important",
-            "outline": "none !important",
-            "box_shadow": "none !important",
-        },
-        "_hover": {
-            "border_color": Color.SECONDARY,
-        },
-    }
-
-    # Mesclar props de estilo
-    style_props = base_style.copy()
-    style_props.update(props)
-    
-    # Garantir que o fundo seja branco (SURFACE) e não herde cinza
-    style_props["bg"] = Color.SURFACE
-    style_props["background_color"] = Color.SURFACE
-    
-    return rx.select(
-        items,
-        placeholder=placeholder,
-        value=value,
-        on_change=on_change,
-        **style_props
-    )
-
-def text_area(placeholder: str = "", **props) -> rx.Component:
-    """TextArea padronizado com estilos acessíveis"""
-    base_style = {
-        "placeholder": placeholder,
-        "border": f"1px solid {Color.BORDER}",
-        "border_radius": Design.RADIUS_LG,
-        "padding": f"{Spacing.SM} {Spacing.MD}",  # 12px 16px
-        "bg": Color.SURFACE,
-        "width": "100%",
-        "min_height": "100px",
-        "color": Color.TEXT_PRIMARY,
-        "font_size": "1rem",  # 16px - evita zoom no iOS
-        "transition": "all 0.2s ease-in-out",
-        "_placeholder": {"color": Color.TEXT_SECONDARY, "opacity": 0.7},
-        "_focus": {
-            "border_color": f"{Color.TEXT_SECONDARY} !important",
-            "outline": "none !important",
-            "box_shadow": "none !important",
-        },
-        "_focus_visible": {
-            "border_color": f"{Color.TEXT_SECONDARY} !important",
-            "outline": "none !important",
-            "box_shadow": "none !important",
-        },
-        "_hover": {
-            "border_color": Color.SECONDARY,
-        },
+        "_hover": {"border_color": Color.PRIMARY},
+        "_focus": {"border_color": Color.PRIMARY, "box_shadow": f"0 0 0 2px {Color.PRIMARY}20"},
     }
     base_style.update(props)
+    return rx.select(items, placeholder=placeholder, value=value, on_change=on_change, **base_style)
 
+def text_area(placeholder: str = "", **props) -> rx.Component:
+    """TextArea padronizado com estilos consistentes"""
+    from ..styles import INPUT_STYLE
+    base_style = INPUT_STYLE.copy()
+    base_style.update({
+        "min_height": "100px",
+        "padding": Spacing.MD,
+        "resize": "vertical"
+    })
+    base_style["placeholder"] = placeholder
+    base_style.update(props)
     return rx.text_area(**base_style)
 
 def status_badge(text: str, status: str = "default") -> rx.Component:
-    """Badge de status (success, error, warning, info)"""
+    """Badge de status (success, error, warning, info) usando Design System"""
     colors = {
         "success": {"bg": Color.SUCCESS_BG, "color": Color.SUCCESS},
         "error": {"bg": Color.ERROR_BG, "color": Color.ERROR},
         "warning": {"bg": Color.WARNING_BG, "color": Color.WARNING},
-        "info": {"bg": "#EFF6FF", "color": "#1D4ED8"}, # Blue
-        "brand": {"bg": "#F3E8FF", "color": "#7E22CE"}, # Purple
-        "default": {"bg": "#F3F4F6", "color": Color.TEXT_SECONDARY},
+        "info": {"bg": Color.PRIMARY_LIGHT, "color": Color.PRIMARY},
+        "primary": {"bg": Color.PRIMARY_LIGHT, "color": Color.PRIMARY},
+        "default": {"bg": Color.BACKGROUND, "color": Color.TEXT_SECONDARY},
     }
     style = colors.get(status, colors["default"])
-    
     return rx.badge(
         text,
         bg=style["bg"],
         color=style["color"],
-        padding_x="0.75rem",
-        padding_y="0.25rem",
-        border_radius="full",
         variant="soft",
-        font_weight="500",
+        radius="full",
+        padding_x=Spacing.MD,
+        padding_y="2px",
     )
 
 def stat_card(title: str, value: str, icon: str, trend: str = "neutral", subtext: str = "") -> rx.Component:
-    """Card de estatística para dashboards com visual premium"""
+    """Card de estatística premium para dashboards"""
     return card(
         rx.vstack(
             rx.hstack(
                 rx.box(
-                    rx.icon(icon, size=24, color=Color.PRIMARY),
+                    rx.icon(tag=icon, size=24, color=Color.PRIMARY),
                     padding="12px",
-                    border_radius="16px",
-                    background_color=f"{Color.PRIMARY}15",
-                    class_name="flex items-center justify-center",
+                    border_radius="12px",
+                    bg=Color.PRIMARY_LIGHT,
+                    display="flex", align_items="center", justify_content="center"
                 ),
                 rx.spacer(),
-                rx.cond(
-                    subtext != "",
-                    status_badge(subtext, status=trend),
-                ),
+                rx.cond(subtext != "", status_badge(subtext, status=trend)),
                 width="100%",
-                align="center",
+                align_items="center",
             ),
             rx.vstack(
-                rx.text(
-                    value, 
-                    font_size=["1.75rem", "2rem", "2.25rem"], 
-                    font_weight="800", 
-                    color=Color.DEEP, 
-                    line_height="1.2",
-                    letter_spacing="-0.02em"
-                ),
-                rx.text(
-                    title, 
-                    font_size="0.875rem", 
-                    font_weight="600", 
-                    color=Color.TEXT_SECONDARY,
-                    text_transform="uppercase",
-                    letter_spacing="0.05em"
-                ),
-                spacing="1", 
-                align="start"
+                rx.text(value, font_size="2rem", font_weight="800", color=Color.DEEP, line_height="1.1"),
+                rx.text(title, style=Typography.SMALL, color=Color.TEXT_SECONDARY, text_transform="uppercase"),
+                align_items="start",
+                style={"gap": "2px"},
             ),
-            spacing="4",
+            style={"gap": Spacing.LG},
         ),
-        _hover={
-            "transform": "translateY(-4px)",
-            "box_shadow": Design.SHADOW_LG,
-            "border_color": f"{Color.PRIMARY}40"
-        }
     )
 
-def page_header(title: str, subtitle: str) -> rx.Component:
-    """Cabeçalho de página padrão centralizado"""
-    return rx.box(
-        rx.vstack(
-            heading(title, level=2, font_size="1.5rem", text_align="center"),
-            text(subtitle, size="body", text_align="center"),
-            spacing="1",
-            align="center",
-        ),
-        class_name="mb-8 flex justify-center w-full"
-    )
-
-def data_table(
-    headers: list[str],
-    rows: list[list],
-    sortable: bool = False,
-    striped: bool = True,
-    hover: bool = True,
-    **props
-) -> rx.Component:
-    """
-    Tabela de dados profissional com formatação moderna
-
-    Args:
-        headers: Lista de cabeçalhos das colunas
-        rows: Lista de listas com os dados (cada lista interna é uma linha)
-        sortable: Se True, permite ordenação por clique nos cabeçalhos
-        striped: Se True, alterna cores das linhas
-        hover: Se True, destaca linha ao passar o mouse
-    """
-    from ..styles import TABLE_STYLE, TABLE_HEADER_STYLE, TABLE_CELL_STYLE, TABLE_ROW_STYLE, TABLE_ROW_EVEN_STYLE, Spacing
-
-    # Cabeçalhos da tabela
-    header_row = rx.table.header(
-        rx.table.row(
-            *[
-                rx.table.column_header_cell(
-                    rx.hstack(
-                        rx.text(header, **{"font_weight": "600"}),
-                        rx.cond(
-                            sortable,
-                            rx.icon("arrow_up_down", size=14, color=Color.TEXT_SECONDARY)
-                        ),
-                        spacing="2",
-                        align="center"
-                    ),
-                    padding=f"{Spacing.MD} {Spacing.MD}",
-                    bg=Color.PRIMARY_LIGHT,
-                    color=Color.DEEP,
-                    font_weight="600",
-                    font_size="0.875rem",
-                    text_transform="uppercase",
-                    letter_spacing="0.05em",
-                )
-                for header in headers
-            ]
-        )
-    )
-
-    # Linhas de dados
-    def create_row(row_data, index):
-        row_bg = rx.cond(
-            (striped & (index % 2 == 1)),
-            "#F9FAFB",
-            Color.SURFACE
-        )
-
-        return rx.table.row(
-            *[
-                rx.table.cell(
-                    str(cell),
-                    padding=f"{Spacing.SM} {Spacing.MD}",
-                    color=Color.TEXT_PRIMARY,
-                    font_size="0.875rem",
-                )
-                for cell in row_data
-            ],
-            bg=row_bg,
-            class_name=rx.cond(hover, "hover:bg-green-50 transition-colors", ""),
-        )
-
-    body = rx.table.body(
-        *[create_row(row, i) for i, row in enumerate(rows)]
-    )
-
+def data_table(headers: list[str], rows: list[list], striped: bool = True, **props) -> rx.Component:
+    """Tabela de dados profissional purificada"""
     return card(
         rx.table.root(
-            header_row,
-            body,
+            rx.table.header(
+                rx.table.row(
+                    *[rx.table.column_header_cell(
+                        rx.text(header, color=Color.DEEP, font_weight="700", font_size="0.875rem"),
+                        padding=Spacing.MD, bg=Color.PRIMARY_LIGHT
+                    ) for header in headers]
+                )
+            ),
+            rx.table.body(
+                *[rx.table.row(
+                    *[rx.table.cell(str(cell), padding=Spacing.MD) for cell in row],
+                    bg=rx.cond(striped & (i % 2 == 1), Color.BACKGROUND, Color.SURFACE),
+                    _hover={"bg": Color.PRIMARY_LIGHT} if props.get("hover", True) else {}
+                ) for i, row in enumerate(rows)]
+            ),
             width="100%",
             variant="surface",
         ),
-        padding=Spacing.MD,
+        padding="0",
+        overflow="hidden",
         **props
     )
 
-def toast(
-    message: str,
-    status: str = "info",  # success, error, warning, info
-    duration: int = 3000,
-    icon: str = None,
-) -> rx.Component:
-    """
-    Notificação toast flutuante
-
-    Args:
-        message: Mensagem a ser exibida
-        status: Tipo de notificação (success, error, warning, info)
-        duration: Duração em milissegundos
-        icon: Ícone personalizado (opcional)
-    """
-    from ..styles import Spacing
-
-    # Mapeamento de status para cores e ícones
-    status_config = {
-        "success": {"bg": Color.SUCCESS_BG, "color": Color.SUCCESS, "icon": "circle-check"},
+def toast(message: str, status: str = "info") -> rx.Component:
+    """Notificação toast (Aspirada: Removido hexadecimais)"""
+    config = {
+        "success": {"bg": Color.SUCCESS_BG, "color": Color.SUCCESS, "icon": "check-circle"},
         "error": {"bg": Color.ERROR_BG, "color": Color.ERROR, "icon": "circle-x"},
         "warning": {"bg": Color.WARNING_BG, "color": Color.WARNING, "icon": "triangle-alert"},
-        "info": {"bg": "#EFF6FF", "color": "#1D4ED8", "icon": "info"},
-    }
-
-
-    config = status_config.get(status, status_config["info"])
-    toast_icon = icon or config["icon"]
+        "info": {"bg": Color.PRIMARY_LIGHT, "color": Color.PRIMARY, "icon": "info"},
+    }.get(status, {"bg": Color.PRIMARY_LIGHT, "color": Color.PRIMARY, "icon": "info"})
 
     return rx.box(
         rx.hstack(
-            rx.icon(toast_icon, size=20, color=config["color"]),
-            rx.text(
-                message,
-                font_size="0.875rem",
-                font_weight="500",
-                color=Color.TEXT_PRIMARY,
-            ),
-            spacing="3",
-            align="center",
+            rx.icon(tag=config["icon"], size=20, color=config["color"]),
+            rx.text(message, style=Typography.LABEL, color=Color.DEEP),
+            align_items="center",
+            style={"gap": Spacing.MD},
         ),
         bg=config["bg"],
         border=f"1px solid {config['color']}40",
         border_radius=Design.RADIUS_LG,
-        padding=f"{Spacing.SM} {Spacing.MD}",
+        padding=Spacing.MD,
         box_shadow=Design.SHADOW_MD,
-        class_name="animate-slide-up",
-        position="fixed",
-        bottom="2rem",
-        right="2rem",
-        z_index="9999",
-        min_width="300px",
-        max_width="500px",
+        position="fixed", bottom="2rem", right="2rem", z_index="9999",
     )
 
-def loading_spinner(size: str = "md", text: str = "") -> rx.Component:
-    """
-    Spinner de carregamento com texto opcional
-
-    Args:
-        size: Tamanho do spinner (sm, md, lg)
-        text: Texto a ser exibido abaixo do spinner
-    """
-    size_map = {"sm": "1", "md": "2", "lg": "3"}
-    spinner_size = size_map.get(size, "2")
-
+def loading_spinner(text: str = "") -> rx.Component:
+    """Spinner padronizado"""
     return rx.vstack(
-        rx.spinner(size=spinner_size, color=Color.PRIMARY),
-        rx.cond(
-            text != "",
-            rx.text(
-                text,
-                font_size="0.875rem",
-                color=Color.TEXT_SECONDARY,
-                font_weight="500",
-            )
-        ),
-        spacing="3",
-        align="center",
-        justify="center",
+        rx.spinner(size="3", color=Color.PRIMARY),
+        rx.cond(text != "", rx.text(text, style=Typography.BODY_SECONDARY)),
+        align_items="center",
+        justify_content="center",
+        style={"gap": Spacing.MD},
     )
 
-def empty_state(
-    icon: str,
-    title: str,
-    description: str,
-    action_label: str = "",
-    on_action = None,
-) -> rx.Component:
-    """
-    Estado vazio para quando não há dados a exibir
-
-    Args:
-        icon: Ícone a ser exibido
-        title: Título do estado vazio
-        description: Descrição do que fazer
-        action_label: Texto do botão de ação (opcional)
-        on_action: Callback para o botão de ação
-    """
-    from ..styles import Spacing
-
+def empty_state(icon: str, title: str, description: str, action_label: str = "", on_action=None) -> rx.Component:
+    """Estado vazio purificado"""
     return card(
         rx.vstack(
             rx.box(
-                rx.icon(icon, size=48, color=Color.TEXT_SECONDARY),
-                class_name="p-6 rounded-full bg-gray-50",
+                rx.icon(tag=icon, size=48, color=Color.TEXT_SECONDARY),
+                padding=Spacing.XL, border_radius="full", bg=Color.BACKGROUND,
             ),
-            heading(title, level=3, color=Color.TEXT_PRIMARY),
-            text(description, size="body", text_align="center", max_width="400px"),
-            rx.cond(
-                action_label != "",
-                button(
-                    action_label,
-                    variant="primary",
-                    on_click=on_action,
-                ),
-            ),
-            padding=f"{Spacing.XXL} {Spacing.XL}",
+            heading(title, level=3, color=Color.DEEP),
+            text(description, size="body_secondary", text_align="center", max_width="400px"),
+            rx.cond(action_label != "", button(action_label, on_click=on_action)),
+            padding=Spacing.XXL,
+            align_items="center",
+            style={"gap": Spacing.LG},
         ),
         text_align="center",
     )
 
-def segmented_control(options: list[dict], current_value: str, on_change) -> rx.Component:
-    """Controle segmentado moderno para navegação tipo abas"""
-    return rx.box(
-        rx.hstack(
-            *[
-                rx.box(
-                    rx.text(
-                        opt["label"],
-                        font_weight=rx.cond(current_value == opt["value"], "600", "500"),
-                        color=rx.cond(current_value == opt["value"], "white", Color.TEXT_SECONDARY),
-                        transition="all 0.2s ease",
-                    ),
-                    padding_x="1.5rem",
-                    padding_y="0.625rem",
-                    border_radius="10px",
-                    bg=rx.cond(current_value == opt["value"], Color.PRIMARY, "transparent"),
-                    box_shadow=rx.cond(current_value == opt["value"], Design.SHADOW_MD, "none"),
-                    cursor="pointer",
-                    on_click=lambda: on_change(opt["value"]),
-                    transition="all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                    _hover=rx.cond(
-                        current_value == opt["value"],
-                        {},
-                        {"bg": "rgba(0,0,0,0.04)", "color": Color.TEXT_PRIMARY}
-                    ),
-                    flex="1",
-                    text_align="center",
-                )
-                for opt in options
-            ],
-            spacing="1",
-            width="100%",
-            padding="4px",
-        ),
-        bg="#F1F5F9",
-        border_radius="14px",
-        padding="2px",
-        width="fit-content",
-        min_width="300px",
-        margin_x="auto",
-        margin_y="1rem",
-    )
-
-def skeleton_loader(width="100%", height="20px", radius="8px") -> rx.Component:
-    """Loader esquelético para estados de carregamento"""
-    return rx.box(
-        width=width,
-        height=height,
-        border_radius=radius,
-        background="linear-gradient(90deg, #F1F5F9 25%, #E2E8F0 50%, #F1F5F9 75%)",
-        background_size="200% 100%",
-        animation="shine 1.5s infinite linear",
-        class_name="animate-pulse-subtle",
+def segmented_control(items: list[dict], value: str, on_change) -> rx.Component:
+    """Controle segmentado padronizado (Alternativa melhor ao tabs)"""
+    return rx.segmented_control.root(
+        *[rx.segmented_control.item(item["label"], value=item["value"]) for item in items],
+        value=value,
+        on_change=on_change,
+        variant="surface",
+        size="2",
+        radius="large",
+        width="100%",
     )

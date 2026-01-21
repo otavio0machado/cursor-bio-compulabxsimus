@@ -6,77 +6,61 @@ import reflex as rx
 from ..state import State
 from ..components.file_upload import file_upload_enhanced, upload_progress_indicator, file_type_badge
 from ..components import ui
-from ..styles import Color, Spacing
+from ..styles import Color, Design, Typography, Spacing
 
 
 def feature_card(icon: str, title: str, description: str) -> rx.Component:
-    """Card de funcionalidade"""
+    """Card de funcionalidade (Purificado)"""
     return ui.card(
         rx.hstack(
             rx.box(
                 rx.icon(icon, size=24, color=Color.PRIMARY),
-                class_name="p-3 rounded-xl bg-green-50"
+                bg=Color.PRIMARY_LIGHT, p="3", border_radius=Design.RADIUS_LG
             ),
             rx.vstack(
                 ui.text(title, size="label", color=Color.DEEP),
-                ui.text(description, size="small"),
-                spacing="0",
-                align="start",
+                ui.text(description, size="small", color=Color.TEXT_SECONDARY),
+                spacing="0", align_items="start",
             ),
-            spacing="3",
-            align="center",
+            spacing="3", align_items="center",
         ),
     )
 
 
 def conversor_page() -> rx.Component:
-    """Página do conversor PDF para CSV - Design oficial aprimorado"""
+    """Página do conversor PDF para Excel - Design oficial aprimorado (Purificada)"""
     
     # SVG do Erlenmeyer (COMPULAB) - Design refinado
-    erlenmeyer_svg = """
-        <svg viewBox="0 0 80 100" width="70" height="88" class="drop-shadow-sm">
+    erlenmeyer_svg = f"""
+        <svg viewBox="0 0 80 100" width="70" height="88">
             <defs>
                 <linearGradient id="liquidGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" style="stop-color:#81C784;stop-opacity:0.3" />
-                    <stop offset="100%" style="stop-color:#4CAF50;stop-opacity:0.5" />
+                    <stop offset="0%" style="stop-color:{Color.SUPPORTIVE_MEDIUM};stop-opacity:0.3" />
+                    <stop offset="100%" style="stop-color:{Color.PRIMARY};stop-opacity:0.5" />
                 </linearGradient>
             </defs>
             <path d="M28 10 L52 10 L52 35 L70 85 Q72 92 65 95 L15 95 Q8 92 10 85 L28 35 Z" 
-                  fill="url(#liquidGrad)" stroke="#1B5E20" stroke-width="2.5"/>
-            <rect x="26" y="5" width="28" height="8" rx="3" fill="none" stroke="#1B5E20" stroke-width="2.5"/>
-            <ellipse cx="40" cy="75" rx="20" ry="8" fill="#4CAF50" opacity="0.2"/>
-            <circle cx="48" cy="60" r="4" fill="#4CAF50" opacity="0.6">
-                <animate attributeName="cy" values="60;55;60" dur="2s" repeatCount="indefinite"/>
-            </circle>
-            <circle cx="35" cy="68" r="3" fill="#4CAF50" opacity="0.4">
-                <animate attributeName="cy" values="68;62;68" dur="1.5s" repeatCount="indefinite"/>
-            </circle>
+                  fill="url(#liquidGrad)" stroke="{Color.DEEP}" stroke-width="2.5"/>
+            <rect x="26" y="5" width="28" height="8" rx="3" fill="none" stroke="{Color.DEEP}" stroke-width="2.5"/>
+            <ellipse cx="40" cy="75" rx="20" ry="8" fill="{Color.PRIMARY}" opacity="0.2"/>
         </svg>
     """
     
     # SVG dos Tubos de ensaio (SIMUS) - Design refinado
-    tubes_svg = """
-        <svg viewBox="0 0 100 100" width="70" height="88" class="drop-shadow-sm">
+    tubes_svg = f"""
+        <svg viewBox="0 0 100 100" width="70" height="88">
             <defs>
                 <linearGradient id="tubeGrad1" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" style="stop-color:#81C784;stop-opacity:0.2" />
-                    <stop offset="100%" style="stop-color:#4CAF50;stop-opacity:0.5" />
+                    <stop offset="0%" style="stop-color:{Color.SUPPORTIVE_MEDIUM};stop-opacity:0.2" />
+                    <stop offset="100%" style="stop-color:{Color.PRIMARY};stop-opacity:0.5" />
                 </linearGradient>
             </defs>
-            <!-- Tubo 1 -->
-            <rect x="18" y="15" width="15" height="68" rx="7" fill="none" stroke="#1B5E20" stroke-width="2.5"/>
+            <rect x="18" y="15" width="15" height="68" rx="7" fill="none" stroke="{Color.DEEP}" stroke-width="2.5"/>
             <rect x="18" y="52" width="15" height="31" rx="7" fill="url(#tubeGrad1)"/>
-            <!-- Tubo 2 -->
-            <rect x="42" y="15" width="15" height="68" rx="7" fill="none" stroke="#1B5E20" stroke-width="2.5"/>
+            <rect x="42" y="15" width="15" height="68" rx="7" fill="none" stroke="{Color.DEEP}" stroke-width="2.5"/>
             <rect x="42" y="42" width="15" height="41" rx="7" fill="url(#tubeGrad1)"/>
-            <!-- Tubo 3 -->
-            <rect x="66" y="15" width="15" height="68" rx="7" fill="none" stroke="#1B5E20" stroke-width="2.5"/>
+            <rect x="66" y="15" width="15" height="68" rx="7" fill="none" stroke="{Color.DEEP}" stroke-width="2.5"/>
             <rect x="66" y="58" width="15" height="25" rx="7" fill="url(#tubeGrad1)"/>
-            <!-- Upload badge -->
-            <circle cx="81" cy="75" r="10" fill="#4CAF50">
-                <animate attributeName="r" values="10;11;10" dur="1.5s" repeatCount="indefinite"/>
-            </circle>
-            <path d="M81 72 L81 78 M78 75 L81 72 L84 75" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/>
         </svg>
     """
     
@@ -85,7 +69,7 @@ def conversor_page() -> rx.Component:
             # Animated Header
             rx.box(
                 ui.animated_heading("Conversor PDF → Excel", level=1),
-                class_name="py-12 w-full flex justify-center"
+                padding_y=Spacing.XL, width="100%", display="flex", justify_content="center"
             ),
 
             
@@ -97,9 +81,7 @@ def conversor_page() -> rx.Component:
 
                 feature_card("zap", "Processamento Rápido", "Conversão em segundos"),
                 columns={"initial": "1", "sm": "2", "lg": "4"},
-                spacing="4",
-                width="100%",
-                class_name="max-w-4xl grid"
+                spacing="4", width="100%", max_width="6xl", margin_x="auto"
             ),
 
             
@@ -107,11 +89,9 @@ def conversor_page() -> rx.Component:
             ui.card(
                 rx.vstack(
                     rx.hstack(
-                        rx.text("📁", font_size="1.5rem"),
-                        ui.heading("Upload de Arquivos", level=3, margin_bottom="0"),
-                        spacing="3",
-                        align="center",
-                        margin_bottom=Spacing.XS,
+                        rx.icon(tag="upload", size=24, color=Color.PRIMARY),
+                        ui.heading("Upload de Arquivos", level=3),
+                        spacing="3", align_items="center",
                     ),
                     ui.text(
                         "Arraste seus arquivos ou clique para selecionar",
@@ -146,20 +126,15 @@ def conversor_page() -> rx.Component:
                             accept_dict={"application/pdf": [".pdf"]},
                         ),
                         columns={"initial": "1", "sm": "2"},
-                        spacing="6",
-                        width="100%",
+                        spacing="6", width="100%",
                     ),
                     
                     # Progresso de upload
                     upload_progress_indicator(State.is_uploading, "Carregando arquivo..."),
                     
-                    spacing="2",
-                    width="100%",
+                    spacing="2", width="100%",
                 ),
-                width="100%",
-                padding=Spacing.LG,
-                max_width="56rem",
-                margin_top=Spacing.LG,
+                width="100%", max_width="5xl", margin_top=Spacing.LG, margin_x="auto"
             ),
             
             # Botão de conversão
@@ -172,9 +147,7 @@ def conversor_page() -> rx.Component:
                 loading_text="Convertendo arquivos...",
                 disabled=~State.has_files,
                 margin_top=Spacing.LG,
-                size="3",
-                width="100%",
-                max_width="24rem",
+                width="100%", max_width="24rem",
             ),
             
             # Indicador de progresso
@@ -182,57 +155,31 @@ def conversor_page() -> rx.Component:
                 State.is_generating_csv,
                 rx.box(
                     rx.vstack(
-                        rx.text(
-                            State.csv_progress_percentage.to_string() + "%",
-                            class_name="text-[#1B5E20] text-3xl font-bold text-center"
-                        ),
-                        rx.text(
-                            State.csv_stage,
-                            class_name="text-gray-600 text-sm text-center mt-1"
-                        ),
+                        ui.text(State.csv_progress_percentage.to_string() + "%", size="body_large", color=Color.DEEP, font_weight="800"),
+                        ui.text(State.csv_stage, size="small", color=Color.TEXT_SECONDARY),
                         # Barra de progresso
                         rx.box(
                             rx.box(
-                                class_name="h-full bg-[#4CAF50] rounded-full transition-all duration-300",
-                                width=rx.cond(
-                                    State.csv_progress_percentage > 0,
-                                    State.csv_progress_percentage.to_string() + "%",
-                                    "0%"
-                                ),
+                                bg=Color.PRIMARY, border_radius="full", transition="all 0.3s ease",
+                                width=rx.cond(State.csv_progress_percentage > 0, State.csv_progress_percentage.to_string() + "%", "0%"),
+                                height="100%"
                             ),
-                            class_name="w-full h-3 bg-gray-200 rounded-full overflow-hidden mt-4",
+                            width="100%", height="12px", bg=Color.BACKGROUND, border_radius="full", overflow="hidden", margin_top=Spacing.MD
                         ),
-                        spacing="2",
-                        align="center",
+                        spacing="2", align_items="center",
                     ),
-                    class_name="bg-white border border-gray-200 rounded-xl p-6 mt-4 max-w-4xl w-full shadow-sm"
+                    bg=Color.SURFACE, border=f"1px solid {Color.BORDER}", border_radius=Design.RADIUS_XL, padding=Spacing.LG, mt="4", max_width="4xl", width="100%", box_shadow=Design.SHADOW_SM
                 ),
             ),
             
             # Mensagens de status
             rx.cond(
                 State.success_message != "",
-                rx.box(
-                    rx.hstack(
-                        rx.icon("circle-check", size=20, color="#15803d"),
-                        rx.text(State.success_message, class_name="text-green-700"),
-                        spacing="2",
-                        align="center",
-                    ),
-                    class_name="bg-green-50 border border-green-200 text-green-700 rounded-xl p-4 mt-4 max-w-4xl w-full"
-                ),
+                rx.callout(State.success_message, icon="circle_check", color_scheme="green", width="100%", max_width="4xl", margin_top=Spacing.MD)
             ),
             rx.cond(
                 State.error_message != "",
-                rx.box(
-                    rx.hstack(
-                        rx.icon("circle-x", size=20, color="#dc2626"),
-                        rx.text(State.error_message, class_name="text-red-700"),
-                        spacing="2",
-                        align="center",
-                    ),
-                    class_name="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 mt-4 max-w-4xl w-full"
-                ),
+                rx.callout(State.error_message, icon="triangle_alert", color_scheme="red", width="100%", max_width="4xl", margin_top=Spacing.MD)
             ),
             
 
@@ -243,9 +190,8 @@ def conversor_page() -> rx.Component:
                     rx.vstack(
                         rx.hstack(
                             rx.text("🎉", font_size="1.5rem"),
-                            ui.heading("Planilhas Excel geradas com sucesso!", level=3, color=Color.DEEP, margin_bottom="0"),
-                            spacing="3",
-                            align="center",
+                            ui.heading("Planilhas Excel geradas com sucesso!", level=3, color=Color.DEEP),
+                            spacing="3", align_items="center",
                         ),
 
                         ui.text(
@@ -255,67 +201,27 @@ def conversor_page() -> rx.Component:
                         ),
                         rx.grid(
                             rx.link(
-                                rx.button(
-                                    rx.hstack(
-                                        rx.text("📥", class_name="text-lg"),
-                                        rx.vstack(
-                                            rx.text("COMPULAB.xlsx", class_name="font-semibold"),
-                                            rx.text("Dados padronizados", class_name="text-xs opacity-80"),
-                                            spacing="0",
-                                            align="start",
-                                        ),
-                                        spacing="3",
-                                        align="center",
-                                    ),
-                                    class_name="bg-[#1B5E20] text-white px-6 py-3 rounded-xl font-medium hover:bg-[#2E7D32] hover:shadow-lg transition-all"
-                                ),
+                                ui.button("COMPULAB.xlsx", icon="download", variant="primary", width="100%"),
                                 download="compulab_data.xlsx",
                                 href=rx.Var.create(f"data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{State.compulab_csv}"),
                             ),
 
                             rx.link(
-                                rx.button(
-                                    rx.hstack(
-                                        rx.text("📥", class_name="text-lg"),
-                                        rx.vstack(
-                                            rx.text("SIMUS.xlsx", class_name="font-semibold"),
-                                            rx.text("Dados padronizados", class_name="text-xs opacity-80"),
-                                            spacing="0",
-                                            align="start",
-                                        ),
-                                        spacing="3",
-                                        align="center",
-                                    ),
-                                    class_name="bg-[#1B5E20] text-white px-6 py-3 rounded-xl font-medium hover:bg-[#2E7D32] hover:shadow-lg transition-all"
-                                ),
+                                ui.button("SIMUS.xlsx", icon="download", variant="primary", width="100%"),
                                 download="simus_data.xlsx",
                                 href=rx.Var.create(f"data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{State.simus_csv}"),
                             ),
 
                             columns={"initial": "1", "sm": "2"},
-                            spacing="4",
-                            width="100%",
-                            justify="center",
+                            spacing="4", width="100%",
                         ),
                         # Botão para limpar e começar novo
-                        rx.button(
-                            rx.hstack(
-                                rx.text("🔄"),
-                                rx.text("Nova Conversão"),
-                                spacing="2",
-                            ),
-                            on_click=State.clear_all_files,
-                            class_name="bg-transparent border border-gray-300 text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-50 transition-all text-sm mt-4"
-                        ),
-                        spacing="4",
-                        align="center",
+                        ui.button("Nova Conversão", icon="refresh_cw", on_click=State.clear_all_files, variant="ghost", margin_top=Spacing.MD),
+                        spacing="4", align_items="center",
                     ),
-                    bg="linear-gradient(to bottom right, #f0fdf4, #ecfccb)",
-                    border_color="#bbf7d0",
-                    width="100%",
-                    max_width="56rem",
-                    padding=Spacing.LG,
-                    margin_top=Spacing.LG,
+                    bg=f"linear-gradient(135deg, {Color.SUCCESS_BG} 0%, {Color.SURFACE} 100%)",
+                    border=f"1px solid {Color.SUCCESS}40",
+                    width="100%", max_width="5xl", margin_top=Spacing.LG, margin_x="auto"
                 ),
             ),
             
@@ -324,29 +230,19 @@ def conversor_page() -> rx.Component:
                 ~State.csv_generated,
                 ui.card(
                     rx.hstack(
-                        rx.text("💡", font_size="1.25rem"),
+                        rx.icon(tag="lightbulb", size=24, color=Color.WARNING),
                         rx.vstack(
-                            ui.text("Dica: Os arquivos gerados terão os nomes de exames padronizados", size="label", color=Color.TEXT_PRIMARY),
-                            ui.text("Isso facilita a comparação entre COMPULAB e SIMUS", size="caption"),
-                            spacing="0",
-                            align="start",
+                            ui.text("Os arquivos gerados terão os nomes de exames padronizados.", size="label", color=Color.DEEP),
+                            ui.text("Isso facilita a comparação entre COMPULAB e SIMUS na Análise Cruzada.", size="caption"),
+                            spacing="0", align_items="start",
                         ),
-                        spacing="3",
-                        align="start",
+                        spacing="3", align_items="start",
                     ),
-                    bg=Color.WARNING_BG,
-                    border_color="#FDE68A", # amber-200
-                    width="100%",
-                    max_width="56rem",
-                    padding=Spacing.MD,
-                    margin_top=Spacing.LG,
+                    bg=Color.WARNING_BG, border=f"1px solid {Color.WARNING}30", width="100%", max_width="5xl", margin_top=Spacing.LG
                 ),
             ),
             
-            spacing="0",
-            align="center",
-            width="100%",
-            class_name="py-8 px-4"
+            spacing="0", align_items="center", width="100%", padding_y=Spacing.XL, padding_x=Spacing.MD
         ),
         width="100%",
     )

@@ -45,7 +45,7 @@ def authenticated_layout() -> rx.Component:
             spacing="0",
             width="100%",
             min_height="100vh",
-            bg="#F8FAFC",
+            bg=Color.BACKGROUND,
         ),
         class_name="font-sans"
     )
@@ -69,7 +69,7 @@ app = rx.App(
     ),
     head_components=[
         rx.el.link(rel="manifest", href="/manifest.json"),
-        rx.el.meta(name="theme-color", content="#1B5E20"),
+        rx.el.meta(name="theme-color", content=Color.DEEP),
         rx.el.meta(name="apple-mobile-web-app-capable", content="yes"),
         rx.el.meta(name="mobile-web-app-capable", content="yes"),
         rx.el.meta(name="apple-mobile-web-app-status-bar-style", content="black-translucent"),
