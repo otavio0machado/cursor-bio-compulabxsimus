@@ -229,9 +229,7 @@ INPUT_STYLE = {
     },
     "_focus": {
         "border_color": Color.PRIMARY,
-        "box_shadow": f"0 0 0 3px {Color.PRIMARY}20",
         "outline": "none",
-        "transform": "scale(1.01)",
     },
     "_hover": {
         "border_color": Color.SECONDARY,

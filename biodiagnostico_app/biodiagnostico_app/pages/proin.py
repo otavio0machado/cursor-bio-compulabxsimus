@@ -299,17 +299,14 @@ def registro_qc_tab() -> rx.Component:
                             placeholder="Selecione o Exame",
                             value=State.qc_exam_name,
                             on_change=State.set_qc_exam_name,
+                            background_color="white",
+                            border=rx.cond(
+                                State.qc_exam_name != "",
+                                f"1px solid {Color.PRIMARY}",
+                                f"1px solid {Color.BORDER}"
+                            ),
                         ),
                         required=True
-                    ),
-                    ui.form_field(
-                        "Nível",
-                        ui.select(
-                            ["N1", "N2", "N3"],
-                            placeholder="Selecione o Nível",
-                            value=State.qc_level,
-                            on_change=State.set_qc_level,
-                        ),
                     ),
                     ui.form_field(
                         "Número do Lote (Opcional)",
@@ -328,7 +325,7 @@ def registro_qc_tab() -> rx.Component:
                         ),
                         required=True
                     ),
-                    columns={"initial": "1", "sm": "2", "md": "2", "lg": "4"},
+                    columns={"initial": "1", "sm": "1", "md": "3"},
                     spacing="4",
                     width="100%",
                 ),
@@ -366,13 +363,13 @@ def registro_qc_tab() -> rx.Component:
                         required=True
                     ),
                     # CV% with dynamic color indicator
-                    rx.vstack(
-                        rx.text("Variação % (Automático)", font_size="0.875rem", font_weight="500", color=Color.TEXT_SECONDARY),
+                    ui.form_field(
+                        "Variação % (Automático)",
                         rx.box(
                             rx.hstack(
                                 rx.text(
                                     State.qc_calculated_cv + "%",
-                                    font_size="1.5rem",
+                                    font_size="1.125rem",
                                     font_weight="bold",
                                     color=rx.cond(
                                         State.qc_cv_status == "ok",
@@ -394,7 +391,7 @@ def registro_qc_tab() -> rx.Component:
                                             "circle-x"
                                         )
                                     ),
-                                    size=20,
+                                    size=18,
                                     color=rx.cond(
                                         State.qc_cv_status == "ok",
                                         "#22C55E",
@@ -406,21 +403,25 @@ def registro_qc_tab() -> rx.Component:
                                     )
                                 ),
                                 align="center",
-                                spacing="2"
+                                spacing="2",
+                                height="100%",
                             ),
+                            width="100%",
+                            height="44px",
+                            display="flex",
+                            align_items="center",
                             class_name=rx.cond(
                                 State.qc_cv_status == "ok",
-                                "bg-green-50 border border-green-200 rounded-xl p-3",
+                                "bg-white border border-green-200 rounded-xl px-4",
                                 rx.cond(
                                     State.qc_cv_status == "warning",
-                                    "bg-amber-50 border border-amber-200 rounded-xl p-3",
-                                    "bg-red-50 border border-red-200 rounded-xl p-3"
+                                    "bg-white border border-amber-200 rounded-xl px-4",
+                                    "bg-white border border-red-200 rounded-xl px-4"
                                 )
                             )
                         ),
-                        spacing="1",
                     ),
-                    columns={"initial": "1", "sm": "2", "md": "2", "lg": "4"},
+                    columns={"initial": "1", "sm": "2", "md": "4"},
                     spacing="4",
                     width="100%",
                 ),

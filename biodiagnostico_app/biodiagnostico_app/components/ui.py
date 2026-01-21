@@ -235,7 +235,6 @@ def select(items, placeholder: str = "Selecione...", value=None, on_change=None,
         "_focus": {
             "border_color": Color.PRIMARY,
             "outline": "none",
-            "box_shadow": f"0 0 0 3px {Color.PRIMARY}20",
         },
         "_hover": {
             "border_color": Color.SECONDARY,
@@ -245,6 +244,10 @@ def select(items, placeholder: str = "Selecione...", value=None, on_change=None,
     # Mesclar props de estilo
     style_props = base_style.copy()
     style_props.update(props)
+    
+    # Garantir que o fundo seja branco (SURFACE) e não herde cinza
+    style_props["bg"] = Color.SURFACE
+    style_props["background_color"] = Color.SURFACE
     
     return rx.select(
         items,
@@ -271,8 +274,6 @@ def text_area(placeholder: str = "", **props) -> rx.Component:
         "_focus": {
             "border_color": Color.PRIMARY,
             "outline": "none",
-            "box_shadow": f"0 0 0 3px {Color.PRIMARY}20",
-            "transform": "scale(1.01)",
         },
         "_hover": {
             "border_color": Color.SECONDARY,
