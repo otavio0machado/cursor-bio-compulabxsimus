@@ -64,7 +64,7 @@ def generate_qc_pdf(qc_records: list, period_description: str) -> bytes:
     else:
         # Tabela
         # Headers: Data, Exame, Nível, Lote, Valor, Alvo, DP, CV%, Status, Analista
-        table_data = [['Data', 'Exame', 'Nível', 'Lote', 'Valor', 'Alvo', 'CV%', 'Status']]
+        table_data = [['Data', 'Exame', 'Nível', 'Lote', 'Valor', 'Alvo', 'Variação %', 'Status']]
         
         for record in qc_records:
             # Normalizar acesso aos dados (dict ou objeto)

@@ -822,30 +822,29 @@ class State(rx.State):
     
     @rx.var
     def qc_calculated_cv(self) -> str:
-        """Calcula o CV% automaticamente baseado no valor, alvo e desvio padrão"""
+        """Calcula a Variação Percentual automaticamente em relação ao alvo"""
         try:
-            if not self.qc_value or not self.qc_target_value or not self.qc_target_sd:
+            if not self.qc_value or not self.qc_target_value:
                 return "0.00"
             
             value = float(self.qc_value.replace(",", "."))
             target = float(self.qc_target_value.replace(",", "."))
-            sd = float(self.qc_target_sd.replace(",", "."))
             
-            if sd <= 0 or target <= 0:
+            if target <= 0:
                 return "0.00"
             
-            # CV% = (SD / Target) * 100
-            cv = (sd / target) * 100
+            # Variação% = ((Valor - Alvo) / Alvo) * 100
+            cv = ((value - target) / target) * 100
             return f"{cv:.2f}"
         except (ValueError, ZeroDivisionError):
             return "0.00"
     
     @rx.var
     def qc_cv_status(self) -> str:
-        """Returns status based on CV%: 'ok' (≤5%), 'warning' (5-10%), 'error' (>10%)"""
+        """Returns status based on |Variação%|: 'ok' (≤5%), 'warning' (5-10%), 'error' (>10%)"""
         try:
             cv_str = self.qc_calculated_cv
-            cv = float(cv_str)
+            cv = abs(float(cv_str))
             if cv <= 5.0:
                 return "ok"
             elif cv <= 10.0:
@@ -2673,8 +2672,8 @@ class State(rx.State):
                 self.qc_error_message = "Valores inválidos. Use apenas números e ponto/vírgula."
                 return
             
-            # Calcular CV% = (SD / Target) * 100
-            cv = (sd / target) * 100 if target > 0 else 0.0
+            # Calcular Variação% = ((Valor - Alvo) / Alvo) * 100
+            cv = ((value - target) / target) * 100 if target > 0 else 0.0
             
             # --- Lógica de Westgard (Novo) ---
             # Buscar histórico para o mesmo exame e nível

@@ -281,7 +281,7 @@ def registro_qc_tab() -> rx.Component:
     return rx.vstack(
         rx.vstack(
             ui.heading("Registro de CQ", level=2),
-            ui.text("Insira os dados diários para cálculo automático do CV%", size="small", color=Color.TEXT_SECONDARY),
+            ui.text("Insira os dados diários para cálculo automático da Variação %", size="small", color=Color.TEXT_SECONDARY),
             spacing="1",
             align="start",
             class_name="mb-6"
@@ -367,7 +367,7 @@ def registro_qc_tab() -> rx.Component:
                     ),
                     # CV% with dynamic color indicator
                     rx.vstack(
-                        rx.text("CV% (Automático)", font_size="0.875rem", font_weight="500", color=Color.TEXT_SECONDARY),
+                        rx.text("Variação % (Automático)", font_size="0.875rem", font_weight="500", color=Color.TEXT_SECONDARY),
                         rx.box(
                             rx.hstack(
                                 rx.text(
