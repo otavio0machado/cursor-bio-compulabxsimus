@@ -502,358 +502,246 @@ def _find_patient_in_tokens(tokens, candidate_patients):
     return None, None
 
 
-def _collect_simus_lines(pdf_file):
-    """Coleta todas as linhas do PDF SIMUS - otimizado para arquivos grandes"""
-    lines_all = []
-    try:
-        with pdfplumber.open(pdf_file) as pdf:
-            total_pages = len(pdf.pages)
-            
-            # Processar em batches para arquivos grandes
-            for batch_start in range(0, total_pages, MAX_PAGES_PER_BATCH):
-                batch_end = min(batch_start + MAX_PAGES_PER_BATCH, total_pages)
-                
-                for page_idx in range(batch_start, batch_end):
-                    page = pdf.pages[page_idx]
-                    text = page.extract_text()
-                    if not text:
-                        continue
-                    lines_all.extend(text.split("\n"))
-                
-                # Liberar memória entre batches
-                gc.collect()
-                
-    except Exception as e:
-        print(f"Erro ao coletar linhas SIMUS: {e}")
+
+class SimusPDFParser:
+    """
+    Parser robusto para arquivos PDF do SIMUS.
+    Implementa múltiplas estratégias de extração para máxima compatibilidade.
+    """
     
-    return lines_all
+    def __init__(self, pdf_path: str):
+        self.pdf_path = pdf_path
+        self.total_sigtap = Decimal('0')
+        self.total_contratualizado = Decimal('0')
+        self.extracted_patients = defaultdict(lambda: {'exams': [], 'total': Decimal('0')})
+        
+    def extract(self, progress_callback=None) -> Tuple[Dict, Decimal, Optional[Decimal], Optional[Decimal]]:
+        """
+        Executa a extração usando a melhor estratégia disponível.
+        1. Tenta extrair totais da primeira página
+        2. Tenta estratégia baseada em tabelas (mais precisa)
+        3. Se falhar ou retornar pouco, tenta estratégia baseada em texto (fallback)
+        """
+        try:
+            with pdfplumber.open(self.pdf_path) as pdf:
+                # FASE 0: Extrair Totais do Cabeçalho (Página 1)
+                self._extract_header_totals(pdf.pages[0])
+                
+                total_pages = len(pdf.pages)
+                
+                # FASE 1: Estratégia de Tabelas
+                table_success = self._strategy_table_extraction(pdf, total_pages, progress_callback)
+                
+                # Validação: Se extraiu muito pouco comparado ao esperado, tentar fallback
+                extracted_total = sum(p['total'] for p in self.extracted_patients.values())
+                expected_total = self.total_contratualizado or Decimal('999999999')
+                
+                # Se recuperamos menos de 10% do valor esperado ou nenhum paciente, tentar fallback
+                if not table_success or (len(self.extracted_patients) == 0):
+                    print("DEBUG: Estratégia de tabela falhou ou insuficiente. Tentando análise textual...")
+                    # Limpar parcial
+                    self.extracted_patients.clear()
+                    self._strategy_text_analysis(pdf, total_pages, progress_callback)
+            
+            final_total = sum(p['total'] for p in self.extracted_patients.values())
+            return self.extracted_patients, final_total, self.total_sigtap, self.total_contratualizado
+            
+        except Exception as e:
+            print(f"Erro fatal no parser SIMUS: {e}")
+            return {}, Decimal('0'), None, None
+
+    def _extract_header_totals(self, first_page):
+        """Extrai valores totais do cabeçalho da primeira página"""
+        try:
+            text = first_page.extract_text() or ""
+            # Padrão: R$ 1.234,56 (SIGTAP) ... R$ 1.234,56 (Contratualizados)
+            sigtap_match = re.search(r'R\$\s*([\d.]+,\d{2})\s*\(SIGTAP\)', text)
+            contrat_match = re.search(r'R\$\s*([\d.]+,\d{2})\s*\(Contratualizados\)', text)
+            
+            if sigtap_match:
+                self.total_sigtap = parse_currency_value(sigtap_match.group(1)) or Decimal('0')
+            if contrat_match:
+                self.total_contratualizado = parse_currency_value(contrat_match.group(1)) or Decimal('0')
+                
+        except Exception as e:
+            print(f"Erro ao extrair totais do cabeçalho: {e}")
+
+    def _strategy_table_extraction(self, pdf, total_pages, progress_callback) -> bool:
+        """Estratégia 1: Extração estruturada de tabelas"""
+        try:
+            current_patient = None
+            
+            for i, page in enumerate(pdf.pages):
+                if progress_callback:
+                    progress_callback(i + 1, total_pages)
+                
+                tables = page.extract_tables()
+                if not tables:
+                    continue
+                    
+                for table in tables:
+                    self._process_table(table, current_patient)
+                    
+            return len(self.extracted_patients) > 0
+        except Exception as e:
+            print(f"Erro na estratégia de tabelas: {e}")
+            return False
+
+    def _process_table(self, table, current_patient):
+        """Processa uma única tabela identificando colunas dinamicamente"""
+        if not table or len(table) < 2:
+            return
+            
+        # Identificar colunas
+        header_row_idx = -1
+        cols = {'paciente': -1, 'exame': -1, 'valor': -1, 'codigo': -1}
+        
+        # Procurar cabeçalho
+        for i, row in enumerate(table[:5]): # Tentar nas 5 primeiras linhas
+            row_str = " ".join([str(c).upper() if c else "" for c in row])
+            if "PACIENTE" in row_str or "BENEFICIARIO" in row_str or "NOME" in row_str:
+                header_row_idx = i
+                break
+        
+        if header_row_idx == -1: return
+        
+        # Mapear índices das colunas
+        header = table[header_row_idx]
+        for idx, col_name in enumerate(header):
+            if not col_name: continue
+            c = str(col_name).upper().strip()
+            
+            if any(x in c for x in ['PACIENTE', 'BENEFICIARIO', 'NOME']): cols['paciente'] = idx
+            elif any(x in c for x in ['EXAME', 'PROCEDIMENTO', 'DESCRICAO']): cols['exame'] = idx
+            elif any(x in c for x in ['VALOR PAGO', 'VL PAGO', 'VALOR']): cols['valor'] = idx # Prioridade
+            elif any(x in c for x in ['CODIGO', 'COD', 'SIGTAP']): cols['codigo'] = idx
+
+        # Se não achou colunas vitais, abortar tabela
+        if cols['exame'] == -1 or cols['valor'] == -1: return
+        
+        # Processar linhas de dados
+        for row in table[header_row_idx+1:]:
+            if not row or len(row) <= max(cols.values()): continue
+            
+            # Extrair dados
+            patient_name = ""
+            if cols['paciente'] != -1 and row[cols['paciente']]:
+                raw_name = str(row[cols['paciente']]).strip()
+                if raw_name and raw_name.upper() not in ['TOTAL', 'SUBTOTAL']:
+                    patient_name = normalize_name(raw_name)
+                    # Atualizar contexto de paciente atual (para linhas subsequentes vazias)
+                    current_patient = patient_name
+            
+            # Usar paciente do contexto se a linha não tiver nome mas for continuação
+            active_patient = patient_name if patient_name else current_patient
+            if not active_patient: continue
+            
+            # Extrair exame
+            exam_raw = str(row[cols['exame']]).strip()
+            if not exam_raw: continue
+            
+            # Extrair código (da coluna ou do nome do exame)
+            exam_code = ""
+            if cols['codigo'] != -1 and row[cols['codigo']]:
+                code_match = re.search(r'\d{8,10}', str(row[cols['codigo']]))
+                if code_match: exam_code = code_match.group(0)
+            
+            if not exam_code:
+                code_match = re.search(r'\d{8,10}', exam_raw)
+                if code_match: exam_code = code_match.group(0)
+            
+            # Limpar nome do exame (remover código se estiver junto)
+            exam_name = re.sub(r'\d{8,10}', '', exam_raw).strip()
+            exam_name = normalize_exam_name(map_simus_to_compulab_exam_name(exam_name))
+            
+            # Extrair valor
+            try:
+                val_str = str(row[cols['valor']])
+                val = parse_currency_value(val_str)
+            except:
+                val = Decimal('0')
+                
+            if val and val > 0:
+                self.extracted_patients[active_patient]['exams'].append({
+                    'exam_name': exam_name,
+                    'code': exam_code,
+                    'value': val
+                })
+                self.extracted_patients[active_patient]['total'] += val
+
+    def _strategy_text_analysis(self, pdf, total_pages, progress_callback):
+        """Estratégia 2: Análise linha a linha (Fallback)"""
+        current_patient = None
+        
+        for i, page in enumerate(pdf.pages):
+            if progress_callback:
+                progress_callback(i + 1, total_pages)
+                
+            text = page.extract_text()
+            if not text: continue
+            
+            lines = text.split('\n')
+            for line in lines:
+                # Pular cabeçalhos/rodapés comuns
+                if any(x in line.upper() for x in ['PAGINA', 'RELATORIO', 'EMISSAO', 'TOTAL']):
+                    continue
+                    
+                # Identificar Paciente (Linha começa com número seq e tem nome)
+                # Ex: 001 NOME DO PACIENTE                                 ...
+                patient_match = re.match(r'^\d+\s+([A-Z\s]+?)\s+\d{2}/\d{2}/\d{4}', line)
+                if patient_match:
+                    possible_name = patient_match.group(1).strip()
+                    if len(possible_name) > 3 and not re.search(r'\d', possible_name):
+                        current_patient = normalize_name(possible_name)
+                        continue
+                
+                # Se temos um paciente ativo, procurar exames na linha
+                if current_patient:
+                    # Tentar achar padrão de exame: Código + Nome + Valor
+                    # Ex: 0202010123 HEMOGRAMA COMPLETO ... 10,00
+                    
+                    # Regex flexível para capturar código, nome e valor
+                    # Procura código 8-10 digitos, seguido de texto, seguido de valor monetário
+                    line_match = re.search(r'(\d{8,10})\s+(.+?)\s+([\d.]+,\d{2})', line)
+                    if not line_match:
+                        # Tentar sem código inicial (as vezes codigo ta em outra coluna)
+                        line_match = re.search(r'()(.+?)\s+([\d.]+,\d{2})', line)
+                        
+                    if line_match:
+                        code = line_match.group(1)
+                        name_raw = line_match.group(2).strip()
+                        val_str = line_match.group(3)
+                        
+                        # Validar se o "nome" não é lixo
+                        if len(name_raw) < 3 or re.search(r'\d{2}/\d{2}', name_raw): 
+                            continue
+                            
+                        val = parse_currency_value(val_str)
+                        if val and val > 0:
+                            # Mapear nome
+                            name_mapped = map_simus_to_compulab_exam_name(name_raw)
+                            normalized_name = normalize_exam_name(name_mapped)
+                            
+                            # Adicionar
+                            self.extracted_patients[current_patient]['exams'].append({
+                                'exam_name': normalized_name,
+                                'code': code,
+                                'value': val
+                            })
+                            self.extracted_patients[current_patient]['total'] += val
 
 
 def extract_simus_patients(pdf_file, known_patient_names=None, progress_callback: Optional[Callable[[int, int], None]] = None):
     """
-    Extrai dados de pacientes do SIMUS usando tabelas do PDF
-    
-    Otimizado para arquivos grandes:
-    - Processa páginas em batches
-    - Libera memória entre iterações
-    - Suporta callback de progresso
-    
-    Args:
-        pdf_file: Caminho para o arquivo PDF
-        known_patient_names: Lista opcional de nomes de pacientes conhecidos
-        progress_callback: Função callback(pagina_atual, total_paginas) para reportar progresso
+    Wrapper para o novo parser SIMUS.
+    Mantém compatibilidade com a assinatura antiga.
     """
-    patients = defaultdict(lambda: {'exams': [], 'total': Decimal('0')})
-    total_value = Decimal('0')
-    sigtap_value = None
-    contratualizado_value = None
-    
-    try:
-        with pdfplumber.open(pdf_file) as pdf:
-            total_pages = len(pdf.pages)
-            
-            # Processar primeira página para extrair totais
-            first_page = pdf.pages[0]
-            first_text = first_page.extract_text()
-            if first_text:
-                pattern = r'R\$([\d.]+,\d{2})\s*\(SIGTAP\).*?R\$([\d.]+,\d{2})\s*\(Contratualizados\)'
-                match = re.search(pattern, first_text, re.DOTALL)
-                if match:
-                    sigtap_value = parse_currency_value(match.group(1))
-                    contratualizado_value = parse_currency_value(match.group(2))
-                    total_value = contratualizado_value
-            
-            candidate_patients = []
-            if known_patient_names:
-                for name in known_patient_names:
-                    tokens = normalize_name(name).split()
-                    if tokens:
-                        candidate_patients.append(tokens)
-                candidate_patients.sort(key=len, reverse=True)
-            
-            # Processar páginas em batches para arquivos grandes
-            for batch_start in range(0, total_pages, MAX_PAGES_PER_BATCH):
-                batch_end = min(batch_start + MAX_PAGES_PER_BATCH, total_pages)
-                
-                for page_idx in range(batch_start, batch_end):
-                    page = pdf.pages[page_idx]
-                    
-                    # Reportar progresso se callback foi fornecido
-                    if progress_callback:
-                        progress_callback(page_idx + 1, total_pages)
-                    
-                    # Tentar extrair tabelas (método mais confiável)
-                    try:
-                        tables = page.extract_tables()
-                    except Exception:
-                        tables = []
-                    
-                    for table in tables:
-                        if not table or len(table) < 2:
-                            continue
-                        
-                        # Busca mais flexível do cabeçalho
-                        header_row = None
-                        header_keywords = ['PACIENTE', 'EXAME', 'PROCEDIMENTO', 'NOME', 'CÓDIGO', 'VALOR']
-                        for i, row in enumerate(table):
-                            if not row:
-                                continue
-                            row_text = ' '.join([str(c).upper() if c else '' for c in row])
-                            if any(kw in row_text for kw in header_keywords):
-                                header_row = i
-                                break
-                        
-                        if header_row is None:
-                            # Tentar usar primeira linha como cabeçalho se tiver pelo menos 3 colunas
-                            if table[0] and len([c for c in table[0] if c]) >= 3:
-                                header_row = 0
-                            else:
-                                continue
-                        
-                        header = table[header_row]
-                        paciente_col = None
-                        exame_col = None
-                        valor_pago_col = None
-                        codigo_col = None
-                        valor_sus_col = None
-                        
-                        for idx, cell in enumerate(header):
-                            if not cell:
-                                continue
-                            cell_upper = str(cell).upper().strip()
-                            
-                            # Detectar coluna de paciente
-                            if any(kw in cell_upper for kw in ['PACIENTE', 'BENEFICIÁRIO', 'BENEFICIARIO', 'NOME']) and paciente_col is None:
-                                paciente_col = idx
-                            # Detectar coluna de exame
-                            elif any(kw in cell_upper for kw in ['EXAME', 'PROCEDIMENTO', 'DESCRIÇÃO', 'DESCRICAO']) and exame_col is None:
-                                exame_col = idx
-                            # Detectar coluna de valor pago (prioridade)
-                            elif ('VALOR PAGO' in cell_upper or ('PAGO' in cell_upper and 'SUS' not in cell_upper) or 'VL PAGO' in cell_upper) and valor_pago_col is None:
-                                valor_pago_col = idx
-                            # Detectar coluna de código
-                            elif any(kw in cell_upper for kw in ['COD', 'CÓD', 'CÓDIGO', 'CODIGO', 'SIGTAP']) and codigo_col is None:
-                                codigo_col = idx
-                            # Detectar valor SUS como fallback
-                            elif 'SUS' in cell_upper and 'VL' in cell_upper and valor_sus_col is None:
-                                valor_sus_col = idx
-                        
-                        # Se não encontrou valor pago, usar valor SUS
-                        if valor_pago_col is None and valor_sus_col is not None:
-                            valor_pago_col = valor_sus_col
-                        
-                        for row in table[header_row + 1:]:
-                            if not row or len(row) < max(paciente_col or 0, exame_col or 0, valor_pago_col or 0) + 1:
-                                continue
-                            
-                            paciente_cell = str(row[paciente_col]).strip() if paciente_col is not None and len(row) > paciente_col and row[paciente_col] else ""
-                            if not paciente_cell or paciente_cell.upper() in ['PACIENTE', 'TOTAL', 'TOTAL E FRACOES', '', 'SUBTOTAL']:
-                                continue
-                            
-                            patient_name = normalize_name(paciente_cell)
-                            
-                            exame_cell = str(row[exame_col]).strip() if exame_col is not None and len(row) > exame_col and row[exame_col] else ""
-                            
-                            # Buscar código de exame (8 a 10 dígitos são comuns)
-                            exam_code = ""
-                            if codigo_col is not None and len(row) > codigo_col and row[codigo_col]:
-                                # Primeiro tenta 10 dígitos
-                                code_match = re.search(r'\b(\d{10})\b', str(row[codigo_col]))
-                                if code_match:
-                                    exam_code = code_match.group(1)
-                                else:
-                                    # Fallback para 8 dígitos
-                                    code_match = re.search(r'\b(\d{8})\b', str(row[codigo_col]))
-                                    if code_match:
-                                        exam_code = code_match.group(1)
-                            
-                            # Tentar extrair código do campo de exame se não encontrou
-                            if not exam_code and exame_cell:
-                                code_match = re.search(r'\b(\d{10})\b', exame_cell)
-                                if code_match:
-                                    exam_code = code_match.group(1)
-                                else:
-                                    code_match = re.search(r'\b(\d{8})\b', exame_cell)
-                                    if code_match:
-                                        exam_code = code_match.group(1)
-
-                            
-                            exam_value = None
-                            if valor_pago_col and len(row) > valor_pago_col and row[valor_pago_col]:
-                                exam_value = parse_currency_value(str(row[valor_pago_col]))
-                            
-                            if not exam_value or exam_value == Decimal('0'):
-                                row_text = ' '.join([str(cell) if cell else '' for cell in row])
-                                values = re.findall(r'R\$\s*([\d.]+,\d{2})', row_text)
-                                if len(values) >= 2:
-                                    exam_value = parse_currency_value(values[1])
-                                elif len(values) == 1:
-                                    exam_value = parse_currency_value(values[0])
-                            
-                            if not exam_value or exam_value == Decimal('0'):
-                                continue
-                            
-                            if exame_cell:
-                                exam_name_clean = re.sub(r'\b\d{10}\b', '', exame_cell).strip()
-                            else:
-                                exam_name_clean = ""
-                            
-                            exam_name_mapped = map_simus_to_compulab_exam_name(exam_name_clean)
-                            if exam_name_mapped != exam_name_clean:
-                                exam_name = normalize_exam_name(exam_name_mapped)
-                            else:
-                                exam_name = normalize_exam_name(exam_name_clean)
-                            
-                            if not exam_name or len(exam_name) < 3:
-                                if exam_code:
-                                    exam_name = f"EXAME {exam_code}"
-                                else:
-                                    exam_name = "EXAME"
-                            
-                            patients[patient_name]['exams'].append({
-                                'exam_name': exam_name,
-                                'code': exam_code,
-                                'value': exam_value
-                            })
-                            patients[patient_name]['total'] += exam_value
-                
-                # Liberar memória após cada batch
-                gc.collect()
-            
-            if not patients:
-                lines_all = _collect_simus_lines(pdf_file)
-                
-                candidate_patients = []
-                if known_patient_names:
-                    for name in known_patient_names:
-                        tokens = normalize_name(name).split()
-                        if tokens:
-                            candidate_patients.append(tokens)
-                    candidate_patients.sort(key=len, reverse=True)
-                
-                current_patient = None
-                pending_exam_code = None
-                
-                for i, line in enumerate(lines_all):
-                    line = line.strip()
-                    if not line:
-                        continue
-                    
-                    upper = line.upper()
-                    if any(x in upper for x in ["SEQ.", "SEQ ", "RELATORIO", "COMPETENCIA", "PRESTADOR", "TOTAL (", "TOTAL E FRACOES", "PAGINA"]):
-                        continue
-                    
-                    code_match = re.search(r'\b(\d{10})\b', line)
-                    if code_match:
-                        pending_exam_code = code_match.group(1)
-                    elif re.match(r'^\(?(\d{10})\)?$', line.replace("(", "").replace(")", "")):
-                        pending_exam_code = re.match(r'^\(?(\d{10})\)?$', line.replace("(", "").replace(")", "")).group(1)
-                        continue
-                    
-                    values = re.findall(r'R\$\s*([\d.]+,\d{2})', line)
-                    if not values:
-                        if current_patient and pending_exam_code and re.match(r'^[A-ZÁÉÍÓÚÂÊÔÇ\s]+$', line):
-                            continue
-                        continue
-                    
-                    if len(values) >= 2:
-                        exam_value = parse_currency_value(values[1])
-                    elif len(values) == 1:
-                        exam_value = parse_currency_value(values[0])
-                    else:
-                        continue
-                    
-                    if not exam_value or exam_value == Decimal('0'):
-                        continue
-                    
-                    line_clean = line
-                    for val in values:
-                        line_clean = line_clean.replace(f"R${val}", "")
-                    if pending_exam_code:
-                        line_clean = re.sub(r'\b' + pending_exam_code + r'\b', '', line_clean)
-                    line_clean = re.sub(r'\d{2}/\d{2}/\d{2,4}', '', line_clean)
-                    line_clean = re.sub(r'REALIZADO.*?(\d{2}/\d{2}/\d{2,4})?', '', line_clean, flags=re.IGNORECASE)
-                    line_clean = re.sub(r'\d+\s+\d+', '', line_clean)
-                    
-                    tokens = line_clean.split()
-                    
-                    patient_name = None
-                    exam_start_idx = 0
-                    
-                    if candidate_patients:
-                        normalized_tokens = [normalize_name(t) for t in tokens]
-                        found_patient, start_idx = _find_patient_in_tokens(normalized_tokens, candidate_patients)
-                        if found_patient:
-                            patient_name = found_patient
-                            exam_start_idx = start_idx
-                            current_patient = patient_name
-                    
-                    if not patient_name:
-                        seq_match = re.match(r'^\d+\s+\d+\s+REALIZADO', line)
-                        if seq_match:
-                            rest = re.sub(r'^\d+\s+\d+\s+REALIZADO\s+\d{2}/\d{2}/\d{4}\s*', '', line_clean)
-                            rest_tokens = rest.split()
-                            
-                            if candidate_patients:
-                                normalized_rest = [normalize_name(t) for t in rest_tokens]
-                                found_patient, start_idx = _find_patient_in_tokens(normalized_rest, candidate_patients)
-                                if found_patient:
-                                    patient_name = found_patient
-                                    exam_start_idx = start_idx
-                                else:
-                                    if len(rest_tokens) >= 3:
-                                        potential_patient = normalize_name(" ".join(rest_tokens[:4]))
-                                        if len(potential_patient.split()) >= 2:
-                                            patient_name = potential_patient
-                                            exam_start_idx = min(4, len(rest_tokens))
-                            else:
-                                if len(rest_tokens) >= 3:
-                                    potential_patient = normalize_name(" ".join(rest_tokens[:4]))
-                                    if len(potential_patient.split()) >= 2:
-                                        patient_name = potential_patient
-                                        exam_start_idx = min(4, len(rest_tokens))
-                    
-                    if not patient_name:
-                        if current_patient:
-                            patient_name = current_patient
-                        else:
-                            continue
-                    
-                    current_patient = patient_name
-                    
-                    exam_tokens = tokens[exam_start_idx:] if exam_start_idx < len(tokens) else []
-                    exam_name_raw = " ".join(exam_tokens)
-                    
-                    exam_name_mapped = map_simus_to_compulab_exam_name(exam_name_raw)
-                    if exam_name_mapped != exam_name_raw:
-                        exam_name = normalize_exam_name(exam_name_mapped)
-                    else:
-                        exam_name = normalize_exam_name(exam_name_raw)
-                    
-                    if not exam_name or len(exam_name) < 3:
-                        if pending_exam_code:
-                            exam_name = f"EXAME {pending_exam_code}"
-                        else:
-                            exam_name = "EXAME"
-                    
-                    patients[patient_name]['exams'].append({
-                        'exam_name': exam_name,
-                        'code': pending_exam_code if pending_exam_code else '',
-                        'value': exam_value
-                    })
-                    patients[patient_name]['total'] += exam_value
-                    
-                    pending_exam_code = None
-                            
-    except Exception as e:
-        print(f"Erro ao processar SIMUS: {e}")
-        return None, None, None, None
-    
-    return patients, total_value, sigtap_value, contratualizado_value
+    parser = SimusPDFParser(pdf_file)
+    return parser.extract(progress_callback)
 
 
-def generate_csvs_from_pdfs(compulab_pdf_bytes, simus_pdf_bytes, progress_callback: Optional[Callable[[int, str], None]] = None):
-    """Gera CSVs a partir dos bytes dos PDFs
+def generate_excel_from_pdfs(compulab_pdf_bytes, simus_pdf_bytes, progress_callback: Optional[Callable[[int, str], None]] = None):
+    """Gera arquivos Excel (.xlsx) a partir dos bytes dos PDFs
     
     Args:
         compulab_pdf_bytes: Bytes do PDF COMPULAB
@@ -959,31 +847,39 @@ def generate_csvs_from_pdfs(compulab_pdf_bytes, simus_pdf_bytes, progress_callba
         
         simus_df = pd.DataFrame(simus_rows)
         
-        # Estágio 4: Gerando CSVs (95-98%)
+        # Estágio 4: Gerando Excels (95-98%)
         if progress_callback:
-            progress_callback(95, "Gerando arquivos CSV...")
+            progress_callback(95, "Gerando arquivos Excel...")
+
+        import io
+        import base64
         
-        compulab_csv = compulab_df.to_csv(
-            index=False, sep=';', decimal=',', encoding='utf-8-sig'
-        )
+        # Gerar Excel COMPULAB
+        output_compulab = io.BytesIO()
+        with pd.ExcelWriter(output_compulab, engine='openpyxl') as writer:
+            compulab_df.to_excel(writer, index=False, sheet_name='COMPULAB')
+        compulab_excel_b64 = base64.b64encode(output_compulab.getvalue()).decode()
         
         if progress_callback:
             progress_callback(98, "Finalizando conversão...")
         
-        simus_csv = simus_df.to_csv(
-            index=False, sep=';', decimal=',', encoding='utf-8-sig'
-        )
+        # Gerar Excel SIMUS
+        output_simus = io.BytesIO()
+        with pd.ExcelWriter(output_simus, engine='openpyxl') as writer:
+            simus_df.to_excel(writer, index=False, sheet_name='SIMUS')
+        simus_excel_b64 = base64.b64encode(output_simus.getvalue()).decode()
         
         if progress_callback:
             progress_callback(100, "Concluído")
         
-        return compulab_csv, simus_csv, True
+        return compulab_excel_b64, simus_excel_b64, True
             
     except Exception as e:
-        print(f"Erro ao gerar CSVs: {e}")
+        print(f"Erro ao gerar Excels: {e}")
         if progress_callback:
             progress_callback(0, f"Erro: {str(e)}")
         return None, None, False
+
     finally:
         if tmp_compulab_path and os.path.exists(tmp_compulab_path):
             try:
@@ -1034,4 +930,93 @@ def load_from_csv(csv_content):
     except Exception as e:
         print(f"Erro ao ler CSV: {e}")
         return None, None
+
+
+def load_from_excel(file_path):
+    """
+    Carrega dados de um arquivo Excel (.xlsx ou .xls)
+    """
+    try:
+        # Detectar se é bytes ou caminho
+        if isinstance(file_path, bytes):
+            import io
+            file_path = io.BytesIO(file_path)
+            
+        df = pd.read_excel(file_path, engine='openpyxl' if str(file_path).endswith('.xlsx') else None)
+        patients = defaultdict(lambda: {'exams': [], 'total': Decimal('0')})
+        total_value = Decimal('0')
+        
+        # Mapeamento flexível de colunas
+        col_map = {}
+        for col in df.columns:
+            col_upper = str(col).upper().strip()
+            
+            # Ordem de prioridade e exclusão de falso-positivos
+            # Se contém "EXAME" ou "PROC", provavelmente não é o nome do paciente
+            is_exam_col = any(name in col_upper for name in ['EXAME', 'PROCEDIMENTO', 'NOME_EXAME', 'NOME DO EXAME', 'DESCRICAO'])
+            
+            if is_exam_col and 'exam' not in col_map:
+                col_map['exam'] = col
+            elif any(name in col_upper for name in ['PACIENTE', 'BENEFICIARIO', 'NOME DO PACIENTE']) and 'patient' not in col_map:
+                # Se for apenas "NOME", verificamos se não é o nome do exame
+                if col_upper == 'NOME' and is_exam_col:
+                    continue
+                col_map['patient'] = col
+            elif 'NOME' in col_upper and 'patient' not in col_map and not is_exam_col:
+                col_map['patient'] = col
+            elif any(name in col_upper for name in ['VALOR_PAGO', 'VALOR PAGO', 'VALOR_TOTAL', 'VALOR TOTAL']) and 'value' not in col_map:
+                col_map['value'] = col
+            elif any(name in col_upper for name in ['VALOR', 'PRECO', 'TOTAL']) and 'value' not in col_map:
+                col_map['value'] = col
+            elif any(name in col_upper for name in ['CODIGO', 'COD', 'SIGTAP', 'COD_PROC']) and 'code' not in col_map:
+                col_map['code'] = col
+                
+        # Fallback se não encontrar colunas
+        if 'patient' not in col_map:
+            # Tentar encontrar uma coluna que pareça ter nomes de pessoas (opcional, aqui apenas pega a primeira)
+            col_map['patient'] = df.columns[0]
+        if 'exam' not in col_map:
+            # Pega a segunda coluna se disponível
+            col_map['exam'] = df.columns[1] if len(df.columns) > 1 else df.columns[0]
+        if 'value' not in col_map:
+            # Tenta a última coluna
+            col_map['value'] = df.columns[-1]
+
+        # Ordenar para determinismo
+        df = df.sort_values(by=[col_map['patient'], col_map['exam']], na_position='last')
+        
+        for _, row in df.iterrows():
+            patient_name = normalize_name(str(row[col_map['patient']]))
+            exam_name = normalize_exam_name(str(row[col_map['exam']]))
+            
+            # Limpeza de valor
+            try:
+                val_raw = str(row[col_map['value']]).replace(',', '.')
+                val_clean = "".join(c for c in val_raw if c.isdigit() or c == '.')
+                value = Decimal(val_clean) if val_clean else Decimal('0')
+            except:
+                value = Decimal('0')
+            
+            if not patient_name or patient_name.upper() in ['TOTAL', 'PACIENTE', 'NOME'] or value == 0:
+                continue
+                
+            code = str(row[col_map['code']]) if 'code' in col_map else ''
+            
+            patients[patient_name]['exams'].append({
+                'exam_name': exam_name,
+                'code': code,
+                'value': value
+            })
+            patients[patient_name]['total'] += value
+            total_value += value
+            
+        # Ordenar exames internos
+        for patient_name in patients:
+            patients[patient_name]['exams'].sort(key=lambda x: (x['exam_name'], x['value']))
+            
+        return patients, total_value
+    except Exception as e:
+        print(f"Erro ao carregar Excel: {e}")
+        return None, Decimal('0')
+
 

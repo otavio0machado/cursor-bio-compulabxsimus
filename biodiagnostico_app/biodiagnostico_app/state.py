@@ -33,6 +33,24 @@ import calendar
 
 
 class State(rx.State):
+    # Lista restrita de exames permitidos no QC (Solicitação do Usuário)
+    ALLOWED_QC_EXAMS: List[str] = [
+        "GLICOSE Cal",
+        "COLESTEROL",
+        "TRIGLICERIDIOS",
+        "UREIA",
+        "CREATININA P",
+        "AC. URICO",
+        "TGO",
+        "TGP",
+        "GGT",
+        "FAL DGKC 137 131",
+        "AMILASE",
+        "CPK Total",
+        "P HDL eva 50",
+        "COLESTEROL 2 P200"
+    ]
+
     """Estado global da aplicação"""
     
     # Autenticação - Login único
@@ -111,9 +129,17 @@ class State(rx.State):
     # Divergence Resolution & Patient History
     resolutions: Dict[str, str] = {} # Key: "patient_name|exam_name"
     patient_history_data: List[PatientHistoryEntry] = []
+    patient_history_search: str = ""
     selected_patient_name: str = ""
     is_showing_patient_history: bool = False
     resolution_notes: str = ""
+    analysis_active_tab: str = "patients_missing"
+
+    def set_analysis_active_tab(self, val: str):
+        self.analysis_active_tab = val
+
+    def set_patient_history_search(self, val: str):
+        self.patient_history_search = val
     
     # Financial Forecast & Goals
     
@@ -131,6 +157,216 @@ class State(rx.State):
             # Usar compulab_total como referência de faturamento realizado
             return min(100.0, (self.compulab_total / self.monthly_goal) * 100)
         return 0.0
+
+    @rx.var
+    def selected_patient_exams_count(self) -> int:
+        """Quantidade de exames no histórico do paciente selecionado"""
+        return len(self.patient_history_data)
+
+    @rx.var
+    def selected_patient_total_value(self) -> str:
+        """Valor total acumulado dos exames no histórico"""
+        total = sum(item.last_value for item in self.patient_history_data)
+        return f"{total:,.2f}"
+
+    @rx.var
+    def selected_patient_id(self) -> str:
+        """Retorna o ID do paciente (baseado no primeiro registro do histórico)"""
+        if self.patient_history_data:
+            return self.patient_history_data[0].id[:8].upper()
+        return "---"
+
+    @rx.var
+    def resolution_progress(self) -> int:
+        """Percentual de divergências resolvidas na análise atual"""
+        total = len(self.missing_exams) + len(self.value_divergences) + len(self.extra_simus_exams)
+        if total == 0:
+            return 100
+            
+        resolved_count = 0
+        all_items = self.missing_exams + self.value_divergences + self.extra_simus_exams
+        
+        for item in all_items:
+            patient = getattr(item, 'patient', '')
+            exam = getattr(item, 'exam_name', '')
+            if self.resolutions.get(f"{patient}|{exam}") == "resolvido":
+                resolved_count += 1
+                
+        return int((resolved_count / total) * 100)
+    
+    # ===== Dashboard Analytics - Chart Data Aggregators =====
+    
+    def _safe_get_attr(self, item: Any, key: str, default: Any = "") -> Any:
+        """Helper to safely extract attribute from dict or object"""
+        if isinstance(item, dict):
+            return item.get(key, default)
+        return getattr(item, key, default)
+    
+    def _format_currency_br(self, value: float) -> str:
+        """Format value as Brazilian currency"""
+        return f"R$ {value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    
+    @rx.var
+    def revenue_distribution_data(self) -> List[Dict[str, Any]]:
+        """Data for pie/donut chart showing composition of revenue leakage"""
+        data = []
+        
+        # Cores consistentes com o design system
+        if self.missing_patients_total > 0:
+            data.append({
+                "name": "Pacientes Faltantes", 
+                "value": round(self.missing_patients_total, 2), 
+                "fill": "#F59E0B"  # Amber
+            })
+        if self.missing_exams_total > 0:
+            data.append({
+                "name": "Exames Faltantes", 
+                "value": round(self.missing_exams_total, 2), 
+                "fill": "#EF4444"  # Red
+            })
+        if self.divergences_total > 0:
+            data.append({
+                "name": "Divergências de Valor", 
+                "value": round(self.divergences_total, 2), 
+                "fill": "#3B82F6"  # Blue
+            })
+        
+        # Calcular valor dos exames fantasma (extras no SIMUS)
+        extras_total = sum(
+            float(self._safe_get_attr(item, 'simus_value', 0) or self._safe_get_attr(item, 'value', 0))
+            for item in self.extra_simus_exams
+        )
+        if extras_total > 0:
+            data.append({
+                "name": "Extras no SIMUS",
+                "value": round(extras_total, 2),
+                "fill": "#6B7280"  # Gray
+            })
+        
+        # Placeholder quando não há divergências
+        if not data:
+            data.append({
+                "name": "✓ Sem Divergências", 
+                "value": 1, 
+                "fill": "#10B981"  # Green
+            })
+        
+        return data
+    
+    @rx.var
+    def total_revenue_leakage(self) -> float:
+        """Total de perda financeira identificada"""
+        extras_total = sum(
+            float(self._safe_get_attr(item, 'simus_value', 0) or self._safe_get_attr(item, 'value', 0))
+            for item in self.extra_simus_exams
+        )
+        return self.missing_patients_total + self.missing_exams_total + self.divergences_total + extras_total
+    
+    @rx.var
+    def formatted_total_leakage(self) -> str:
+        """Total de perda formatado em BRL"""
+        return self._format_currency_br(self.total_revenue_leakage)
+    
+    @rx.var
+    def top_exams_discrepancy_data(self) -> List[Dict[str, Any]]:
+        """Data for bar chart showing top 7 exams contributing to financial impact"""
+        exam_values: Dict[str, float] = {}
+        
+        # Agregar valores de exames faltantes
+        for item in self.missing_exams:
+            name = str(self._safe_get_attr(item, 'exam_name', ''))
+            value = float(self._safe_get_attr(item, 'value', 0) or 0)
+            if name:
+                exam_values[name] = exam_values.get(name, 0) + value
+        
+        # Agregar diferenças absolutas de divergências
+        for item in self.value_divergences:
+            name = str(self._safe_get_attr(item, 'exam_name', ''))
+            diff = float(self._safe_get_attr(item, 'difference', 0) or 0)
+            if name:
+                exam_values[name] = exam_values.get(name, 0) + abs(diff)
+        
+        # Agregar valores de exames fantasma
+        for item in self.extra_simus_exams:
+            name = str(self._safe_get_attr(item, 'exam_name', ''))
+            value = float(self._safe_get_attr(item, 'simus_value', 0) or self._safe_get_attr(item, 'value', 0) or 0)
+            if name:
+                exam_values[name] = exam_values.get(name, 0) + value
+        
+        # Ordenar por impacto financeiro e limitar a 7
+        sorted_exams = sorted(exam_values.items(), key=lambda x: x[1], reverse=True)[:7]
+        
+        # Truncar nomes longos para melhor visualização
+        return [
+            {"name": (name[:18] + "…" if len(name) > 18 else name), "value": round(val, 2)} 
+            for name, val in sorted_exams
+        ]
+    
+    @rx.var
+    def action_center_insights(self) -> List[Dict[str, str]]:
+        """Auto-generated insights and recommended actions with smart priority"""
+        insights = []
+        
+        # Calcular impacto para priorização inteligente
+        total_leakage = self.total_revenue_leakage
+        
+        # Insight 1: Pacientes faltantes (alta prioridade se impacto > 30%)
+        if self.missing_patients_count > 0:
+            impact_pct = (self.missing_patients_total / total_leakage * 100) if total_leakage > 0 else 0
+            priority = "high" if impact_pct > 30 or self.missing_patients_total > 1000 else "medium"
+            insights.append({
+                "icon": "users",
+                "title": f"Verificar {self.missing_patients_count} pacientes no SIMUS",
+                "description": f"Impacto: {self._format_currency_br(self.missing_patients_total)} ({impact_pct:.1f}% do total)",
+                "priority": priority,
+                "action_type": "patients_missing"
+            })
+        
+        # Insight 2: Exames faltantes
+        if self.missing_exams_count > 0:
+            impact_pct = (self.missing_exams_total / total_leakage * 100) if total_leakage > 0 else 0
+            priority = "high" if self.missing_exams_count > 10 or impact_pct > 25 else "medium"
+            insights.append({
+                "icon": "file-warning",
+                "title": f"Auditar {self.missing_exams_count} exames não integrados",
+                "description": f"Recuperação potencial: {self._format_currency_br(self.missing_exams_total)}",
+                "priority": priority,
+                "action_type": "missing"
+            })
+        
+        # Insight 3: Top Offender (exame mais problemático)
+        if self.top_offenders:
+            top = self.top_offenders[0]
+            insights.append({
+                "icon": "target",
+                "title": f"Revisar exame '{top.name[:25]}'",
+                "description": f"Aparece {top.count}x nas divergências. Verifique a tabela TUSS/CBHPM.",
+                "priority": "medium",
+                "action_type": "divergences"
+            })
+        
+        # Insight 4: Exames fantasma
+        if self.extra_simus_exams_count > 0:
+            insights.append({
+                "icon": "ghost",
+                "title": f"Investigar {self.extra_simus_exams_count} exames 'fantasma'",
+                "description": "Presentes no SIMUS mas não no COMPULAB. Possível duplicidade.",
+                "priority": "low",
+                "action_type": "extras"
+            })
+        
+        # Estado de sucesso
+        if not insights:
+            insights.append({
+                "icon": "check-circle",
+                "title": "Auditoria Perfeita! ✓",
+                "description": "Nenhuma divergência significativa identificada entre os sistemas.",
+                "priority": "success",
+                "action_type": ""
+            })
+        
+        return insights[:4]
+
     
     # Progresso do processamento (para arquivos grandes)
     processing_progress: int = 0
@@ -237,7 +473,7 @@ class State(rx.State):
                     equipment=r.get("equipment_name", ""),
                     analyst=r.get("analyst_name", ""),
                     status=r.get("status", "")
-                ) for r in qc_data
+                ) for r in qc_data if r.get("exam_name") in self.ALLOWED_QC_EXAMS
             ]
             
             # Carregar Reagentes
@@ -621,79 +857,8 @@ class State(rx.State):
     
     @rx.var
     def unique_exam_names(self) -> List[str]:
-        """Retorna lista única de nomes de exames para o dropdown"""
-
-        
-        # Lista de exames comuns em laboratório (padronizada)
-        common_exams = [
-            "17 HIDROXIPROGESTERONA", "ABSAG", "ACIDO FOLICO", "ACIDO URICO", "ALDOLASE", 
-            "ALFA 1 GLICOPROTEINA ACIDA", "AMILASE", "ANDROSTENEDIONA", "ANTI HBS", "ANTI HCV", 
-            "ANTI HVA IGG", "ANTI TIREOPEROXIDASE", "ANTIBIOGRAMA", "ANTICARDIOLIPINA IGM", 
-            "ANTICORPO ANTICARDIOLIPINA IGG", "ANTICORPOS ANTI DNA", "ANTICORPOS ANTI INSULINA", 
-            "ANTIESTREPTOLISINA O", "ANTIGENO CARCINO EMBRIONICO", "ANTIGENO PROSTATICO ESPECIFICO", 
-            "B HCG", "BACTERIOLOGICO", "BILIRRUBINAS", "CALCIO", "CAPACIDADE FERROPEXICA", 
-            "CITOMEGALOVIRUS IGG", "CITOMEGALOVIRUS IGM", "COLESTEROL HDL", "COLESTEROL LDL", 
-            "COLESTEROL LDL2", "COLESTEROL TOTAL", "COMPLEMENTO C 3", "COMPLEMENTO C4", 
-            "COOMBS INDIRETO", "CORTISOL", "CREATININA", "CREATINOFOSFOQUINASE", 
-            "DEPURACAO DA CREATININA ENDOGENA", "DOSAGEM DE CA 125", "ELETROFORESE DE PROTEINAS", 
-            "EPSTEIN BAAR IGM", "ESTRADIOL", "EXAME A FRESCO", "EXAME PARASITOLOGICO DE FEZES 1 O", 
-            "EXAME PARASITOLOGICO DE FEZES 2 O", "EXAME PARAZITOLOGICO DE FEZES 3 O", 
-            "EXAME QUALITATIVO DE URINA", "FATOR ANTI NUCLEAR", "FATOR RH", "FERRITINA", 
-            "FERRO SERICO", "FOSFATASE ACIDA PROSTATICA", "FOSFATASE ALCALINA", "FOSFORO", 
-            "FTA ABS", "G O T", "G P T", "GAMA GT", "GLICOSE", "GLICOSE 1 E 2 HORAS", 
-            "GRAM DE SECRECAO VAGINAL", "GRUPO SANGUINEO", "HBEAG", "HEMOGLOBINA GLICOSILADA A1C", 
-            "HEMOGRAMA", "HIDROXIPROGESTERONA", "HIV 1 2", "HORMONIO FOLICULO ESTIMULANTE FSH", 
-            "HORMONIO LUTEINIZANTE LH", "HTLV I II", "IGG", "IMUNOGLOBULINA A", 
-            "IMUNOGLOBULINA E", "IMUNOGLOBULINA M", "INSULINA", "LIPASE", "LITIO", 
-            "MAGNESIO", "MICROALBUMINURIA", "PARATORMONIO", "PESQUISA DE LARVAS NAS FEZES", 
-            "PESQUISA DE LEUCOCITOS FECAIS", "PESQUISA DE LEVEDURAS NAS FEZES", 
-            "PESQUISA DE SANGUE OCULTO FEZES", "PESQUISA DE TROFOZOITAS NAS FEZES", "PLAQUETAS", 
-            "POTASSIO", "PROGESTERONA", "PROLACTINA", "PROTEINA C REATIVA", 
-            "PROTEINAS TOTAIS E FRACOES", "PROTEINURIA", "PROVA DO LATEX A R", "SODIO", 
-            "SUBSTANCIAS REDUTORAS NAS FEZES", "TEMPO DE PROTROMBINA", 
-            "TEMPO DE TROMBOPLASTINA ATIVADO", "TESTOSTERONA LIVRE", "TESTOSTERONA TOTAL", 
-            "TIREOGLOBULINA", "TIREOTROFINA", "TIROXINA LIVRE", "TIROXINA T4 RIE", 
-            "TOXOPLASMOSE", "TRANSFERRINA", "TRIGLICERIDEOS", "TRIIODOTIRONINA T3 RIE", 
-            "UREIA", "UROCULTURA", "V S G", "VARICELA ZOSTER IGG", "VARICELA ZOSTER IGM", 
-            "VDRL QUANTITATIVO", "VITAMINA B12", "VITAMINA D25", "ZINCO"
-        ]
-        
-        # Combinar e ordenar
-        try:
-            # Adicionar exames dos registros existentes
-            recorded_exams = set()
-            if self.qc_records:
-                for record in self.qc_records:
-                    if record and hasattr(record, "exam_name") and record.exam_name:
-                        recorded_exams.add(record.exam_name)
-            
-            # Adicionar exames dos PDFs analisados (Compulab)
-            if self._compulab_patients:
-                for patient_data in self._compulab_patients.values():
-                    for exam in patient_data.get("exams", []):
-                        if exam.get("exam_name"):
-                            recorded_exams.add(exam["exam_name"])
-                            
-            # Adicionar exames dos PDFs analisados (Simus)
-            if self._simus_patients:
-                for patient_data in self._simus_patients.values():
-                    for exam in patient_data.get("exams", []):
-                        if exam.get("exam_name"):
-                            recorded_exams.add(exam["exam_name"])
-                            
-            all_exams = set(common_exams) | recorded_exams
-            return sorted(list(all_exams))
-            
-        except Exception as e:
-            # Log error for debugging
-            try:
-                import traceback
-                with open("debug_exam_list.txt", "a") as f:
-                    f.write(f"Error in unique_exam_names: {str(e)}\n")
-                    f.write(traceback.format_exc())
-            except:
-                pass
-            return sorted(common_exams)
+        """Retorna lista única de nomes de exames para o dropdown (Restrita conforme solicitação)"""
+        return sorted(self.ALLOWED_QC_EXAMS)
 
     # ===== Dashboard - Financial Scoreboard =====
     financial_target_daily: float = 15000.00
@@ -869,9 +1034,10 @@ class State(rx.State):
                 return
             
             # Validar extensão
-            valid_extensions = ['.pdf', '.csv']
+            valid_extensions = ['.pdf', '.csv', '.xlsx', '.xls', '.xsl']
             if not any(file.name.lower().endswith(ext) for ext in valid_extensions):
-                self.error_message = f"ERRO: COMPULAB: Tipo de arquivo inválido. Aceitos: PDF, CSV"
+                self.error_message = f"ERRO: COMPULAB: Tipo de arquivo inválido. Aceitos: PDF, CSV, Excel, XSL"
+
                 if tmp_file_path and os.path.exists(tmp_file_path):
                     os.unlink(tmp_file_path)
                 return
@@ -985,9 +1151,10 @@ class State(rx.State):
                 return
             
             # Validar extensão
-            valid_extensions = ['.pdf', '.csv']
+            valid_extensions = ['.pdf', '.csv', '.xlsx', '.xls', '.xsl']
             if not any(file.name.lower().endswith(ext) for ext in valid_extensions):
-                self.error_message = f"ERRO: SIMUS: Tipo de arquivo inválido. Aceitos: PDF, CSV"
+                self.error_message = f"ERRO: SIMUS: Tipo de arquivo inválido. Aceitos: PDF, CSV, Excel, XSL"
+
                 if tmp_file_path and os.path.exists(tmp_file_path):
                     os.unlink(tmp_file_path)
                 return
@@ -1162,26 +1329,23 @@ class State(rx.State):
     
     def _run_pdf_extraction_sync(self, compulab_path: str, simus_path: str, compulab_is_csv: bool = False, simus_is_csv: bool = False, progress_callback=None) -> dict:
         """
-        Executa a extração de PDF ou CSV de forma síncrona (chamado em thread separada)
-        Usa caminhos de arquivos em vez de bytes para evitar problemas de memória
-        Retorna um dict com os resultados ou erro
-        
-        Args:
-            compulab_path: Caminho do arquivo COMPULAB
-            simus_path: Caminho do arquivo SIMUS
-            compulab_is_csv: True se COMPULAB é CSV
-            simus_is_csv: True se SIMUS é CSV
-            progress_callback: Função callback(percentage: int, stage: str) para reportar progresso
+        Executa a extração de PDF, CSV ou Excel de forma síncrona
         """
-        from .utils.pdf_processor import extract_compulab_patients, extract_simus_patients, load_from_csv
+        from .utils.pdf_processor import extract_compulab_patients, extract_simus_patients, load_from_csv, load_from_excel
+
         
         try:
             # Estágio 1: Processando COMPULAB (0-45%)
             if progress_callback:
                 progress_callback(0, "Processando COMPULAB...")
-            
-            # Processar COMPULAB
-            if compulab_is_csv:
+                
+            compulab_filename = compulab_path.lower()
+            if compulab_filename.endswith(('.xlsx', '.xls', '.xsl')):
+                if progress_callback:
+                    progress_callback(5, "Lendo arquivo COMPULAB (Excel)...")
+                compulab_patients, compulab_total = load_from_excel(compulab_path)
+            elif compulab_is_csv:
+
                 # Ler CSV (rápido, 0-15%)
                 if progress_callback:
                     progress_callback(5, "Lendo arquivo COMPULAB (CSV)...")
@@ -1215,9 +1379,15 @@ class State(rx.State):
             # Estágio 2: Processando SIMUS (45-90%)
             if progress_callback:
                 progress_callback(45, "Processando SIMUS...")
-            
-            # Processar SIMUS
-            if simus_is_csv:
+                
+            simus_filename = simus_path.lower()
+            if simus_filename.endswith(('.xlsx', '.xls', '.xsl')):
+                if progress_callback:
+                    progress_callback(50, "Lendo arquivo SIMUS (Excel)...")
+                simus_patients, simus_total = load_from_excel(simus_path)
+                sigtap_val, contrat_val = None, None
+            elif simus_is_csv:
+
                 # Ler CSV (rápido, 45-60%)
                 if progress_callback:
                     progress_callback(50, "Lendo arquivo SIMUS (CSV)...")
@@ -1316,6 +1486,20 @@ class State(rx.State):
                 simus_is_csv = self.simus_file_name.lower().endswith('.csv')
             elif self.simus_file_path:
                 simus_is_csv = self.simus_file_path.lower().endswith('.csv')
+                
+            compulab_is_excel = False
+            excel_exts = ('.xlsx', '.xls', '.xsl')
+            if self.compulab_file_name:
+                compulab_is_excel = self.compulab_file_name.lower().endswith(excel_exts)
+            elif self.compulab_file_path:
+                compulab_is_excel = self.compulab_file_path.lower().endswith(excel_exts)
+
+            simus_is_excel = False
+            if self.simus_file_name:
+                simus_is_excel = self.simus_file_name.lower().endswith(excel_exts)
+            elif self.simus_file_path:
+                simus_is_excel = self.simus_file_path.lower().endswith(excel_exts)
+
             
             # Obter caminhos dos arquivos (do disco ou criar temporários dos bytes)
             compulab_path = self.compulab_file_path if (self.compulab_file_path and os.path.exists(self.compulab_file_path)) else None
@@ -1326,9 +1510,10 @@ class State(rx.State):
             
             # Se não houver caminhos, criar arquivos temporários dos bytes (compatibilidade)
             if not compulab_path and len(self.compulab_file_bytes) > 0:
-                suffix = '.csv' if compulab_is_csv else '.pdf'
-                mode = 'w' if compulab_is_csv else 'wb'
+                suffix = '.csv' if compulab_is_csv else ('.xlsx' if compulab_is_excel else '.pdf')
+                mode = 'wb' if not compulab_is_csv else 'w'
                 encoding = 'utf-8-sig' if compulab_is_csv else None
+
                 with tempfile.NamedTemporaryFile(mode=mode, delete=False, suffix=suffix, encoding=encoding) as tmp_file:
                     if compulab_is_csv:
                         # Para CSV, decodificar bytes para string
@@ -1340,9 +1525,10 @@ class State(rx.State):
                 created_temp_files.append(compulab_path)
             
             if not simus_path and len(self.simus_file_bytes) > 0:
-                suffix = '.csv' if simus_is_csv else '.pdf'
-                mode = 'w' if simus_is_csv else 'wb'
+                suffix = '.csv' if simus_is_csv else ('.xlsx' if simus_is_excel else '.pdf')
+                mode = 'wb' if not simus_is_csv else 'w'
                 encoding = 'utf-8-sig' if simus_is_csv else None
+
                 with tempfile.NamedTemporaryFile(mode=mode, delete=False, suffix=suffix, encoding=encoding) as tmp_file:
                     if simus_is_csv:
                         # Para CSV, decodificar bytes para string
@@ -1568,19 +1754,71 @@ class State(rx.State):
             # Auditoria Híbrida: Filtrar apenas pacientes com problemas detectados
             # Isso economiza 80-90% de tokens e foca a IA no que realmente importa.
             problem_patients = set()
-            for p in self.missing_patients: problem_patients.add(p.name)
-            for item in self.missing_exams: problem_patients.add(item['patient'])
-            for item in self.value_divergences: problem_patients.add(item['patient'])
-            for item in self.extra_simus_exams: problem_patients.add(item['patient'])
+            
+            # --- Robustness Check: Ensure lists are populated if totals are > 0 ---
+            total_leakage = self.total_revenue_leakage
+            has_lists_data = (len(self.missing_patients) > 0 or 
+                              len(self.missing_exams) > 0 or 
+                              len(self.value_divergences) > 0 or
+                              len(self.extra_simus_exams) > 0)
+            
+            if total_leakage > 0 and not has_lists_data:
+                print("DEBUG: State inconsistency detected in generate_ai_analysis (Totals > 0 but lists empty). Regenerating...")
+                try:
+                    from .utils.comparison import compare_patients
+                    comparison_results = compare_patients(self._compulab_patients, self._simus_patients)
+                    
+                    # Re-populate lists temporarily ensuring they are AnalysisResult/PatientModel
+                    # Note: We are not determining breakdown totals again, just the lists for AI context
+                    for item in comparison_results['missing_patients']:
+                         problem_patients.add(item['patient'])
+                    for item in comparison_results['missing_exams']:
+                         problem_patients.add(item['patient'])
+                    for item in comparison_results['value_divergences']:
+                         problem_patients.add(item['patient'])
+                    for item in comparison_results['extra_simus_exams']:
+                         problem_patients.add(item['patient'])
+                except Exception as e:
+                     print(f"DEBUG: Failed to regenerate lists: {e}")
+            else:
+                for p in self.missing_patients: problem_patients.add(p.name)
+                for item in self.missing_exams: problem_patients.add(item.patient)
+                for item in self.value_divergences: problem_patients.add(item.patient)
+                for item in self.extra_simus_exams: problem_patients.add(item.patient)
             
             filtered_compulab = {k: v for k, v in self._compulab_patients.items() if k in problem_patients}
             filtered_simus = {k: v for k, v in self._simus_patients.items() if k in problem_patients}
             
+            # Double check: If filtering resulted in empty dicts but we have problem patients,
+            # it means keys didn't match. Try fallback with relaxed matching.
+            if not filtered_compulab and problem_patients:
+                 print("DEBUG: Exact key match failed for AI context. Attempting normalized match.")
+                 # Create normalized map of _compulab_patients
+                 from .utils.comparison import normalize_patient_name
+                 norm_map = {normalize_patient_name(k): v for k, v in self._compulab_patients.items()}
+                 
+                 for p_name in problem_patients:
+                     norm_p = normalize_patient_name(p_name)
+                     if norm_p in norm_map:
+                         filtered_compulab[p_name] = norm_map[norm_p]
+            
             if not problem_patients:
-                self.ai_analysis = "# RELATÓRIO DE AUDITORIA\n\nNenhuma divergência foi encontrada na análise determinística. A auditoria de IA não é necessária."
-                self.is_generating_ai = False
-                self.success_message = "Análise concluída: Sem divergências detectadas."
-                return
+                # Only show 'No Discrepancy' if totals are also zero or negligible
+                if self.total_revenue_leakage > 1.0:
+                     # Fallback: Send everything if local detection failed but we have leak
+                     print("DEBUG: Fallback to full analysis due to empty problem_patients but high leakage.")
+                     filtered_compulab = self._compulab_patients
+                     filtered_simus = self._simus_patients
+                     all_patients = list(filtered_compulab.keys())
+                     # Limit to first 50 to avoid token overflow in fallback mode
+                     if len(all_patients) > 50:
+                         filtered_compulab = {k: filtered_compulab[k] for k in all_patients[:50]}
+                         filtered_simus = {k: filtered_simus[k] for k in all_patients[:50] if k in filtered_simus}
+                else:
+                    self.ai_analysis = "# RELATÓRIO DE AUDITORIA\n\nNenhuma divergência foi encontrada na análise determinística. A auditoria de IA não é necessária."
+                    self.is_generating_ai = False
+                    self.success_message = "Análise concluída: Sem divergências detectadas."
+                    return
 
             # Consumir o gerador async
             final_analysis = None
@@ -1780,6 +2018,91 @@ class State(rx.State):
         """Fecha o modal de histórico"""
         self.is_showing_patient_history = False
         self.patient_history_data = []
+        self.patient_history_search = ""
+
+    @rx.var
+    def filtered_patient_history(self) -> List[PatientHistoryEntry]:
+        """Retorna o histórico filtrado pela busca"""
+        if not self.patient_history_search:
+            return self.patient_history_data
+        search = self.patient_history_search.lower().strip()
+        return [
+            entry for entry in self.patient_history_data
+            if search in entry.exam_name.lower() or search in (entry.notes or "").lower()
+        ]
+
+    @rx.var
+    def patient_history_total_items(self) -> int:
+        """Total de itens no histórico"""
+        return len(self.patient_history_data)
+
+    @rx.var
+    def patient_history_resolved_items(self) -> int:
+        """Total de itens resolvidos"""
+        return len([e for e in self.patient_history_data if e.status == "resolvido"])
+
+    @rx.var
+    def patient_history_total_value(self) -> float:
+        """Valor total auditado"""
+        return sum(e.last_value for e in self.patient_history_data)
+
+    @rx.var
+    def patient_history_resolved_value(self) -> float:
+        """Valor total recuperado"""
+        return sum(e.last_value for e in self.patient_history_data if e.status == "resolvido")
+
+    @rx.var
+    def patient_history_success_rate(self) -> str:
+        """Taxa de sucesso formatada"""
+        total = len(self.patient_history_data)
+        if total == 0:
+            return "0%"
+        resolved = len([e for e in self.patient_history_data if e.status == "resolvido"])
+        return f"{(resolved / total) * 100:.1f}%"
+
+    @rx.var
+    def patient_history_total_value_formatted(self) -> str:
+        """Valor total auditado formatado"""
+        return f"R$ {self.patient_history_total_value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+    @rx.var
+    def patient_history_resolved_value_formatted(self) -> str:
+        """Valor total recuperado formatado"""
+        return f"R$ {self.patient_history_resolved_value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+    async def update_patient_history_note(self, entry_id: str, new_note: str):
+        """Atualiza a nota de um registro de histórico"""
+        for entry in self.patient_history_data:
+            if entry.id == entry_id:
+                entry.notes = new_note
+                # Persistir
+                await AuditService.save_divergence_resolution({
+                    "patient_name": entry.patient_name,
+                    "exam_name": entry.exam_name,
+                    "status": entry.status,
+                    "notes": new_note,
+                    "last_value": entry.last_value
+                })
+                break
+        return rx.toast("Nota atualizada com sucesso!", status="success")
+
+    async def download_patient_history_pdf(self):
+        """Gera e baixa o PDF do histórico do paciente"""
+        if not self.selected_patient_name or not self.patient_history_data:
+            return
+        
+        try:
+            from .utils.patient_pdf_report import generate_patient_history_pdf
+            pdf_bytes = generate_patient_history_pdf(self.selected_patient_name, self.patient_history_data)
+            
+            b64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
+            yield rx.download(
+                data=f"data:application/pdf;base64,{b64_pdf}",
+                filename=f"Historico_{self.selected_patient_name.replace(' ', '_')}.pdf"
+            )
+        except Exception as e:
+            print(f"Erro ao gerar PDF do histórico: {e}")
+            yield rx.toast(f"Erro ao gerar PDF: {str(e)}", status="error")
 
     def calculate_forecast(self):
         """Calcula previsão de faturamento baseada nos últimos meses"""
@@ -1843,7 +2166,7 @@ class State(rx.State):
             filename = self.excel_file_name.lower()
             normalized_data = [] # List of dicts: date, exam_name, value, target, sd, cv, etc.
             
-            if filename.endswith(".xlsx") or filename.endswith(".xls"):
+            if filename.endswith(".xlsx") or filename.endswith(".xls") or filename.endswith(".xsl"):
                 # --- Análise Excel (Multi-Sheet) ---
                 import pandas as pd
                 import io

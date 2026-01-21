@@ -12,8 +12,9 @@ from ..state import State
 from ..styles import Color, Design, Typography
 from ..components import ui
 
+
 def tab_button(label: str, icon: str, tab_id: str) -> rx.Component:
-    """Botão de aba do ProIn - Estilo Premium Padronizado"""
+    """Botão de aba do ProIn - Estilo Premium que imita a Navbar Principal"""
     is_active = State.proin_current_tab == tab_id
     
     return rx.button(
@@ -24,18 +25,19 @@ def tab_button(label: str, icon: str, tab_id: str) -> rx.Component:
             align="center",
         ),
         on_click=lambda: State.set_proin_tab(tab_id),
-        bg=rx.cond(is_active, Color.PRIMARY_LIGHT, "transparent"),
-        color=rx.cond(is_active, Color.DEEP, Color.TEXT_SECONDARY),
-        border_radius="9999px",
-        padding_x="1.25rem",
-        padding_y="0.625rem",
+        bg=rx.cond(is_active, "#DCFCE7", "transparent"),
+        color=rx.cond(is_active, "#166534", Color.TEXT_SECONDARY),
+        border_radius="12px",
+        padding_x="1.5rem",
+        padding_y="0.75rem",
+        border=rx.cond(is_active, "1px solid #86EFAC", "1px solid transparent"),
         _hover={
-            "bg": rx.cond(is_active, Color.PRIMARY_LIGHT, "#F3F4F6"),
-            "color": Color.DEEP,
+            "bg": rx.cond(is_active, "#DCFCE7", "#F9FAFB"),
+            "color": rx.cond(is_active, "#166534", Color.DEEP),
         },
-        class_name="transition-all duration-200 border border-transparent" + 
-                   rx.cond(is_active, f" border-{Color.PRIMARY}/20 shadow-sm", "")
+        transition="all 0.2s ease"
     )
+
 
 def dashboard_tab() -> rx.Component:
     """Aba Dashboard - Visão geral"""
@@ -106,44 +108,52 @@ def dashboard_tab() -> rx.Component:
                         # Manutenções
                         rx.box(
                             rx.hstack(
-                                rx.box(rx.icon("wrench", size=28, color="orange"), class_name="bg-amber-100 p-3 rounded-xl"),
+                                rx.box(
+                                    rx.icon("wrench", size=24, color="#F59E0B"), 
+                                    class_name="bg-amber-100 p-3 rounded-xl flex items-center justify-center"
+                                ),
                                 rx.vstack(
-                                    ui.text("Manutenções Pendentes", size="label"),
+                                    rx.text("Manutenções Pendentes", font_size="0.875rem", font_weight="600", color=Color.TEXT_SECONDARY),
                                     ui.text("Equipamentos aguardando revisão", size="small"),
                                     spacing="0",
                                 ),
                                 rx.spacer(),
                                 rx.text(
                                     State.dashboard_pending_maintenances,
-                                    font_size="2.5rem",
-                                    font_weight="bold",
-                                    color=rx.cond(State.has_pending_maintenances, Color.WARNING, Color.SUCCESS)
+                                    font_size="2rem",
+                                    font_weight="800",
+                                    color=rx.cond(State.has_pending_maintenances, Color.WARNING, Color.SUCCESS),
+                                    line_height="1"
                                 ),
                                 width="100%",
                                 align="center",
                             ),
-                            class_name="p-6 w-full flex-1 flex items-center bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
+                            class_name="p-5 w-full flex-1 flex items-center bg-white border border-gray-100 rounded-2xl hover:border-amber-200 hover:shadow-md transition-all cursor-pointer"
                         ),
                         # Lotes Vencendo
                         rx.box(
                             rx.hstack(
-                                rx.box(rx.icon("clock", size=28, color="red"), class_name="bg-red-100 p-3 rounded-xl"),
+                                rx.box(
+                                    rx.icon("clock", size=24, color="#EF4444"), 
+                                    class_name="bg-red-100 p-3 rounded-xl flex items-center justify-center"
+                                ),
                                 rx.vstack(
-                                    ui.text("Lotes Vencendo", size="label"),
+                                    rx.text("Lotes Vencendo", font_size="0.875rem", font_weight="600", color=Color.TEXT_SECONDARY),
                                     ui.text("Próximos 30 dias", size="small"),
                                     spacing="0",
                                 ),
                                 rx.spacer(),
                                 rx.text(
                                     State.dashboard_expiring_lots,
-                                    font_size="2.5rem",
-                                    font_weight="bold",
-                                    color=rx.cond(State.has_expiring_lots, Color.ERROR, Color.SUCCESS)
+                                    font_size="2rem",
+                                    font_weight="800",
+                                    color=rx.cond(State.has_expiring_lots, Color.ERROR, Color.SUCCESS),
+                                    line_height="1"
                                 ),
                                 width="100%",
                                 align="center",
                             ),
-                            class_name="p-6 w-full flex-1 flex items-center bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
+                            class_name="p-5 w-full flex-1 flex items-center bg-white border border-gray-100 rounded-2xl hover:border-red-200 hover:shadow-md transition-all cursor-pointer"
                         ),
                         spacing="4",
                         width="100%",
@@ -215,7 +225,7 @@ def dashboard_tab() -> rx.Component:
         rx.box(
             rx.vstack(
                 rx.hstack(
-                    rx.icon("file_text", size=20, color=Color.TEXT_SECONDARY),
+                    rx.icon("file-text", size=20, color=Color.TEXT_SECONDARY),
                     ui.heading("Últimos Registros", level=3),
                     spacing="2",
                     align="center",
@@ -465,7 +475,7 @@ def registro_qc_tab() -> rx.Component:
                     State.qc_success_message != "",
                     rx.box(
                         rx.hstack(
-                            rx.icon("circle_check", size=24, color="green"),
+                            rx.icon("circle-check", size=24, color="green"),
                             ui.text(State.qc_success_message, font_weight="500", color="green"),
                             spacing="3",
                             align="center"
@@ -477,7 +487,7 @@ def registro_qc_tab() -> rx.Component:
                     State.qc_error_message != "",
                     rx.box(
                         rx.hstack(
-                            rx.icon("circle_x", size=24, color="red"),
+                            rx.icon("circle-x", size=24, color="red"),
                             ui.text(State.qc_error_message, font_weight="500", color="red"),
                             spacing="3",
                             align="center"
@@ -755,7 +765,7 @@ def reagentes_tab() -> rx.Component:
                             ),
                             rx.center(
                                 rx.vstack(
-                                    rx.icon("package_open", size=32, color="lightgray"),
+                                    rx.icon("package-open", size=32, color="lightgray"),
                                     ui.text("Nenhum lote cadastrado.", size="small", color="gray"),
                                     spacing="2",
                                     align="center"
@@ -1140,7 +1150,7 @@ def relatorios_tab() -> rx.Component:
             ),
             rx.center(
                 rx.vstack(
-                    rx.icon("chart_bar", size=48, color="#9ca3af"),
+                    rx.icon("chart-bar", size=48, color="#9ca3af"),
                     ui.text("Selecione um exame e clique em 'Gerar Gráfico'", color="gray"),
                     ui.text("para visualizar a análise Levey-Jennings", color="gray", size="small"),
                     spacing="2",
@@ -1178,9 +1188,9 @@ def importar_tab() -> rx.Component:
                                 align="center"
                             ),
                             rx.vstack(
-                                rx.icon("file_spreadsheet", size=48, class_name="opacity-50"),
+                                rx.icon("file-spreadsheet", size=48, class_name="opacity-50"),
                                 ui.text("Arraste sua planilha aqui", font_weight="600"),
-                                ui.text("Suporta .xlsx, .xls e .pdf", size="small"),
+                                ui.text("Suporta .xlsx, .xls, .xsl e .pdf", size="small"),
                                 class_name="group-hover:scale-105 transition-transform",
                                 spacing="2",
                                 align="center"
@@ -1193,7 +1203,7 @@ def importar_tab() -> rx.Component:
                     id="excel_upload",
                     accept={
                         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
-                        "application/vnd.ms-excel": [".xls"],
+                        "application/vnd.ms-excel": [".xls", ".xsl"],
                         "application/pdf": [".pdf"]
                     },
                     max_files=1,
@@ -1250,7 +1260,8 @@ def importar_tab() -> rx.Component:
                     (State.excel_error_message != "") & ~(State.is_analyzing_excel | State.is_importing),
                     rx.callout(
                         State.excel_error_message,
-                        icon="triangle_alert",
+                        icon="triangle-alert",
+
                         color_scheme="red",
                         class_name="mt-4 max-w-2xl mx-auto"
                     )
@@ -1261,7 +1272,8 @@ def importar_tab() -> rx.Component:
                     (State.excel_success_message != "") & ~(State.is_analyzing_excel | State.is_importing),
                     rx.callout(
                         State.excel_success_message,
-                        icon="circle_check",
+                        icon="circle-check",
+
                         color_scheme="green",
                         class_name="mt-4 max-w-2xl mx-auto"
                     )
@@ -1298,19 +1310,19 @@ def importar_tab() -> rx.Component:
                     # Stats row
                     rx.grid(
                         rx.hstack(
-                            rx.icon("file_text", size=16, color="gray"),
+                            rx.icon("file-text", size=16, color="gray"),
                             rx.text(State.excel_filled_cells.to_string() + " células", font_size="0.875rem"),
                             spacing="1",
                             align="center"
                         ),
                         rx.hstack(
-                            rx.icon("columns_2", size=16, color="gray"),
+                            rx.icon("columns-2", size=16, color="gray"),
                             rx.text(State.excel_total_columns.to_string() + " colunas", font_size="0.875rem"),
                             spacing="1",
                             align="center"
                         ),
                         rx.hstack(
-                            rx.icon("rows_2", size=16, color="gray"),
+                            rx.icon("rows-2", size=16, color="gray"),
                             rx.text(State.excel_total_rows.to_string() + " registros a importar", font_size="0.875rem", color=Color.PRIMARY, font_weight="500"),
                             spacing="1",
                             align="center"
@@ -1366,20 +1378,24 @@ def proin_page() -> rx.Component:
                 class_name="py-12 w-full flex justify-center"
             ),
             
-            # Navigation Tabs
+            # Navigation Tabs - Custom Style matching screenshot
             rx.box(
                 rx.hstack(
-                    tab_button("Dashboard", "layout_dashboard", "dashboard"),
-                    tab_button("Registro CQ", "file_pen_line", "registro"),
-                    tab_button("Gestão de Reagentes", "flask_conical", "reagentes"),
-                    tab_button("Relatórios", "chart_line", "relatorios"),
+                    tab_button("Dashboard", "layout-dashboard", "dashboard"),
+                    tab_button("Registro CQ", "file-pen-line", "registro"),
+                    tab_button("Gestão de Reagentes", "flask-conical", "reagentes"),
+                    tab_button("Relatórios", "chart-line", "relatorios"),
                     tab_button("Importar", "upload", "importar"),
                     spacing="2",
-                    wrap="wrap",
+                    padding="6px",
+                    bg="white",
+                    border="1px solid #E5E7EB",
+                    border_radius="20px",
+                    box_shadow="0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                    align="center",
                     justify="center",
-                    class_name="p-1 bg-gray-100/50 rounded-2xl md:rounded-full inline-flex border border-gray-200/50 backdrop-blur-sm"
                 ),
-                class_name="w-full mb-8 sticky top-0 z-10 py-4 flex justify-center"
+                class_name="w-full mb-10 sticky top-4 z-10 flex justify-center"
             ),
             
             # Main Content Area

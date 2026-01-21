@@ -166,8 +166,25 @@ def button(
     final_style.update(current_variant)
     final_style.update(props)
 
+    # Added shine effect element for primary button
+    shine_effect = rx.box(
+        position="absolute",
+        top="0",
+        left="-100%",
+        width="100%",
+        height="100%",
+        background_image="linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)",
+        transition="all 0.6s ease",
+        _hover={"left": "100%"},
+        class_name="hover-shine" if variant == "primary" else ""
+    )
+
     return rx.button(
-        rx.cond(is_loading, loading_content, normal_content),
+        rx.box(
+            rx.cond(is_loading, loading_content, normal_content),
+            z_index="1"
+        ),
+        rx.cond(variant == "primary", shine_effect, rx.fragment()),
         on_click=on_click,
         disabled=should_disable,
         **final_style
@@ -289,13 +306,16 @@ def status_badge(text: str, status: str = "default") -> rx.Component:
     )
 
 def stat_card(title: str, value: str, icon: str, trend: str = "neutral", subtext: str = "") -> rx.Component:
-    """Card de estatística para dashboards"""
+    """Card de estatística para dashboards com visual premium"""
     return card(
         rx.vstack(
             rx.hstack(
                 rx.box(
-                    rx.icon(icon, size=24, color=Color.DEEP),
-                    class_name="p-3 rounded-xl bg-gray-50",
+                    rx.icon(icon, size=24, color=Color.PRIMARY),
+                    padding="12px",
+                    border_radius="16px",
+                    background_color=f"{Color.PRIMARY}15",
+                    class_name="flex items-center justify-center",
                 ),
                 rx.spacer(),
                 rx.cond(
@@ -306,13 +326,32 @@ def stat_card(title: str, value: str, icon: str, trend: str = "neutral", subtext
                 align="center",
             ),
             rx.vstack(
-                rx.text(value, font_size="2rem", font_weight="700", color=Color.DEEP, line_height="1"),
-                rx.text(title, font_size="0.875rem", font_weight="500", color=Color.TEXT_SECONDARY),
+                rx.text(
+                    value, 
+                    font_size=["1.75rem", "2rem", "2.25rem"], 
+                    font_weight="800", 
+                    color=Color.DEEP, 
+                    line_height="1.2",
+                    letter_spacing="-0.02em"
+                ),
+                rx.text(
+                    title, 
+                    font_size="0.875rem", 
+                    font_weight="600", 
+                    color=Color.TEXT_SECONDARY,
+                    text_transform="uppercase",
+                    letter_spacing="0.05em"
+                ),
                 spacing="1", 
                 align="start"
             ),
             spacing="4",
-        )
+        ),
+        _hover={
+            "transform": "translateY(-4px)",
+            "box_shadow": Design.SHADOW_LG,
+            "border_color": f"{Color.PRIMARY}40"
+        }
     )
 
 def page_header(title: str, subtitle: str) -> rx.Component:
@@ -430,11 +469,12 @@ def toast(
 
     # Mapeamento de status para cores e ícones
     status_config = {
-        "success": {"bg": Color.SUCCESS_BG, "color": Color.SUCCESS, "icon": "circle_check"},
-        "error": {"bg": Color.ERROR_BG, "color": Color.ERROR, "icon": "circle_x"},
-        "warning": {"bg": Color.WARNING_BG, "color": Color.WARNING, "icon": "triangle_alert"},
+        "success": {"bg": Color.SUCCESS_BG, "color": Color.SUCCESS, "icon": "circle-check"},
+        "error": {"bg": Color.ERROR_BG, "color": Color.ERROR, "icon": "circle-x"},
+        "warning": {"bg": Color.WARNING_BG, "color": Color.WARNING, "icon": "triangle-alert"},
         "info": {"bg": "#EFF6FF", "color": "#1D4ED8", "icon": "info"},
     }
+
 
     config = status_config.get(status, status_config["info"])
     toast_icon = icon or config["icon"]
@@ -527,10 +567,62 @@ def empty_state(
                     on_click=on_action,
                 ),
             ),
-            spacing="4",
-            align="center",
-            justify="center",
             padding=f"{Spacing.XXL} {Spacing.XL}",
         ),
         text_align="center",
+    )
+
+def segmented_control(options: list[dict], current_value: str, on_change) -> rx.Component:
+    """Controle segmentado moderno para navegação tipo abas"""
+    return rx.box(
+        rx.hstack(
+            *[
+                rx.box(
+                    rx.text(
+                        opt["label"],
+                        font_weight=rx.cond(current_value == opt["value"], "600", "500"),
+                        color=rx.cond(current_value == opt["value"], "white", Color.TEXT_SECONDARY),
+                        transition="all 0.2s ease",
+                    ),
+                    padding_x="1.5rem",
+                    padding_y="0.625rem",
+                    border_radius="10px",
+                    bg=rx.cond(current_value == opt["value"], Color.PRIMARY, "transparent"),
+                    box_shadow=rx.cond(current_value == opt["value"], Design.SHADOW_MD, "none"),
+                    cursor="pointer",
+                    on_click=lambda: on_change(opt["value"]),
+                    transition="all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                    _hover=rx.cond(
+                        current_value == opt["value"],
+                        {},
+                        {"bg": "rgba(0,0,0,0.04)", "color": Color.TEXT_PRIMARY}
+                    ),
+                    flex="1",
+                    text_align="center",
+                )
+                for opt in options
+            ],
+            spacing="1",
+            width="100%",
+            padding="4px",
+        ),
+        bg="#F1F5F9",
+        border_radius="14px",
+        padding="2px",
+        width="fit-content",
+        min_width="300px",
+        margin_x="auto",
+        margin_y="1rem",
+    )
+
+def skeleton_loader(width="100%", height="20px", radius="8px") -> rx.Component:
+    """Loader esquelético para estados de carregamento"""
+    return rx.box(
+        width=width,
+        height=height,
+        border_radius=radius,
+        background="linear-gradient(90deg, #F1F5F9 25%, #E2E8F0 50%, #F1F5F9 75%)",
+        background_size="200% 100%",
+        animation="shine 1.5s infinite linear",
+        class_name="animate-pulse-subtle",
     )

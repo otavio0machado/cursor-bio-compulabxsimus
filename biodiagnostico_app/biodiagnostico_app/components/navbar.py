@@ -8,34 +8,47 @@ def navbar_link(text: str, url: str, icon: str) -> rx.Component:
 
     is_active = State.current_page == url
     return rx.link(
-        rx.hstack(
-            rx.icon(
-                icon,
-                size=20,  # Ícone maior para melhor visibilidade
-                color=rx.cond(is_active, Color.DEEP, Color.TEXT_SECONDARY)
+        rx.vstack(
+            rx.hstack(
+                rx.icon(
+                    icon,
+                    size=20,
+                    color=rx.cond(is_active, Color.PRIMARY, Color.TEXT_SECONDARY)
+                ),
+                rx.text(
+                    text,
+                    font_weight=rx.cond(is_active, "700", "500"),
+                    font_size="1rem",
+                    transition="all 0.2s ease",
+                ),
+                spacing="2",
+                align="center",
+                color=rx.cond(is_active, Color.PRIMARY, Color.TEXT_SECONDARY),
+                padding_x=Spacing.MD,
+                padding_y=Spacing.SM,
+                border_radius=Design.RADIUS_LG,
+                transition="all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                _hover={"bg": "rgba(0, 0, 0, 0.04)", "transform": "translateY(-1px)"},
+                min_height="44px",
             ),
-            rx.text(
-                text,
-                font_weight=rx.cond(is_active, "600", "500"),  # Negrito quando ativo
-                font_size="1rem"  # 16px - texto maior
-            ),
-            spacing="2",
-            align="center",
-            color=rx.cond(is_active, Color.DEEP, Color.TEXT_SECONDARY),
-            class_name=rx.cond(
+            # Active Indicator Line
+            rx.cond(
                 is_active,
-                "bg-green-50 border-2 border-green-300 shadow-md",  # Border mais visível quando ativo
-                "hover:bg-gray-50 border-2 border-transparent hover:border-gray-200"
+                rx.box(
+                    width="40%",
+                    height="3px",
+                    bg=Color.PRIMARY,
+                    border_radius="full",
+                    animation="fadeIn 0.3s ease",
+                ),
+                rx.box(width="0%", height="3px", bg="transparent")
             ),
-            padding_x=Spacing.MD,  # 16px
-            padding_y=Spacing.SM,  # 12px
-            border_radius=Design.RADIUS_LG,  # 12px
-            transition="all 0.2s ease",
-            min_height="44px",  # Área de toque acessível
+            spacing="0",
+            align="center",
         ),
         on_click=lambda: State.set_page(url),
         text_decoration="none",
-        _focus_visible={  # Acessibilidade por teclado
+        _focus_visible={
             "outline": f"2px solid {Color.PRIMARY}",
             "outline_offset": "2px"
         }
@@ -133,11 +146,11 @@ def navbar() -> rx.Component:
             align="center",
             padding_x=[Spacing.MD, Spacing.LG],
             padding_y=Spacing.SM,
-            bg="rgba(255, 255, 255, 0.95)",
-            backdrop_filter="blur(12px)",
-            border=f"1px solid {Color.BORDER}",
+            background_color="rgba(255, 255, 255, 0.8)",
+            backdrop_filter="blur(16px) saturate(180%)",
+            border=f"1px solid rgba(255, 255, 255, 0.5)",
             border_radius=Design.RADIUS_XL,
-            box_shadow=Design.SHADOW_DEFAULT,
+            box_shadow="0 10px 30px -10px rgba(0, 0, 0, 0.1)",
         ),
         width="100%",
         position="sticky",
@@ -162,13 +175,13 @@ def mobile_nav_trigger() -> rx.Component:
             )
         ),
         rx.menu.content(
-            rx.menu.item(rx.hstack(rx.icon("layout_dashboard", size=18), rx.text("Dashboard", font_size="1rem")), on_select=lambda: State.set_page("dashboard"), padding="12px"),
-            rx.menu.item(rx.hstack(rx.icon("file_text", size=18), rx.text("Conversor PDF", font_size="1rem")), on_select=lambda: State.set_page("conversor"), padding="12px"),
-            rx.menu.item(rx.hstack(rx.icon("chart_bar", size=18), rx.text("Análise", font_size="1rem")), on_select=lambda: State.set_page("analise"), padding="12px"),
+            rx.menu.item(rx.hstack(rx.icon("layout-dashboard", size=18), rx.text("Dashboard", font_size="1rem")), on_select=lambda: State.set_page("dashboard"), padding="12px"),
+            rx.menu.item(rx.hstack(rx.icon("file-text", size=18), rx.text("Conversor PDF", font_size="1rem")), on_select=lambda: State.set_page("conversor"), padding="12px"),
+            rx.menu.item(rx.hstack(rx.icon("chart-bar", size=18), rx.text("Análise", font_size="1rem")), on_select=lambda: State.set_page("analise"), padding="12px"),
             rx.menu.item(rx.hstack(rx.icon("activity", size=18), rx.text("Proin QC", font_size="1rem")), on_select=lambda: State.set_page("proin"), padding="12px"),
             rx.menu.separator(),
             rx.menu.item(rx.hstack(rx.icon("settings", size=18), rx.text("Configurações", font_size="1rem")), on_select=lambda: State.set_page("api"), padding="12px"),
-            rx.menu.item(rx.hstack(rx.icon("log_out", size=18), rx.text("Sair", font_size="1rem")), color="red", on_select=State.logout, padding="12px"),
+            rx.menu.item(rx.hstack(rx.icon("log-out", size=18), rx.text("Sair", font_size="1rem")), color="red", on_select=State.logout, padding="12px"),
             size="2",
             width="220px",
         )

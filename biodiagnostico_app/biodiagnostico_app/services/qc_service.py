@@ -159,22 +159,25 @@ class QCService:
     async def delete_qc_record(record_id: str) -> bool:
         """Remove registro de CQ"""
         try:
-            # Tenta deletar o registro solicitando contagem exata
+            print(f"DEBUG: Tentando deletar QC record: {record_id}")
+            # Tenta deletar o registro - Por padrão retorna os dados deletados
             response = supabase.table("qc_records")\
-                .delete(count='exact')\
+                .delete()\
                 .eq("id", record_id)\
                 .execute()
             
-            # Verifica se deletou algo
-            if hasattr(response, 'count') and response.count is not None:
-                return response.count > 0
-            
-            # Se não tem count, verifica data
+            # Verifica se deletou algo (retornou dados)
             if response.data and len(response.data) > 0:
+                print(f"DEBUG: Registro {record_id} deletado com sucesso.")
+                return True
+            
+            # Se não tem data, verifica count se disponível (fallback)
+            if hasattr(response, 'count') and response.count is not None and response.count > 0:
+                print(f"DEBUG: Registro {record_id} deletado (count > 0).")
                 return True
                 
-            # Se não tem data nem count, assume falha (segurança)
-            # Geralmente delete retorna vazio se nada foi deletado
+            # Se response.data está vazio, significa que o ID não foi encontrado ou não deletado
+            print(f"DEBUG: Delete falhou ou registro não encontrado. Response data: {response.data}")
             return False
             
         except Exception as e:

@@ -11,8 +11,11 @@ def file_type_badge(file_type: str) -> rx.Component:
     colors = {
         "PDF": ("bg-red-100", "text-red-700", "border-red-200"),
         "CSV": ("bg-blue-100", "text-blue-700", "border-blue-200"),
+        "EXCEL": ("bg-emerald-100", "text-emerald-700", "border-emerald-200"),
         "PDF/CSV": ("bg-purple-100", "text-purple-700", "border-purple-200"),
+        "COMPLETO": ("bg-indigo-100", "text-indigo-700", "border-indigo-200"),
     }
+
     bg, text, border = colors.get(file_type, ("bg-gray-100", "text-gray-700", "border-gray-200"))
     
     return rx.box(
@@ -43,7 +46,14 @@ def file_upload_enhanced(
     - Feedback visual melhorado
     """
     if accept_dict is None:
-        accept_dict = {"application/pdf": [".pdf"]}
+        accept_dict = {
+            "application/pdf": [".pdf"],
+            "text/csv": [".csv"],
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
+            "application/vnd.ms-excel": [".xls", ".xsl"]
+        }
+
+
     
     # Ícone de arquivo carregado
     file_loaded_icon = """
@@ -153,7 +163,14 @@ def compact_upload_card(
 ) -> rx.Component:
     """Card de upload compacto para análise"""
     if accept_dict is None:
-        accept_dict = {"application/pdf": [".pdf"], "text/csv": [".csv"]}
+        accept_dict = {
+            "application/pdf": [".pdf"], 
+            "text/csv": [".csv"],
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
+            "application/vnd.ms-excel": [".xls", ".xsl"]
+        }
+
+
     
     return rx.box(
         rx.upload(
@@ -320,9 +337,11 @@ def file_upload_section() -> rx.Component:
                 align="center",
             ),
             rx.text(
-                "Arraste ou clique para carregar os arquivos PDF ou CSV",
+                "Arraste ou clique para carregar os arquivos PDF, CSV ou Excel/XSL",
                 class_name="text-gray-600 text-sm"
             ),
+
+
             
             # Grid de uploads
             rx.grid(
@@ -335,9 +354,16 @@ def file_upload_section() -> rx.Component:
                     file_size=State.compulab_file_size,
                     on_upload=State.handle_compulab_upload,
                     on_remove=State.clear_compulab_file,
-                    accepted_types="PDF/CSV",
-                    accept_dict={"application/pdf": [".pdf"], "text/csv": [".csv"]},
+                    accepted_types="COMPLETO",
+                    accept_dict={
+                        "application/pdf": [".pdf"], 
+                        "text/csv": [".csv"],
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
+                        "application/vnd.ms-excel": [".xls", ".xsl"]
+
+                    },
                 ),
+
                 file_upload_enhanced(
                     title="SIMUS",
                     subtitle="Arraste ou clique para enviar",
@@ -347,9 +373,16 @@ def file_upload_section() -> rx.Component:
                     file_size=State.simus_file_size,
                     on_upload=State.handle_simus_upload,
                     on_remove=State.clear_simus_file,
-                    accepted_types="PDF/CSV",
-                    accept_dict={"application/pdf": [".pdf"], "text/csv": [".csv"]},
+                    accepted_types="COMPLETO",
+                    accept_dict={
+                        "application/pdf": [".pdf"], 
+                        "text/csv": [".csv"],
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
+                        "application/vnd.ms-excel": [".xls", ".xsl"]
+
+                    },
                 ),
+
                 columns="2",
                 spacing="6",
                 width="100%",

@@ -30,6 +30,11 @@ class Color:
     WARNING = "#F59E0B"      # Amarelo alerta
     WARNING_BG = "#FFFBEB"   # Fundo alerta
 
+    # Gradients
+    GRADIENT_PRIMARY = "linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)"
+    GRADIENT_SURFACE = "linear-gradient(180deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.4) 100%)"
+    GRADIENT_SHINE = "linear-gradient(45deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0) 100%)"
+
 # Configurações de Design System
 class Design:
     RADIUS_MD = "8px"
@@ -191,6 +196,17 @@ STYLES = {
     },
     ".animate-shake": {
         "animation": "shake 0.82s cubic-bezier(.36,.07,.19,.97) both"
+    },
+    "@keyframes pulse-subtle": {
+        "0%, 100%": {"opacity": "1"},
+        "50%": {"opacity": "0.7"},
+    },
+    ".animate-pulse-subtle": {
+        "animation": "pulse-subtle 2s ease-in-out infinite"
+    },
+    "@keyframes shine": {
+        "0%": {"background-position": "-200% 0"},
+        "100%": {"background-position": "200% 0"},
     }
 }
 
@@ -229,7 +245,7 @@ INPUT_STYLE = {
 
 # Botão Primário Premium - Altura mínima 44px, largura mínima 120px
 BUTTON_PRIMARY_STYLE = {
-    "bg": Color.PRIMARY,
+    "background_image": Color.GRADIENT_PRIMARY,
     "color": "white",
     "padding_y": Spacing.SM,    # 12px
     "padding_x": Spacing.LG,    # 24px
@@ -239,16 +255,18 @@ BUTTON_PRIMARY_STYLE = {
     "font_weight": "600",
     "font_size": "1rem",        # 16px
     "box_shadow": Design.SHADOW_MD,
-    "transition": "all 0.2s ease",
+    "transition": "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
     "cursor": "pointer",
     "border": "none",
+    "position": "relative",
+    "overflow": "hidden",
     "_hover": {
-        "bg": Color.PRIMARY_HOVER,
+        "filter": "brightness(1.1)",
         "box_shadow": Design.SHADOW_LG,
-        "transform": "translateY(-2px)",  # Efeito de elevação
+        "transform": "translateY(-2px)",
     },
     "_active": {
-        "transform": "translateY(0)",
+        "transform": "translateY(0) scale(0.98)",
         "box_shadow": Design.SHADOW_SM,
     },
     "_focus": {
@@ -260,6 +278,7 @@ BUTTON_PRIMARY_STYLE = {
         "cursor": "not-allowed",
         "transform": "none",
         "box_shadow": "none",
+        "filter": "grayscale(0.5)",
     }
 }
 
@@ -297,6 +316,14 @@ BUTTON_SECONDARY_STYLE = {
     }
 }
 
+# Glassmorphism Style
+GLASS_STYLE = {
+    "background_color": "rgba(255, 255, 255, 0.7)",
+    "backdrop_filter": "blur(12px) saturate(180%)",
+    "-webkit-backdrop-filter": "blur(12px) saturate(180%)",
+    "border": "1px solid rgba(255, 255, 255, 0.3)",
+}
+
 # Card Premium (Floating) - Padding mínimo 20px
 CARD_STYLE = {
     "bg": Color.SURFACE,
@@ -304,7 +331,9 @@ CARD_STYLE = {
     "border_radius": Design.RADIUS_XL,
     "padding": Spacing.LG,  # 24px - respiro visual adequado
     "box_shadow": Design.SHADOW_DEFAULT,
-    "transition": "all 0.3s ease",
+    "transition": "all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
+    "position": "relative",
+    "overflow": "hidden",
 }
 
 # Estilo para Tabelas - Alternância de linhas e espaçamento confortável

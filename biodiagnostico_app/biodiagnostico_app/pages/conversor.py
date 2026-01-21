@@ -84,15 +84,17 @@ def conversor_page() -> rx.Component:
         rx.vstack(
             # Animated Header
             rx.box(
-                ui.animated_heading("Conversor PDF → CSV", level=1),
+                ui.animated_heading("Conversor PDF → Excel", level=1),
                 class_name="py-12 w-full flex justify-center"
             ),
+
             
             # Cards de funcionalidades
             rx.grid(
                 feature_card("file_text", "Extração Inteligente", "Extrai dados automaticamente dos PDFs"),
                 feature_card("refresh_cw", "Padronização", "Normaliza nomes de exames e pacientes"),
-                feature_card("chart_bar", "CSV Estruturado", "Gera arquivos prontos para análise"),
+                feature_card("chart_bar", "Excel Estruturado", "Gera arquivos prontos para análise"),
+
                 feature_card("zap", "Processamento Rápido", "Conversão em segundos"),
                 columns={"initial": "1", "sm": "2", "lg": "4"},
                 spacing="4",
@@ -162,10 +164,11 @@ def conversor_page() -> rx.Component:
             
             # Botão de conversão
             ui.button(
-                "Converter para CSV",
+                "Converter para Excel",
                 icon="refresh_cw",
                 on_click=State.generate_csvs,
                 is_loading=State.is_generating_csv,
+
                 loading_text="Convertendo arquivos...",
                 disabled=~State.has_files,
                 margin_top=Spacing.LG,
@@ -211,7 +214,7 @@ def conversor_page() -> rx.Component:
                 State.success_message != "",
                 rx.box(
                     rx.hstack(
-                        rx.icon("circle_check", size=20, color="#15803d"),
+                        rx.icon("circle-check", size=20, color="#15803d"),
                         rx.text(State.success_message, class_name="text-green-700"),
                         spacing="2",
                         align="center",
@@ -223,7 +226,7 @@ def conversor_page() -> rx.Component:
                 State.error_message != "",
                 rx.box(
                     rx.hstack(
-                        rx.icon("circle_x", size=20, color="#dc2626"),
+                        rx.icon("circle-x", size=20, color="#dc2626"),
                         rx.text(State.error_message, class_name="text-red-700"),
                         spacing="2",
                         align="center",
@@ -240,10 +243,11 @@ def conversor_page() -> rx.Component:
                     rx.vstack(
                         rx.hstack(
                             rx.text("🎉", font_size="1.5rem"),
-                            ui.heading("CSVs gerados com sucesso!", level=3, color=Color.DEEP, margin_bottom="0"),
+                            ui.heading("Planilhas Excel geradas com sucesso!", level=3, color=Color.DEEP, margin_bottom="0"),
                             spacing="3",
                             align="center",
                         ),
+
                         ui.text(
                             "Clique nos botões abaixo para baixar os arquivos",
                             size="body_secondary",
@@ -255,7 +259,7 @@ def conversor_page() -> rx.Component:
                                     rx.hstack(
                                         rx.text("📥", class_name="text-lg"),
                                         rx.vstack(
-                                            rx.text("COMPULAB.csv", class_name="font-semibold"),
+                                            rx.text("COMPULAB.xlsx", class_name="font-semibold"),
                                             rx.text("Dados padronizados", class_name="text-xs opacity-80"),
                                             spacing="0",
                                             align="start",
@@ -265,15 +269,16 @@ def conversor_page() -> rx.Component:
                                     ),
                                     class_name="bg-[#1B5E20] text-white px-6 py-3 rounded-xl font-medium hover:bg-[#2E7D32] hover:shadow-lg transition-all"
                                 ),
-                                download="compulab_data.csv",
-                                href=rx.Var.create(f"data:text/csv;charset=utf-8,{State.compulab_csv}"),
+                                download="compulab_data.xlsx",
+                                href=rx.Var.create(f"data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{State.compulab_csv}"),
                             ),
+
                             rx.link(
                                 rx.button(
                                     rx.hstack(
                                         rx.text("📥", class_name="text-lg"),
                                         rx.vstack(
-                                            rx.text("SIMUS.csv", class_name="font-semibold"),
+                                            rx.text("SIMUS.xlsx", class_name="font-semibold"),
                                             rx.text("Dados padronizados", class_name="text-xs opacity-80"),
                                             spacing="0",
                                             align="start",
@@ -283,9 +288,10 @@ def conversor_page() -> rx.Component:
                                     ),
                                     class_name="bg-[#1B5E20] text-white px-6 py-3 rounded-xl font-medium hover:bg-[#2E7D32] hover:shadow-lg transition-all"
                                 ),
-                                download="simus_data.csv",
-                                href=rx.Var.create(f"data:text/csv;charset=utf-8,{State.simus_csv}"),
+                                download="simus_data.xlsx",
+                                href=rx.Var.create(f"data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{State.simus_csv}"),
                             ),
+
                             columns={"initial": "1", "sm": "2"},
                             spacing="4",
                             width="100%",

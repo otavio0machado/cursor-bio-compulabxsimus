@@ -9,8 +9,9 @@ from .pdf_processor import (
     map_simus_to_compulab_exam_name,
     extract_compulab_patients,
     extract_simus_patients,
-    generate_csvs_from_pdfs,
+    generate_excel_from_pdfs,
     load_from_csv,
+    load_from_excel,
     EXAM_NAME_MAPPING
 )
 from .comparison import compare_patients, compute_difference_breakdown, format_divergences_to_json
