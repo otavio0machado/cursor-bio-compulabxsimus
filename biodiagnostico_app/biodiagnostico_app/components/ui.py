@@ -233,8 +233,14 @@ def select(items, placeholder: str = "Selecione...", value=None, on_change=None,
         "font_size": "1rem",  # 16px - evita zoom no iOS
         "transition": "all 0.2s ease-in-out",
         "_focus": {
-            "border_color": Color.PRIMARY,
-            "outline": "none",
+            "border_color": f"{Color.TEXT_SECONDARY} !important",
+            "outline": "none !important",
+            "box_shadow": "none !important",
+        },
+        "_focus_visible": {
+            "border_color": f"{Color.TEXT_SECONDARY} !important",
+            "outline": "none !important",
+            "box_shadow": "none !important",
         },
         "_hover": {
             "border_color": Color.SECONDARY,
@@ -272,8 +278,14 @@ def text_area(placeholder: str = "", **props) -> rx.Component:
         "transition": "all 0.2s ease-in-out",
         "_placeholder": {"color": Color.TEXT_SECONDARY, "opacity": 0.7},
         "_focus": {
-            "border_color": Color.PRIMARY,
-            "outline": "none",
+            "border_color": f"{Color.TEXT_SECONDARY} !important",
+            "outline": "none !important",
+            "box_shadow": "none !important",
+        },
+        "_focus_visible": {
+            "border_color": f"{Color.TEXT_SECONDARY} !important",
+            "outline": "none !important",
+            "box_shadow": "none !important",
         },
         "_hover": {
             "border_color": Color.SECONDARY,

@@ -6,6 +6,7 @@
         opacity: 0;
         transform: translateY(20px);
     }
+
     100% {
         opacity: 1;
         transform: translateY(0);
@@ -13,15 +14,37 @@
 }
 
 @keyframes fadeIn {
-    0% { opacity: 0; }
-    100% { opacity: 1; }
+    0% {
+        opacity: 0;
+    }
+
+    100% {
+        opacity: 1;
+    }
 }
 
 @keyframes shake {
-    10%, 90% { transform: translate3d(-1px, 0, 0); }
-    20%, 80% { transform: translate3d(2px, 0, 0); }
-    30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
-    40%, 60% { transform: translate3d(4px, 0, 0); }
+
+    10%,
+    90% {
+        transform: translate3d(-1px, 0, 0);
+    }
+
+    20%,
+    80% {
+        transform: translate3d(2px, 0, 0);
+    }
+
+    30%,
+    50%,
+    70% {
+        transform: translate3d(-4px, 0, 0);
+    }
+
+    40%,
+    60% {
+        transform: translate3d(4px, 0, 0);
+    }
 }
 
 @keyframes slideInFromBottom {
@@ -29,6 +52,7 @@
         opacity: 0;
         transform: translateY(30px);
     }
+
     100% {
         opacity: 1;
         transform: translateY(0);
@@ -49,7 +73,7 @@
 }
 
 .animate-shake {
-    animation: shake 0.82s cubic-bezier(.36,.07,.19,.97) both;
+    animation: shake 0.82s cubic-bezier(.36, .07, .19, .97) both;
 }
 
 /* Tailwind animate-in override for reflex */
@@ -68,28 +92,61 @@
 }
 
 /* Delay utility classes */
-.delay-100 { animation-delay: 100ms; }
-.delay-200 { animation-delay: 200ms; }
-.delay-300 { animation-delay: 300ms; }
-.delay-400 { animation-delay: 400ms; }
-.delay-500 { animation-delay: 500ms; }
+.delay-100 {
+    animation-delay: 100ms;
+}
+
+.delay-200 {
+    animation-delay: 200ms;
+}
+
+.delay-300 {
+    animation-delay: 300ms;
+}
+
+.delay-400 {
+    animation-delay: 400ms;
+}
+
+.delay-500 {
+    animation-delay: 500ms;
+}
 
 /* Smooth transitions for all interactive elements */
-button, a, input, select, textarea {
+button,
+a,
+input,
+select,
+textarea {
     transition: all 0.2s ease-in-out;
 }
 
 /* Focus visible for accessibility - remove default outline and add custom */
 *:focus-visible {
-    outline: 2px solid #4CAF50;
-    outline-offset: 2px;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+.rt-TextFieldInput:focus,
+.rt-TextAreaInput:focus,
+.rt-SelectTrigger:focus {
+    outline: none !important;
+    box-shadow: none !important;
+    --tw-ring-color: transparent !important;
+    --tw-ring-shadow: none !important;
 }
 
 /* Pulse animation for loading states */
 @keyframes pulse {
-    0%, 100% {
+
+    0%,
+    100% {
         opacity: 1;
     }
+
     50% {
         opacity: 0.5;
     }
@@ -105,6 +162,7 @@ button, a, input, select, textarea {
         opacity: 0;
         transform: translateX(100%);
     }
+
     100% {
         opacity: 1;
         transform: translateX(0);
@@ -117,9 +175,12 @@ button, a, input, select, textarea {
 
 /* Bounce animation for attention */
 @keyframes bounce {
-    0%, 100% {
+
+    0%,
+    100% {
         transform: translateY(0);
     }
+
     50% {
         transform: translateY(-10px);
     }
@@ -135,6 +196,7 @@ button, a, input, select, textarea {
         opacity: 0;
         transform: scale(0.9);
     }
+
     100% {
         opacity: 1;
         transform: scale(1);

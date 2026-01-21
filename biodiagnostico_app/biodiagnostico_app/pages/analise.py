@@ -820,6 +820,44 @@ def analise_page() -> rx.Component:
                                         ),
                                     ),
 
+                                    # Seletor de Modelo e Provedor
+                                    rx.box(
+                                        rx.vstack(
+                                            rx.text("Modelo de IA", class_name="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2"),
+                                            
+                                            # Seletor de Provedor (Macro)
+                                            ui.segmented_control(
+                                                [
+                                                    {"label": "OpenAI", "value": "OpenAI"},
+                                                    {"label": "Google Gemini", "value": "Gemini"},
+                                                ],
+                                                State.ai_provider,
+                                                State.set_ai_provider
+                                            ),
+
+                                            # Seletor de Modelo (Específico)
+                                            rx.cond(
+                                                State.ai_provider == "OpenAI",
+                                                rx.select(
+                                                    ["gpt-4o", "gpt-4-turbo"],
+                                                    value=State.ai_model,
+                                                    on_change=State.set_ai_model,
+                                                    class_name="w-full mt-2 p-2 border border-gray-200 rounded-xl bg-white text-sm"
+                                                ),
+                                                rx.select(
+                                                    ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro", "gemini-3-pro-preview", "gemini-3-flash-preview"],
+                                                    value=State.ai_model,
+                                                    on_change=State.set_ai_model,
+                                                    class_name="w-full mt-2 p-2 border border-gray-200 rounded-xl bg-white text-sm"
+                                                )
+                                            ),
+                                            
+                                            width="100%",
+                                            align="start"
+                                        ),
+                                        class_name="mb-6 w-full"
+                                    ),
+
                                     rx.button(
                                         rx.hstack(
                                             rx.cond(State.is_generating_ai, rx.spinner(size="1", color="white"), rx.icon("rocket", size=18, color="white")),

@@ -111,6 +111,9 @@ class State(rx.State):
     # AI Results Data (Structured)
     ai_analysis_data: List[Dict[str, Any]] = []
     ai_analysis_csv: str = ""  # CSV data URI para download
+    ai_analysis_csv: str = ""  # CSV data URI para download
+    ai_provider: str = "OpenAI"  # OpenAI ou Gemini
+    ai_model: str = "gpt-4o"  # Modelo específico selecionado
     
     # CSVs gerados
     compulab_csv: str = ""
@@ -138,10 +141,56 @@ class State(rx.State):
     def set_analysis_active_tab(self, val: str):
         self.analysis_active_tab = val
 
+    def set_ai_provider(self, val: str):
+        self.ai_provider = val
+        # Definir defaults ao trocar de provedor
+        if val == "OpenAI":
+            self.ai_model = "gpt-4o"
+        elif val == "Gemini":
+            self.ai_model = "gemini-2.5-flash"
+
+    def set_ai_model(self, val: str):
+        self.ai_model = val
+    
     def set_patient_history_search(self, val: str):
         self.patient_history_search = val
     
     # Financial Forecast & Goals
+    
+    def calculate_sd(self):
+        """Calcula o Desvio Padrão (Diferença Absoluta) automaticamente"""
+        try:
+            if not self.qc_value or not self.qc_target_value:
+                return
+            
+            # Tratar inputs
+            val_str = self.qc_value.replace(",", ".")
+            target_str = self.qc_target_value.replace(",", ".")
+            
+            if not val_str or not target_str:
+                return
+
+            value = float(val_str)
+            target = float(target_str)
+            
+            # Desvio Padrão = Diferença Absoluta entre Medição e Alvo
+            # Solicitado pelo usuário para representar o 'Desvio' do registro
+            sd = abs(value - target)
+            self.qc_target_sd = f"{sd:.2f}"
+            
+        except Exception:
+            pass
+
+    def update_qc_value(self, value: str):
+        """Atualiza valor da medição e recalcula SD"""
+        self.qc_value = value
+        self.calculate_sd()
+        
+    def update_qc_target_value(self, value: str):
+        """Atualiza valor alvo e recalcula SD"""
+        self.qc_target_value = value
+        self.calculate_sd()
+
     
     # Internal Data (Backend Only)
     _compulab_patients: Dict[str, Any] = {}
@@ -1732,10 +1781,14 @@ class State(rx.State):
     
     async def generate_ai_analysis(self):
         """Gera análise por IA (Async + Parallel)"""
-        api_key = Config.OPENAI_API_KEY
+        # Selecionar chave e provedor
+        if self.ai_provider == "Gemini":
+            api_key = Config.GEMINI_API_KEY
+        else:
+            api_key = Config.OPENAI_API_KEY
         
         if not api_key:
-            self.error_message = "ERRO: API Key não configurada no ambiente (.env)"
+            self.error_message = f"ERRO: API Key para {self.ai_provider} não configurada no ambiente (.env)"
             return
         
         if not self.has_analysis:
@@ -1819,31 +1872,38 @@ class State(rx.State):
                     self.success_message = "Análise concluída: Sem divergências detectadas."
                     return
 
-            # Consumir o gerador async
+            # Consumir o gerador async com throttling de UI
             final_analysis = None
             final_error = None
+            last_progress_update = 0
             
             async for progress_update in generate_ai_analysis(
                 filtered_compulab,
                 filtered_simus,
-                api_key
+                api_key,
+                provider=self.ai_provider,
+                model_name=self.ai_model
             ):
                 # O gerador retorna tuplas (progresso, status) OU (resultado, erro) no final
                 if isinstance(progress_update, tuple):
                     val1, val2 = progress_update
                     
                     if isinstance(val1, int): # (percentage, message)
-                        self.ai_loading_progress = val1
-                        self.ai_loading_text = val2
+                        # Só atualiza a UI se mudou o texto ou a cada 5% para evitar socket flood
+                        if val1 != self.ai_loading_progress and (val1 % 5 == 0 or val1 == 100 or val2 != self.ai_loading_text):
+                            self.ai_loading_progress = val1
+                            self.ai_loading_text = val2
+                            yield
                     else: # (analysis, error) - Resultado final
                         final_analysis = val1
                         final_error = val2
             
             if final_error:
                 self.error_message = f"ERRO: {final_error}"
+                self.success_message = ""
             else:
                 self.ai_analysis = final_analysis
-                self.success_message = "SUCESSO: Análise por IA gerada!"
+                self.success_message = f"SUCESSO: Auditoria IA concluída com {self.ai_provider} ({self.ai_model})!"
                 
                 # Parsear para tabela na UI (Plain CSV Format - sem code blocks)
                 try:
@@ -2711,7 +2771,6 @@ class State(rx.State):
                         "target_sd": sd,
                         "equipment": self.qc_equipment,
                         "analyst": self.qc_analyst,
-                        "status": status, # Passar status atualizado
                     }
                     await QCService.create_qc_record(db_data)
                     await self.load_data_from_db(force=True)

@@ -18,6 +18,9 @@ class Config:
     # OpenAI
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
     
+    # Gemini
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+    
     # Cloudinary
     CLOUDINARY_CLOUD_NAME = os.getenv("CLOUDINARY_CLOUD_NAME", "")
     CLOUDINARY_API_KEY = os.getenv("CLOUDINARY_API_KEY", "")

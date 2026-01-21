@@ -340,7 +340,7 @@ def registro_qc_tab() -> rx.Component:
                         ui.input(
                             placeholder="0.00",
                             value=State.qc_value,
-                            on_change=State.set_qc_value,
+                            on_change=State.update_qc_value,
                         ),
                         required=True
                     ),
@@ -349,7 +349,7 @@ def registro_qc_tab() -> rx.Component:
                         ui.input(
                             placeholder="0.00",
                             value=State.qc_target_value,
-                            on_change=State.set_qc_target_value,
+                            on_change=State.update_qc_target_value,
                         ),
                         required=True
                     ),

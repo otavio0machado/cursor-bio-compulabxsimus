@@ -228,8 +228,14 @@ INPUT_STYLE = {
         "opacity": 0.7
     },
     "_focus": {
-        "border_color": Color.PRIMARY,
-        "outline": "none",
+        "border_color": f"{Color.TEXT_SECONDARY} !important",
+        "outline": "none !important",
+        "box_shadow": "none !important",
+    },
+    "_focus_visible": {
+        "border_color": f"{Color.TEXT_SECONDARY} !important",
+        "outline": "none !important",
+        "box_shadow": "none !important",
     },
     "_hover": {
         "border_color": Color.SECONDARY,
