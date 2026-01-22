@@ -116,7 +116,7 @@ def patient_history_modal() -> rx.Component:
                     ),
                     rx.hstack(
                         rx.badge("PACIENTE PRIORITÁRIO", color_scheme="blue", variant="solid", size="1"),
-                        rx.text(f"ID: {State.selected_patient_id}", size="1", color=Color.TEXT_LIGHT, weight="medium"),
+                        rx.text(f"ID: {State.selected_patient_id}", size="1", color=Color.TEXT_SECONDARY, weight="medium"),
                         spacing="3", align_items="center"
                     ),
                     spacing="1", align_items="start"
@@ -139,12 +139,12 @@ def patient_history_modal() -> rx.Component:
             # Resumo Rápido
             rx.grid(
                 rx.vstack(
-                    rx.text("Registros", size="1", color=Color.TEXT_LIGHT, weight="bold"),
+                    rx.text("Registros", size="1", color=Color.TEXT_SECONDARY, weight="bold"),
                     rx.text(State.patient_history_data.length().to_string(), size="4", weight="bold", color=Color.DEEP),
                     spacing="0", align_items="start"
                 ),
                 rx.vstack(
-                    rx.text("Status Atual", size="1", color=Color.TEXT_LIGHT, weight="bold"),
+                    rx.text("Status Atual", size="1", color=Color.TEXT_SECONDARY, weight="bold"),
                     rx.badge("Auditado", color_scheme="green", variant="soft"),
                     spacing="1", align_items="start"
                 ),
@@ -281,7 +281,7 @@ def action_table(headers: list[str], data: list, columns_keys: list[str], patien
                     icon=rx.cond(is_resolved, "circle-check", "circle"),
                     on_click=lambda: State.toggle_resolution(getattr(item, patient_key), getattr(item, "exam_name")),
                     variant="ghost", 
-                    color=rx.cond(is_resolved, Color.SUCCESS, Color.TEXT_LIGHT),
+                    color=rx.cond(is_resolved, Color.SUCCESS, Color.TEXT_SECONDARY),
                     size="1", padding="4px"
                 )
             )

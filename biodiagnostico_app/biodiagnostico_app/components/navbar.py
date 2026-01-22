@@ -154,11 +154,11 @@ def navbar() -> rx.Component:
             align="center",
             padding_x=[Spacing.MD, Spacing.LG],
             padding_y=Spacing.SM,
-            background_color="rgba(255, 255, 255, 0.8)",
+            background_color="rgba(255, 255, 255, 0.8)", # Keep true glass
             backdrop_filter="blur(16px) saturate(180%)",
-            border="1px solid rgba(255, 255, 255, 0.5)",
+            border=f"1px solid {Color.BORDER}", # Use token
             border_radius=Design.RADIUS_XL,
-            box_shadow="0 10px 30px -10px rgba(0, 0, 0, 0.1)",
+            box_shadow=Design.SHADOW_MD, # Use token
         ),
         width="100%",
         position="sticky",

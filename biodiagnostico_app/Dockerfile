@@ -29,6 +29,9 @@ RUN reflex export --frontend-only --no-zip --loglevel debug
 
 COPY nginx.conf /etc/nginx/nginx.conf
 
+# Converter line endings do arquivo start.sh (Windows CRLF -> Unix LF)
+RUN apt-get update && apt-get install -y dos2unix && rm -rf /var/lib/apt/lists/*
+RUN dos2unix start.sh
 RUN chmod +x start.sh
 
 RUN mkdir -p /app/uploaded_files

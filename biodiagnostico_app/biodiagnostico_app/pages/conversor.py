@@ -47,7 +47,7 @@ def step_indicator(number: str, title: str, is_active: bool = False, is_complete
                 rx.cond(
                     is_active, 
                     f"2px solid {Color.PRIMARY}", 
-                    f"2px solid {Color.TEXT_LIGHT}"
+                    f"2px solid {Color.TEXT_SECONDARY}"
                 )
             ),
             display="flex", align_items="center", justify_content="center",
@@ -66,7 +66,7 @@ def conversor_page() -> rx.Component:
         <svg viewBox="0 0 80 100" width="60" height="75">
             <defs>
                 <linearGradient id="liquidGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" style="stop-color:{Color.SUPPORTIVE_MEDIUM};stop-opacity:0.4" />
+                    <stop offset="0%" style="stop-color:{Color.SECONDARY};stop-opacity:0.4" />
                     <stop offset="100%" style="stop-color:{Color.PRIMARY};stop-opacity:0.6" />
                 </linearGradient>
             </defs>
@@ -84,7 +84,7 @@ def conversor_page() -> rx.Component:
         <svg viewBox="0 0 100 100" width="60" height="75">
             <defs>
                 <linearGradient id="tubeGrad1" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" style="stop-color:{Color.SUPPORTIVE_MEDIUM};stop-opacity:0.3" />
+                    <stop offset="0%" style="stop-color:{Color.SECONDARY};stop-opacity:0.3" />
                     <stop offset="100%" style="stop-color:{Color.PRIMARY};stop-opacity:0.6" />
                 </linearGradient>
             </defs>

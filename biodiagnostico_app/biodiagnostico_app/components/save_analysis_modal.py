@@ -159,7 +159,7 @@ def save_analysis_modal() -> rx.Component:
             
             style={
                 "max_width": "450px",
-                "background": Color.BACKGROUND_CARD,
+                "background": Color.SURFACE,
             },
         ),
         open=State.is_save_modal_open,
@@ -194,9 +194,9 @@ def saved_analyses_list() -> rx.Component:
                         rx.text(
                             analysis["formatted_date"],
                             size="1",
-                            color=Color.TEXT_LIGHT,
+                            color=Color.TEXT_SECONDARY,
                         ),
-                        rx.text("•", color=Color.TEXT_LIGHT),
+                        rx.text("•", color=Color.TEXT_SECONDARY),
                         rx.text(
                             analysis["formatted_difference"],
                             size="1",
@@ -271,16 +271,16 @@ def saved_analyses_list() -> rx.Component:
                 ),
                 rx.center(
                     rx.vstack(
-                        rx.icon(tag="inbox", size=32, color=Color.TEXT_LIGHT),
+                        rx.icon(tag="inbox", size=32, color=Color.TEXT_SECONDARY),
                         rx.text(
                             "Nenhuma análise salva",
                             size="2",
-                            color=Color.TEXT_LIGHT,
+                            color=Color.TEXT_SECONDARY,
                         ),
                         rx.text(
                             "Execute uma análise e clique em 'Salvar'",
                             size="1",
-                            color=Color.TEXT_LIGHT,
+                            color=Color.TEXT_SECONDARY,
                         ),
                         align="center",
                         spacing="1",
@@ -294,7 +294,7 @@ def saved_analyses_list() -> rx.Component:
         ),
         padding="4",
         border_radius="var(--radius-3)",
-        background=Color.BACKGROUND_CARD,
+        background=Color.SURFACE,
         width="100%",
     )
 

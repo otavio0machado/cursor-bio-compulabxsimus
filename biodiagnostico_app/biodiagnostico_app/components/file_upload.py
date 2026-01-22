@@ -93,7 +93,7 @@ def file_upload_enhanced(
                         ui.text(subtitle, size="small", color=Color.TEXT_SECONDARY),
                         rx.hstack(
                             file_type_badge(accepted_types),
-                            ui.text(f"Máx. {max_size_mb}MB", size="caption", color=Color.TEXT_LIGHT),
+                            ui.text(f"Máx. {max_size_mb}MB", size="caption", color=Color.TEXT_SECONDARY),
                             spacing="2", align_items="center",
                         ),
                         spacing="2", align_items="center",
@@ -155,7 +155,7 @@ def compact_upload_card(
                             rx.vstack(
                                 ui.text(title, size="label", color=Color.DEEP, font_weight="700"),
                                 ui.text(file_name, size="caption", color=Color.SUCCESS, style={"max_width": "140px", "overflow": "hidden", "text_overflow": "ellipsis", "white_space": "nowrap"}),
-                                rx.cond(file_size != "", ui.text(file_size, size="caption", color=Color.TEXT_LIGHT)),
+                                rx.cond(file_size != "", ui.text(file_size, size="caption", color=Color.TEXT_SECONDARY)),
                                 spacing="0", align_items="start",
                             ),
                             spacing="2", align_items="center",

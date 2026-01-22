@@ -86,7 +86,7 @@ def route_insights() -> rx.Component:
 # Configurar aplicação
 app = rx.App(
     theme=rx.theme(
-        accent_color="green",
+        accent_color="jade",
         gray_color="slate",
         radius="large",
     ),
@@ -110,13 +110,3 @@ app.add_page(route_conversor, route="/conversor", title="Biodiagnóstico - Conve
 app.add_page(route_analise, route="/analise", title="Biodiagnóstico - Análise", on_load=State.load_saved_analyses)
 app.add_page(route_proin, route="/proin", title="Biodiagnóstico - ProIn QC", on_load=State.load_data_from_db)
 app.add_page(route_insights, route="/detetive", title="Biodiagnóstico - Bio IA")
-
-# ============================================================
-# Integração de API para n8n Tools
-# ============================================================
-# Registrar endpoints de tools do n8n no FastAPI subjacente
-from .api_n8n_tools import n8n_tools_router
-
-# O Reflex expõe a instância FastAPI através do app.api
-# Registramos nosso router customizado para as tools do n8n
-app.api.include_router(n8n_tools_router)

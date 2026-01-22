@@ -479,7 +479,7 @@ def reagentes_tab() -> rx.Component:
                                             ui.text(lot["name"], font_weight="500"),
                                             rx.hstack(
                                                 ui.text(lot["lot_number"], size="small", color=Color.TEXT_SECONDARY),
-                                                rx.text("•", color=Color.TEXT_LIGHT, font_size="0.75rem"),
+                                                rx.text("•", color=Color.TEXT_SECONDARY, font_size="0.75rem"),
                                                 ui.text(lot["manufacturer"], size="small", color=Color.TEXT_SECONDARY),
                                                 spacing="1",
                                             ),
@@ -523,7 +523,7 @@ def reagentes_tab() -> rx.Component:
                             ),
                             rx.center(
                                 rx.vstack(
-                                    rx.icon(tag="package_open", size=32, color=Color.TEXT_LIGHT),
+                                    rx.icon(tag="package_open", size=32, color=Color.TEXT_SECONDARY),
                                     ui.text("Nenhum lote cadastrado.", size="small", color=Color.TEXT_SECONDARY),
                                     spacing="2", align_items="center"
                                 ),

@@ -134,9 +134,9 @@ def progress_card() -> rx.Component:
                 width="100%", h="12px", bg=Color.BACKGROUND, border_radius="full", overflow="hidden", margin_y=Spacing.SM
             ),
             rx.hstack(
-                rx.text(State.formatted_compulab_total, font_size="0.8rem", color=Color.TEXT_LIGHT, font_weight="500"),
+                rx.text(State.formatted_compulab_total, font_size="0.8rem", color=Color.TEXT_SECONDARY, font_weight="500"),
                 rx.spacer(),
-                rx.text(f"Meta: {State.formatted_monthly_goal}", font_size="0.8rem", color=Color.TEXT_LIGHT, font_weight="500"),
+                rx.text(f"Meta: {State.formatted_monthly_goal}", font_size="0.8rem", color=Color.TEXT_SECONDARY, font_weight="500"),
                 width="100%"
             ),
             width="100%",
@@ -210,7 +210,7 @@ def dashboard_page() -> rx.Component:
                                         style={"gap": "6px"}
                                     ),
                                     rx.text(State.formatted_revenue_forecast, font_size="1.75rem", font_weight="800", color=Color.DEEP),
-                                    rx.text("Baseado nos últimos 6 meses", font_size="0.75rem", color=Color.TEXT_LIGHT),
+                                    rx.text("Baseado nos últimos 6 meses", font_size="0.75rem", color=Color.TEXT_SECONDARY),
                                     align_items="start",
                                     style={"gap": "2px"}
                                 ),
@@ -267,7 +267,7 @@ def dashboard_page() -> rx.Component:
                                         State.top_offenders,
                                         lambda item, i: rx.hstack(
                                             rx.box(
-                                                rx.text(f"#{(i + 1).to_string()}", font_size="0.7rem", font_weight="800", color=Color.TEXT_LIGHT),
+                                                rx.text(f"#{(i + 1).to_string()}", font_size="0.7rem", font_weight="800", color=Color.TEXT_SECONDARY),
                                                 width="24px"
                                             ),
                                             rx.box(
@@ -297,7 +297,7 @@ def dashboard_page() -> rx.Component:
                                             bg=Color.SUCCESS_BG, p="4", border_radius="full"
                                         ),
                                         rx.text("Tudo em ordem!", font_weight="600", color=Color.SUCCESS),
-                                        rx.text("Nenhum ofensor detectado", font_size="0.8rem", color=Color.TEXT_LIGHT),
+                                        rx.text("Nenhum ofensor detectado", font_size="0.8rem", color=Color.TEXT_SECONDARY),
                                         align_items="center",
                                         spacing="2"
                                     ),
