@@ -10,6 +10,7 @@ Segue as diretrizes da skill "O Oráculo":
 import os
 import asyncio
 from typing import Dict, Any, Optional, List
+from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
 # Carregar variáveis de ambiente
@@ -92,6 +93,33 @@ Síntese executiva para apresentação à diretoria
 - Inclua valores monetários específicos sempre que possível
 - Baseie todas as conclusões nos dados fornecidos
 - O relatório deve ser acionável e orientado a resultados
+"""
+
+class ClinicalConsistencySchema(BaseModel):
+    """Schema para Structured Output da análise clínica"""
+    is_consistent: bool = Field(..., description="Se a alteração do valor faz sentido clínico.")
+    reason: str = Field(..., description="Explicação detalhada do raciocínio clínico (Chain of Thought).")
+    warning_level: str = Field(..., description="Nível de alerta: 'low', 'medium', 'high', 'critical'.")
+    suggested_action: str = Field(..., description="Ação recomendada para o analista.")
+
+CLINICAL_AUDIT_PROMPT = """
+Você é um auditor clínico sênior. Sua tarefa é analisar se uma alteração manual em um resultado de exame faz sentido ou parece um erro de digitação/fraude.
+
+## CONTEXTO DO EXAME
+Exame: {exam_name}
+Lote: {lot_number}
+Nível: {level}
+
+## ALTERAÇÃO
+Valor Antigo: {old_value}
+Valor Novo: {new_value}
+Variação: {percentage_change:.2f}%
+
+## INSTRUÇÕES
+1. Pense passo a passo sobre a viabilidade biológica dessa variação.
+2. Considere se o novo valor está dentro de limites fisiológicos extremos.
+3. Identifique possíveis erros de digitação (ex: vírgula no lugar errado).
+4. Retorne sua análise obrigatoriamente no formato JSON estruturado.
 """
 
 
@@ -228,6 +256,55 @@ class AIService:
         except Exception as e:
             print(f"ERROR Gemini: {e}")
             raise
+
+    async def analyze_clinical_consistency(self, audit_data: Dict[str, Any]) -> ClinicalConsistencySchema:
+        """
+        Analisa a consistência de uma alteração clínica usando Structured Outputs.
+        """
+        if not self.gemini_key:
+            return ClinicalConsistencySchema(
+                is_consistent=True, 
+                reason="AI Analysis skipped: Key missing", 
+                warning_level="low",
+                suggested_action="Proceder com cautela"
+            )
+
+        prompt = CLINICAL_AUDIT_PROMPT.format(
+            exam_name=audit_data.get("exam_name"),
+            lot_number=audit_data.get("lot_number"),
+            level=audit_data.get("level"),
+            old_value=audit_data.get("old_value"),
+            new_value=audit_data.get("new_value"),
+            percentage_change=audit_data.get("percentage_change", 0)
+        )
+
+        try:
+            from google import genai
+            client = genai.Client(api_key=self.gemini_key)
+            
+            # Usando Structured Output do novo SDK
+            response = await asyncio.to_thread(
+                client.models.generate_content,
+                model="gemini-2.5-flash",
+                contents=prompt,
+                config={
+                    "response_mime_type": "application/json",
+                    "response_schema": ClinicalConsistencySchema,
+                    "temperature": 0.2, # Baixa temperatura para auditoria
+                }
+            )
+            
+            # O SDK retorna um objeto que pode ser convertido/validado
+            return response.parsed
+            
+        except Exception as e:
+            print(f"Clinical AI Audit Error: {e}")
+            return ClinicalConsistencySchema(
+                is_consistent=True,
+                reason=f"Erro na análise de IA: {str(e)}",
+                warning_level="medium",
+                suggested_action="Verificar manualmente"
+            )
     
     async def run_analysis(self, provider: str, model: str, analysis_data: Dict[str, Any]) -> str:
         """Executa análise usando o provedor e modelo especificados"""

@@ -19,7 +19,7 @@ def nav_item(label: str, icon: str, page: str) -> rx.Component:
         on_click=lambda: State.set_page(page),
         class_name=rx.cond(
             State.current_page == page,
-            "w-full px-4 py-3 rounded-lg bg-[#4CAF50] text-white cursor-pointer transition-all",
+            f"w-full px-4 py-3 rounded-lg bg-[{Color.PRIMARY}] text-white cursor-pointer transition-all",
             "w-full px-4 py-3 rounded-lg text-white/90 hover:bg-white/10 cursor-pointer transition-all"
         ),
     )
@@ -37,8 +37,8 @@ def sidebar() -> rx.Component:
                         rx.html("""
                             <svg viewBox="0 0 60 70" width="45" height="52">
                                 <path d="M20 5 L40 5 L40 25 L55 60 Q57 65 52 68 L8 68 Q3 65 5 60 L20 25 Z" 
-                                      fill="#4CAF50" stroke="#8BC34A" stroke-width="2"/>
-                                <rect x="18" y="2" width="24" height="6" rx="2" fill="#4CAF50" stroke="#8BC34A" stroke-width="1"/>
+                                      fill="{Color.PRIMARY}" stroke="{Color.SUPPORTIVE_MEDIUM}" stroke-width="2"/>
+                                <rect x="18" y="2" width="24" height="6" rx="2" fill="{Color.PRIMARY}" stroke="{Color.SUPPORTIVE_MEDIUM}" stroke-width="1"/>
                                 <circle cx="25" cy="45" r="3" fill="#FFD54F"/>
                                 <circle cx="35" cy="50" r="2.5" fill="#FFD54F"/>
                                 <circle cx="30" cy="55" r="2" fill="#FFD54F"/>
@@ -155,7 +155,7 @@ def sidebar() -> rx.Component:
             height="100%",
             width="100%",
         ),
-        class_name="w-64 bg-[#1B5E20] min-h-screen fixed left-0 top-0"
+        class_name=f"w-64 bg-[{Color.DEEP}] min-h-screen fixed left-0 top-0"
     )
 
 
@@ -172,7 +172,7 @@ def mobile_nav() -> rx.Component:
                 on_click=lambda: State.set_page("conversor"),
                 class_name=rx.cond(
                     State.current_page == "conversor",
-                    "bg-[#4CAF50] text-white px-4 py-2 rounded-lg",
+                    f"bg-[{Color.PRIMARY}] text-white px-4 py-2 rounded-lg",
                     "bg-white/10 text-white/80 px-4 py-2 rounded-lg"
                 ),
                 variant="ghost",
@@ -186,7 +186,7 @@ def mobile_nav() -> rx.Component:
                 on_click=lambda: State.set_page("analise"),
                 class_name=rx.cond(
                     State.current_page == "analise",
-                    "bg-[#4CAF50] text-white px-4 py-2 rounded-lg",
+                    f"bg-[{Color.PRIMARY}] text-white px-4 py-2 rounded-lg",
                     "bg-white/10 text-white/80 px-4 py-2 rounded-lg"
                 ),
                 variant="ghost",
@@ -200,7 +200,7 @@ def mobile_nav() -> rx.Component:
                 on_click=lambda: State.set_page("proin"),
                 class_name=rx.cond(
                     State.current_page == "proin",
-                    "bg-[#4CAF50] text-white px-4 py-2 rounded-lg",
+                    f"bg-[{Color.PRIMARY}] text-white px-4 py-2 rounded-lg",
                     "bg-white/10 text-white/80 px-4 py-2 rounded-lg"
                 ),
                 variant="ghost",
@@ -218,5 +218,5 @@ def mobile_nav() -> rx.Component:
             justify="center",
             width="100%",
         ),
-        class_name="md:hidden bg-[#1B5E20] p-3 rounded-xl mb-4"
+        class_name=f"md:hidden bg-[{Color.DEEP}] p-3 rounded-xl mb-4"
     )

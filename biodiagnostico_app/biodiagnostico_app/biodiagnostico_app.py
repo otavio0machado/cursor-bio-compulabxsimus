@@ -13,6 +13,8 @@ from .pages.dashboard import dashboard_page
 from .styles import Color
 
 
+from .pages.insight_chat import insight_chat_page
+
 def main_content() -> rx.Component:
     """Conteúdo principal baseado na página atual"""
     return rx.match(
@@ -21,6 +23,7 @@ def main_content() -> rx.Component:
         ("conversor", conversor_page()),
         ("analise", analise_page()),
         ("proin", proin_page()),
+        ("detetive", insight_chat_page()), # New page match
         dashboard_page(),  # default
     )
 
@@ -76,6 +79,10 @@ def route_proin() -> rx.Component:
     """Rota ProIn QC"""
     return authenticated_layout(proin_page())
 
+def route_insights() -> rx.Component:
+    """Rota Detetive de Dados"""
+    return authenticated_layout(insight_chat_page())
+
 # Configurar aplicação
 app = rx.App(
     theme=rx.theme(
@@ -102,3 +109,4 @@ app.add_page(index_dashboard, route="/dashboard", title="Biodiagnóstico - Dashb
 app.add_page(route_conversor, route="/conversor", title="Biodiagnóstico - Conversor PDF")
 app.add_page(route_analise, route="/analise", title="Biodiagnóstico - Análise")
 app.add_page(route_proin, route="/proin", title="Biodiagnóstico - ProIn QC", on_load=State.load_data_from_db)
+app.add_page(route_insights, route="/detetive", title="Biodiagnóstico - Bio IA")

@@ -1,0 +1,47 @@
+[
+    {
+        "id": "100208ef-f2d4-47a3-adcf-e5152ee3f8ca",
+        "date": "2026-01-18T10:10:00",
+        "exam_name": "17 HIDROXIPROGESTERONA",
+        "level": "Normal",
+        "lot_number": "",
+        "value": 10.0,
+        "target_value": 11.0,
+        "target_sd": 1.0,
+        "equipment_name": "",
+        "analyst_name": "",
+        "cv": 9.091,
+        "status": "ALERTA",
+        "created_at": "2026-01-19T19:00:22.514575"
+    },
+    {
+        "id": "6b426cd6-3d18-4a04-947b-71c66f94aa15",
+        "date": "2026-01-19T10:10:00",
+        "exam_name": "17 HIDROXIPROGESTERONA",
+        "level": "Normal",
+        "lot_number": "",
+        "value": 10.0,
+        "target_value": 11.0,
+        "target_sd": 2.0,
+        "equipment_name": "",
+        "analyst_name": "",
+        "cv": 18.182,
+        "status": "ALERTA",
+        "created_at": "2026-01-19T19:00:38.775028"
+    },
+    {
+        "id": "61d11c1f-0d9e-41a5-a345-7590d16f8583",
+        "date": "2026-01-10T10:10:00",
+        "exam_name": "17 HIDROXIPROGESTERONA",
+        "level": "Normal",
+        "lot_number": "",
+        "value": 10.0,
+        "target_value": 11.0,
+        "target_sd": 1.0,
+        "equipment_name": "",
+        "analyst_name": "",
+        "cv": 9.091,
+        "status": "ALERTA",
+        "created_at": "2026-01-19T19:07:24.371112"
+    }
+]

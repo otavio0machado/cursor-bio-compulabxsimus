@@ -1,2 +1,3 @@
+import reflex as rx
 # Components package
-from .sidebar import sidebar, mobile_nav
+from .navbar import navbar, mobile_nav

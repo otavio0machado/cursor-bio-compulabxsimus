@@ -17,6 +17,7 @@ Esta skill fornece a infraestrutura e as diretrizes para garantir a estabilidade
     - `unit/`: Testes de funções isoladas (utils, helpers).
     - `integration/`: Testes de fluxo (ex: Login -> Redirecionamento).
     - `conftest.py`: Fixtures globais e configuração de mocks.
+- `e2e/`: Testes de ponta a ponta com Playwright.
 
 ## 🛠️ Ferramentas e Configuração
 Certifique-se de que o `pytest` e `pytest-mock` estejam instalados.
@@ -68,6 +69,18 @@ def test_analise_ia(mocker):
     resultado = analisar_exame("texto do pdf")
     
     assert resultado == "Resultado Mockado"
+    
+### Testes E2E (Playwright)
+```python
+# tests/e2e/test_auth.py
+from playwright.sync_api import Page, expect
+
+def test_login_flow(page: Page):
+    page.goto("http://localhost:3000/login")
+    page.fill("input[name='username']", "admin")
+    page.click("button[type='submit']")
+    expect(page).to_have_url("http://localhost:3000/dashboard")
+```
 ```
 
 ## 🚨 Checklist de QA ("Guardrails do Guardião")
@@ -75,6 +88,16 @@ Antes de considerar uma tarefa como "Pronta":
 1. [ ] Criei um teste unitário para novas funções lógicas?
 2. [ ] Se alterei o Supabase, os testes mocks ainda refletem a realidade?
 3. [ ] Rodei `pytest` e todos os testes passaram (Verde)?
+
+## 🛠️ Ferramentas de Monitoramento (Scripts)
+
+Para garantir que o sistema não saia dos trilhos, use esses scripts de vigilância:
+
+1.  **`testador_cliques.py`**: (O Testador) Simula um usuário clicando em tudo para ver se algo explode.
+2.  **`vigia_performance.py`**: (O Vigia) Mede o tempo de carregamento e avisa se o site ficar "cansado".
+3.  **`verificador_links.py`**: (O Carteiro) Checa se todos os links do sistema levam a algum lugar real.
+4.  **`detetive_bugs.py`**: (O Sherlock) Analisa os registros de erro para descobrir o que quebrado.
+5.  **`simulador_celular.py`**: (O Provador) Testa se o visual continua elegante em telas pequenas.
 
 ## 🏃 Como Rodar
 Simplesmente execute na raiz do projeto:

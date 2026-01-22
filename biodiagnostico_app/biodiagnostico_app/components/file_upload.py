@@ -14,7 +14,7 @@ def file_type_badge(file_type: str) -> rx.Component:
         "PDF": Color.ERROR,
         "CSV": Color.PRIMARY,
         "EXCEL": Color.SUCCESS,
-        "PDF/CSV": "#7C3AED", # Purple (A ser adicionado ao Design System se recorrente)
+        "PDF/CSV": Color.PRIMARY, # Optimized to use PRIMARY green
         "COMPLETO": Color.DEEP,
     }
     fg = colors.get(file_type, Color.TEXT_SECONDARY)

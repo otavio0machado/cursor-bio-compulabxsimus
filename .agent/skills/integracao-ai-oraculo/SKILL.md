@@ -10,7 +10,8 @@ Esta skill governa a inteligência do Biodiagnóstico. Seu objetivo é transform
 ## 🎯 Objetivos
 - **Desacoplar Prompts**: Prompts não devem viver no meio de funções Python.
 - **Resiliência**: Tratamento automático de `ResourceExhausted` (429) e timeouts.
-- **Consistência**: Garantir que o JSON retornado pela IA siga sempre o mesmo schema.
+- **Consistência**: Garantir que o JSON retornado pela IA siga sempre o mesmo schema via **Structured Outputs**.
+- **Eficiência**: Uso de **Prompt Caching** para contextos repetitivos ou volumosos (PDFs longos).
 
 ## 📂 Estrutura Recomendada
 - `biodiagnostico_app/ai/`: Módulo dedicado.
@@ -53,9 +54,18 @@ def chamar_gemini(prompt: str):
 ```
 
 ## 🚨 Regras do Oráculo
-1. **JSON Mode Always**: Sempre instrua a IA a retornar JSON e use `generation_config={"response_mime_type": "application/json"}` no Gemini 1.5.
-2. **Never Trust AI**: Valide o JSON retornado com Pydantic antes de usar. Se falhar, lance `AIParsingError`.
-3. **Log Everything**: Logue o token usage (se disponível) e latência para monitoramento futuro.
+1. **Structured Outputs Always**: Use Pydantic para definir o schema e passe para o Gemini via `response_mime_type="application/json"` e `response_schema`.
+2. **Chain of Thought (CoT)**: Para análises médicas complexas, instrua a IA a "pensar passo a passo" antes de gerar o JSON final.
+3. **Prompt Caching**: Ao processar múltiplos PDFs ou conversas longas, estruture o prompt para que as partes estáticas venham primeiro para aproveitar o cache.
+4. **Never Trust AI**: Valide o JSON retornado com Pydantic antes de usar. Se falhar, lance `AIParsingError`.
+5. **Log Everything**: Logue o token usage (se disponível) e latência para monitoramento futuro.
 
-## 📝 Scripts
-- `scripts/test_prompts.py`: Script para rodar um prompt contra um set de arquivos de teste e avaliar a qualidade da resposta (human evaluation).
+## 🛰️ Ferramentas da Inteligência (Scripts)
+
+Use esses "ensaios" para economizar tempo e dinheiro com a IA:
+
+1.  **`ensaio_ia.py`**: (O Treinador) Testa se um prompt novo funciona antes de colocá-lo no site oficial.
+2.  **`contador_ia.py`**: (O Contador) Mostra quanto custou o uso do Gemini nas últimas 24 horas.
+3.  **`revisor_ia.py`**: (O Revisor) Confere se as explicações da IA estão simples ou se ela está falando difícil demais.
+4.  **`simulador_caso.py`**: (O Paciente Virtual) Cria casos médicos falsos para testar se a lógica clínica da IA está afiada.
+5.  **`encurtador_contexto.py`**: (O Encurtador) Remove "palha" de textos grandes para a IA ler mais rápido e barato.

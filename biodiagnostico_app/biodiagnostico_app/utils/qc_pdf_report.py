@@ -9,6 +9,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER
 from datetime import datetime
 from io import BytesIO
+from ..styles import Color
 
 def generate_qc_pdf(qc_records: list, period_description: str) -> bytes:
     """
@@ -37,7 +38,7 @@ def generate_qc_pdf(qc_records: list, period_description: str) -> bytes:
         'CustomTitle',
         parent=styles['Heading1'],
         fontSize=18,
-        textColor=colors.HexColor('#1B5E20'),
+        textColor=colors.HexColor(Color.DEEP),
         spaceAfter=20,
         alignment=TA_CENTER
     )
@@ -96,7 +97,7 @@ def generate_qc_pdf(qc_records: list, period_description: str) -> bytes:
         
         # Estilo da Tabela
         table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2E7D32')),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor(Color.SECONDARY)),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
             ('ALIGN', (4, 1), (6, -1), 'RIGHT'), # Alinhar números à direita
@@ -106,7 +107,7 @@ def generate_qc_pdf(qc_records: list, period_description: str) -> bytes:
             ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
             ('TOPPADDING', (0, 0), (-1, 0), 8),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.lightgrey),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F5F5F5')]),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor(Color.BACKGROUND)]),
         ]))
         
         story.append(table)

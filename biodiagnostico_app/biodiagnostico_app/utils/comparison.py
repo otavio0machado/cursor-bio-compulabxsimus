@@ -390,10 +390,10 @@ def compare_patients(compulab_patients, simus_patients):
         'missing_patients': [
             {
                 'patient': p.name,
-                'name': p.name,  # Alias for compatibility
+                'name': p.name,
                 'exams_count': p.total_exams,
                 'total_exams': p.total_exams,
-                'total_value': p.total_value,  # Keep as float, not string
+                'total_value': round(float(p.total_value), 2),
                 'exams': p.exams
             }
             for p in report.missing_patients
@@ -403,7 +403,7 @@ def compare_patients(compulab_patients, simus_patients):
             {
                 'patient': e.patient,
                 'exam_name': e.exam_name,
-                'value': e.value,  # Float for calculations
+                'value': round(float(e.value), 2),
                 'code': e.code
             }
             for e in report.missing_exams
@@ -413,9 +413,9 @@ def compare_patients(compulab_patients, simus_patients):
                 'patient': v.patient,
                 'exam_name': v.exam_name,
                 'code': v.code,
-                'compulab_value': v.compulab_value,  # Float
-                'simus_value': v.simus_value,  # Float
-                'difference': v.difference  # Float
+                'compulab_value': round(float(v.compulab_value), 2),
+                'simus_value': round(float(v.simus_value), 2),
+                'difference': round(float(v.difference), 2)
             }
             for v in report.value_divergences
         ],
@@ -423,8 +423,8 @@ def compare_patients(compulab_patients, simus_patients):
             {
                 'patient': e.patient,
                 'exam_name': e.exam_name,
-                'simus_value': e.simus_value,  # Float
-                'value': e.simus_value,  # Alias for compatibility
+                'simus_value': round(float(e.simus_value), 2),
+                'value': round(float(e.simus_value), 2),
                 'code': e.code
             }
             for e in report.extra_simus_exams

@@ -1,0 +1,295 @@
+{
+    "name": "Detetive de Dados - Biodiagnóstico",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "detetive-dados",
+                "responseMode": "responseNode",
+                "options": {
+                    "allowedOrigins": "*"
+                }
+            },
+            "id": "webhook-trigger",
+            "name": "Webhook Detetive",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2,
+            "position": [
+                240,
+                320
+            ],
+            "webhookId": "detetive-dados-biodiagnostico"
+        },
+        {
+            "parameters": {
+                "promptType": "define",
+                "text": "={{ $json.body.message }}",
+                "options": {
+                    "systemMessage": "Você é o \"Detetive de Dados\", um assistente especializado em análise de dados de laboratórios clínicos e faturamento de convênios de saúde.\n\nVocê está analisando dados de divergências entre o sistema SIMUS (laboratório) e as tabelas dos convênios (planos de saúde). Seu objetivo é ajudar o analista a identificar padrões, causas e soluções para as divergências encontradas.\n\nDados de contexto disponíveis:\n{{ $json.body.context }}\n\nDiretrizes:\n1. Responda SEMPRE em português brasileiro\n2. Seja objetivo e direto nas análises\n3. Use emojis para facilitar a leitura (📊 para dados, 🔍 para investigação, ⚠️ para alertas, 💡 para sugestões)\n4. Quando analisar divergências, identifique:\n   - Padrão (se houver)\n   - Impacto financeiro estimado\n   - Causa provável\n   - Ação recomendada\n5. Formate valores monetários como R$ X.XXX,XX\n6. Se não tiver dados suficientes, peça mais informações"
+                }
+            },
+            "id": "ai-agent",
+            "name": "AI Agent Detetive",
+            "type": "@n8n/n8n-nodes-langchain.agent",
+            "typeVersion": 1.7,
+            "position": [
+                660,
+                320
+            ]
+        },
+        {
+            "parameters": {
+                "modelName": "models/gemini-2.5-flash",
+                "options": {
+                    "temperature": 0.7,
+                    "maxOutputTokens": 2048
+                }
+            },
+            "id": "gemini-chat",
+            "name": "Google Gemini Chat Model",
+            "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+            "typeVersion": 1,
+            "position": [
+                520,
+                520
+            ],
+            "credentials": {
+                "googleGeminiApi": {
+                    "id": "CONFIGURE_CREDENTIAL",
+                    "name": "Google Gemini API"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "name": "analisar_divergencias",
+                "description": "Analisa as divergências de valores, pacientes ausentes e exames não encontrados nos dados de contexto. Use esta ferramenta quando o usuário pedir para analisar divergências, identificar padrões ou calcular impactos financeiros.",
+                "workflowId": "={{ $workflow.id }}",
+                "responsePropertyName": "analysis_result"
+            },
+            "id": "tool-analisar",
+            "name": "Tool: Analisar Divergências",
+            "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+            "typeVersion": 2,
+            "position": [
+                660,
+                540
+            ]
+        },
+        {
+            "parameters": {
+                "name": "calcular_perda_financeira",
+                "description": "Calcula o total de perda financeira baseado nas divergências. Use quando o usuário perguntar sobre impacto financeiro total, perdas ou valores não faturados.",
+                "code": "const context = JSON.parse($input.item.json.context || '{}');\nconst divergencias = context.value_divergences || [];\n\nlet totalPerda = 0;\nlet resumoPorConvenio = {};\n\nfor (const div of divergencias) {\n  const perda = (div.valor_simus || 0) - (div.valor_convenio || 0);\n  if (perda > 0) {\n    totalPerda += perda;\n    const convenio = div.convenio || 'Desconhecido';\n    resumoPorConvenio[convenio] = (resumoPorConvenio[convenio] || 0) + perda;\n  }\n}\n\nreturn {\n  total_perda: totalPerda,\n  total_formatado: `R$ ${totalPerda.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`,\n  por_convenio: resumoPorConvenio,\n  quantidade_divergencias: divergencias.length\n};"
+            },
+            "id": "tool-calcular-perda",
+            "name": "Tool: Calcular Perda Financeira",
+            "type": "@n8n/n8n-nodes-langchain.toolCode",
+            "typeVersion": 1,
+            "position": [
+                800,
+                540
+            ]
+        },
+        {
+            "parameters": {
+                "name": "buscar_historico_paciente",
+                "description": "Busca o histórico de exames e divergências de um paciente específico no banco de dados. Use quando o usuário mencionar um nome de paciente ou pedir histórico.",
+                "method": "POST",
+                "url": "={{ $json.body.supabase_url }}/rest/v1/rpc/buscar_historico_paciente",
+                "authentication": "predefinedCredentialType",
+                "nodeCredentialType": "supabaseApi",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "paciente_nome",
+                            "value": "={{ $json.tool_input }}"
+                        }
+                    ]
+                }
+            },
+            "id": "tool-historico",
+            "name": "Tool: Buscar Histórico",
+            "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+            "typeVersion": 1.1,
+            "position": [
+                940,
+                540
+            ],
+            "credentials": {
+                "supabaseApi": {
+                    "id": "CONFIGURE_CREDENTIAL",
+                    "name": "Supabase API"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "name": "identificar_top_offenders",
+                "description": "Identifica os convênios ou exames com maior quantidade de divergências (top offenders). Use quando o usuário perguntar sobre os piores casos, maiores problemas ou ranking de divergências.",
+                "code": "const context = JSON.parse($input.item.json.context || '{}');\nconst divergencias = context.value_divergences || [];\nconst pacientesAusentes = context.missing_patients || [];\nconst examesAusentes = context.missing_exams || [];\n\n// Contar divergências por convênio\nconst porConvenio = {};\nfor (const div of divergencias) {\n  const convenio = div.convenio || 'Desconhecido';\n  porConvenio[convenio] = (porConvenio[convenio] || 0) + 1;\n}\n\n// Contar divergências por exame\nconst porExame = {};\nfor (const div of divergencias) {\n  const exame = div.exame || 'Desconhecido';\n  porExame[exame] = (porExame[exame] || 0) + 1;\n}\n\n// Ordenar e pegar top 5\nconst topConvenios = Object.entries(porConvenio)\n  .sort((a, b) => b[1] - a[1])\n  .slice(0, 5);\n\nconst topExames = Object.entries(porExame)\n  .sort((a, b) => b[1] - a[1])\n  .slice(0, 5);\n\nreturn {\n  top_convenios: topConvenios.map(([nome, count]) => ({ nome, divergencias: count })),\n  top_exames: topExames.map(([nome, count]) => ({ nome, divergencias: count })),\n  total_pacientes_ausentes: pacientesAusentes.length,\n  total_exames_ausentes: examesAusentes.length\n};"
+            },
+            "id": "tool-top-offenders",
+            "name": "Tool: Top Offenders",
+            "type": "@n8n/n8n-nodes-langchain.toolCode",
+            "typeVersion": 1,
+            "position": [
+                1080,
+                540
+            ]
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={{ JSON.stringify({ success: true, response: $json.output, agent_thinking: $json.intermediateSteps || [] }) }}",
+                "options": {
+                    "responseCode": 200,
+                    "responseHeaders": {
+                        "entries": [
+                            {
+                                "name": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "name": "Access-Control-Allow-Origin",
+                                "value": "*"
+                            }
+                        ]
+                    }
+                }
+            },
+            "id": "webhook-response",
+            "name": "Resposta Webhook",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1.1,
+            "position": [
+                1060,
+                320
+            ]
+        },
+        {
+            "parameters": {
+                "windowSize": 10
+            },
+            "id": "memory-buffer",
+            "name": "Window Buffer Memory",
+            "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+            "typeVersion": 1.3,
+            "position": [
+                520,
+                660
+            ]
+        }
+    ],
+    "connections": {
+        "Webhook Detetive": {
+            "main": [
+                [
+                    {
+                        "node": "AI Agent Detetive",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "AI Agent Detetive": {
+            "main": [
+                [
+                    {
+                        "node": "Resposta Webhook",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Google Gemini Chat Model": {
+            "ai_languageModel": [
+                [
+                    {
+                        "node": "AI Agent Detetive",
+                        "type": "ai_languageModel",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Tool: Analisar Divergências": {
+            "ai_tool": [
+                [
+                    {
+                        "node": "AI Agent Detetive",
+                        "type": "ai_tool",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Tool: Calcular Perda Financeira": {
+            "ai_tool": [
+                [
+                    {
+                        "node": "AI Agent Detetive",
+                        "type": "ai_tool",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Tool: Buscar Histórico": {
+            "ai_tool": [
+                [
+                    {
+                        "node": "AI Agent Detetive",
+                        "type": "ai_tool",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Tool: Top Offenders": {
+            "ai_tool": [
+                [
+                    {
+                        "node": "AI Agent Detetive",
+                        "type": "ai_tool",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Window Buffer Memory": {
+            "ai_memory": [
+                [
+                    {
+                        "node": "AI Agent Detetive",
+                        "type": "ai_memory",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "pinData": {},
+    "settings": {
+        "executionOrder": "v1"
+    },
+    "staticData": null,
+    "tags": [
+        {
+            "name": "Biodiagnóstico",
+            "createdAt": "2026-01-22T04:00:00.000Z",
+            "updatedAt": "2026-01-22T04:00:00.000Z"
+        },
+        {
+            "name": "AI Agent",
+            "createdAt": "2026-01-22T04:00:00.000Z",
+            "updatedAt": "2026-01-22T04:00:00.000Z"
+        }
+    ],
+    "triggerCount": 0,
+    "updatedAt": "2026-01-22T04:00:00.000Z",
+    "versionId": "1"
+}

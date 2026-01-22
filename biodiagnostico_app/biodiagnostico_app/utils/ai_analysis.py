@@ -14,6 +14,7 @@ from typing import Optional, Tuple, Dict, List, Any, Callable
 import google.genai as genai
 from google.genai import types
 import json
+from ..services.mapping_service import mapping_service
 
 
 def normalize_patient_name(name: str) -> str:
@@ -521,8 +522,19 @@ async def generate_ai_analysis(
         # Gemini doesn't need a client object in the same way for the batch processor as it configures globally or per-call
         
         # ===== FASE 2: AUDITORIA IA PROFUNDA =====
+        # Carregar mapeamentos oficiais do banco
+        await mapping_service.load_mappings()
+        synonyms_dict = mapping_service.get_all_synonyms()
+        synonyms_str = ""
+        for orig, canon in synonyms_dict.items():
+            if orig != canon:
+                synonyms_str += f"- COMPULAB: \"{canon}\" <--> SIMUS: \"{orig}\" (Match confirmado)\n"
+        
+        if not synonyms_str:
+            synonyms_str = "Nenhum mapeamento de sinônimo cadastrado."
+
         # System Prompt FORENSE (v3.0)
-        system_prompt = """
+        system_prompt = f"""
 # ROLE
 Você é um Engenheiro de Dados Sênior e Auditor Forense Digital, especialista em sistemas de saúde e conciliação financeira para fins judiciais.
 
@@ -545,14 +557,7 @@ Você receberá APENAS exames que apresentaram alguma divergência (valor, ausê
 
 # DICTIONARY OF SYNONYMS (CRITICAL - ALWAYS CHECK THESE)
 Use this specific mapping to reconcile differences:
-- COMPULAB: "G O T" <--> SIMUS: "GOT" (Match confirmed)
-- COMPULAB: "G P T" <--> SIMUS: "GPT" (Match confirmed)
-- COMPULAB: "V. S. G." or "V S G" <--> SIMUS: "V S G" or "VHS" or "VELOCIDADE DE SEDIMENTACAO" (Match confirmed)
-- COMPULAB: "TIROXINA T4 RIE" <--> SIMUS: "TIROXINA" (Match confirmed)
-- COMPULAB: "TRIIODOTIRONINA T3 RIE" <--> SIMUS: "TRIIODOTIRONINA" (Match confirmed)
-- COMPULAB: "ANTIGENO PROSTATICO ESPECIFICO" <--> SIMUS: "ANTIGENO PROSTATICO ESPECIFICO" or "PSA" (Match confirmed)
-- COMPULAB: "CREATINOFOSFOQUINASE" <--> SIMUS: "CREATINOFOSFOQUINASE" or "CPK" (Match confirmed)
-- COMPULAB: "PROVA DO LATEX A.R." <--> SIMUS: "PROTEINA C REATIVA" (Match confirmed)
+{synonyms_str}
 
 # OUTPUT FORMAT (JSON Array)
 Return a valid JSON array of objects.
@@ -789,5 +794,6 @@ Com base nos dados analisados, a diferença de **{format_currency_br(gap_finance
 
 
 def format_ai_report(ai_analysis: str) -> str:
+    """Wrapper para formatação do relatório de IA (Atualmente retorna string pura)"""
     return ai_analysis
 

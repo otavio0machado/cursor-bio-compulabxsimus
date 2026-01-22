@@ -109,21 +109,28 @@ def conversor_page() -> rx.Component:
             rx.box(
                 rx.vstack(
                     ui.animated_heading("Conversor Inteligente", level=1),
-                    ui.text("Transforme relatórios laboratoriais em dados estruturados", color=Color.TEXT_SECONDARY),
+                    rx.text("Transforme relatórios laboratoriais em dados estruturados", 
+                           color=Color.TEXT_SECONDARY, 
+                           text_align="center",
+                           font_size=["0.875rem", "1rem"]),
                     
                     # Stepper
                     rx.hstack(
                         step_indicator("1", "Upload", is_active=True, is_completed=State.has_files),
-                        rx.box(width="40px", height="2px", bg=Color.BORDER),
+                        rx.box(width=["20px", "40px"], height="2px", bg=Color.BORDER),
                         step_indicator("2", "Conversão", is_active=State.is_generating_csv, is_completed=State.csv_generated),
-                        rx.box(width="40px", height="2px", bg=Color.BORDER),
+                        rx.box(width=["20px", "40px"], height="2px", bg=Color.BORDER),
                         step_indicator("3", "Excel", is_active=State.csv_generated, is_completed=False),
-                        spacing="4", margin_top=Spacing.LG, align_items="center"
+                        spacing="0", margin_top=Spacing.LG, align_items="center",
+                        gap=["2", "4"] # Gap responsivo
                     ),
                     align_items="center",
-                    spacing="2"
+                    spacing="2",
+                    width="100%"
                 ),
-                padding_y=Spacing.XL, width="100%", display="flex", justify_content="center"
+                padding_y=[Spacing.MD, Spacing.LG, Spacing.XL],
+                padding_x=[Spacing.MD, Spacing.LG],
+                width="100%", display="flex", justify_content="center"
             ),
             
             # Cards de funcionalidades
@@ -223,7 +230,7 @@ def conversor_page() -> rx.Component:
                         )
                     ),
                     
-                    padding=Spacing.XL,
+                    padding=[Spacing.MD, Spacing.LG, Spacing.XL],
                     width="100%"
                 ),
                 bg=Color.SURFACE,
@@ -246,12 +253,12 @@ def conversor_page() -> rx.Component:
                             rx.link(
                                 ui.button("Baixar COMPULAB (.xlsx)", icon="download", variant="primary", width="100%", height="48px"),
                                 download="compulab_data.xlsx",
-                                href=rx.Var.create(f"data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{State.compulab_csv}"),
+                                href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64," + State.compulab_csv,
                             ),
                             rx.link(
                                 ui.button("Baixar SIMUS (.xlsx)", icon="download", variant="primary", width="100%", height="48px"),
                                 download="simus_data.xlsx",
-                                href=rx.Var.create(f"data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{State.simus_csv}"),
+                                href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64," + State.simus_csv,
                             ),
                             columns={"initial": "1", "sm": "2"},
                             spacing="4", width="100%", margin_top=Spacing.MD

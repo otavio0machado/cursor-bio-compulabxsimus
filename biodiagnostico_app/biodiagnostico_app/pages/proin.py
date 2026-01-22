@@ -81,110 +81,119 @@ def dashboard_tab() -> rx.Component:
             margin_bottom=Spacing.LG, max_width="6xl", margin_x="auto", width="100%"
         ),
         
-        # Grid Secundário (Pendências e Alertas)
-        rx.grid(
-            # Coluna 1: Pendências
-            rx.vstack(
-                ui.heading("Pendências & Alertas", level=3),
-                ui.card(
+        # Grid Secundário (Pendências e Alertas) - Alinhado com grid 4 colunas acima
+        rx.box(
+            rx.grid(
+                # Coluna 1-2: Pendências
+                rx.box(
                     rx.vstack(
-                        # Manutenções
-                        rx.box(
-                            rx.hstack(
+                        ui.heading("Pendências & Alertas", level=3),
+                        ui.card(
+                            rx.vstack(
+                                # Manutenções
                                 rx.box(
-                                    rx.icon(tag="wrench", size=24, color=Color.WARNING), 
-                                    bg=Color.WARNING_BG, p="3", border_radius="12px",
-                                    display="flex", align_items="center", justify_content="center"
-                                ),
-                                rx.vstack(
-                                    rx.text("Manutenções Pendentes", style=Typography.LABEL, color=Color.TEXT_SECONDARY),
-                                    ui.text("Equipamentos aguardando revisão", size="small"),
-                                    spacing="0", align_items="start"
-                                ),
-                                rx.spacer(),
-                                rx.text(
-                                    State.dashboard_pending_maintenances,
-                                    font_size="2rem", font_weight="800",
-                                    color=rx.cond(State.has_pending_maintenances, Color.WARNING, Color.SUCCESS),
-                                    line_height="1"
-                                ),
-                                width="100%", align_items="center",
-                            ),
-                            padding=Spacing.MD, width="100%", bg=Color.SURFACE, border=f"1px solid {Color.BORDER}", border_radius=Design.RADIUS_XL,
-                            _hover={"border_color": Color.WARNING, "box_shadow": Design.SHADOW_MD}, transition="all 0.2s ease", cursor="pointer"
-                        ),
-                        # Lotes Vencendo
-                        rx.box(
-                            rx.hstack(
-                                rx.box(
-                                    rx.icon(tag="clock", size=24, color=Color.ERROR), 
-                                    bg=Color.ERROR_BG, p="3", border_radius="12px",
-                                    display="flex", align_items="center", justify_content="center"
-                                ),
-                                rx.vstack(
-                                    rx.text("Lotes Vencendo", style=Typography.LABEL, color=Color.TEXT_SECONDARY),
-                                    ui.text("Próximos 30 dias", size="small"),
-                                    spacing="0", align_items="start"
-                                ),
-                                rx.spacer(),
-                                rx.text(
-                                    State.dashboard_expiring_lots,
-                                    font_size="2rem", font_weight="800",
-                                    color=rx.cond(State.has_expiring_lots, Color.ERROR, Color.SUCCESS),
-                                    line_height="1"
-                                ),
-                                width="100%", align_items="center",
-                            ),
-                            padding=Spacing.MD, width="100%", bg=Color.SURFACE, border=f"1px solid {Color.BORDER}", border_radius=Design.RADIUS_XL,
-                            _hover={"border_color": Color.ERROR, "box_shadow": Design.SHADOW_MD}, transition="all 0.2s ease", cursor="pointer"
-                        ),
-                        spacing="4", width="100%", height="100%",
-                    ),
-                    padding=Spacing.LG, height="100%", min_height="250px"
-                ),
-                width="100%", height="100%",
-            ),
-            
-            # Coluna 2: Últimos Alertas
-            rx.vstack(
-                ui.heading("Alertas Recentes", level=3),
-                ui.card(
-                    rx.cond(
-                        State.qc_records_with_alerts.length() > 0,
-                        rx.vstack(
-                            rx.foreach(
-                                State.qc_records_with_alerts[:4],
-                                lambda r: rx.hstack(
-                                    rx.box(width="8px", height="8px", border_radius="full", bg=Color.ERROR),
-                                    rx.vstack(
-                                        ui.text(r["exam_name"], size="label"),
-                                        ui.text(r["date"], size="small"),
-                                        spacing="0", align_items="start"
+                                    rx.hstack(
+                                        rx.box(
+                                            rx.icon(tag="wrench", size=24, color=Color.WARNING), 
+                                            bg=Color.WARNING_BG, p="3", border_radius="12px",
+                                            display="flex", align_items="center", justify_content="center"
+                                        ),
+                                        rx.vstack(
+                                            rx.text("Manutenções Pendentes", style=Typography.LABEL, color=Color.TEXT_SECONDARY),
+                                            ui.text("Equipamentos aguardando revisão", size="small"),
+                                            spacing="0", align_items="start"
+                                        ),
+                                        rx.spacer(),
+                                        rx.text(
+                                            State.dashboard_pending_maintenances,
+                                            font_size="2rem", font_weight="800",
+                                            color=rx.cond(State.has_pending_maintenances, Color.WARNING, Color.SUCCESS),
+                                            line_height="1"
+                                        ),
+                                        width="100%", align_items="center",
                                     ),
-                                    rx.spacer(),
-                                    ui.status_badge("CV: " + r["cv"].to_string() + "%", status="error"),
-                                    width="100%", align_items="center",
-                                    padding=Spacing.XS, border_radius=Design.RADIUS_MD, _hover={"bg": Color.ERROR_BG}
+                                    padding=Spacing.MD, width="100%", bg=Color.SURFACE, border=f"1px solid {Color.BORDER}", border_radius=Design.RADIUS_XL,
+                                    _hover={"border_color": Color.WARNING, "box_shadow": Design.SHADOW_MD}, transition="all 0.2s ease", cursor="pointer"
+                                ),
+                                # Lotes Vencendo
+                                rx.box(
+                                    rx.hstack(
+                                        rx.box(
+                                            rx.icon(tag="clock", size=24, color=Color.ERROR), 
+                                            bg=Color.ERROR_BG, p="3", border_radius="12px",
+                                            display="flex", align_items="center", justify_content="center"
+                                        ),
+                                        rx.vstack(
+                                            rx.text("Lotes Vencendo", style=Typography.LABEL, color=Color.TEXT_SECONDARY),
+                                            ui.text("Próximos 30 dias", size="small"),
+                                            spacing="0", align_items="start"
+                                        ),
+                                        rx.spacer(),
+                                        rx.text(
+                                            State.dashboard_expiring_lots,
+                                            font_size="2rem", font_weight="800",
+                                            color=rx.cond(State.has_expiring_lots, Color.ERROR, Color.SUCCESS),
+                                            line_height="1"
+                                        ),
+                                        width="100%", align_items="center",
+                                    ),
+                                    padding=Spacing.MD, width="100%", bg=Color.SURFACE, border=f"1px solid {Color.BORDER}", border_radius=Design.RADIUS_XL,
+                                    _hover={"border_color": Color.ERROR, "box_shadow": Design.SHADOW_MD}, transition="all 0.2s ease", cursor="pointer"
+                                ),
+                                spacing="4", width="100%", height="100%",
+                            ),
+                            padding=Spacing.LG, height="100%", min_height="250px"
+                        ),
+                        width="100%", height="100%",
+                    ),
+                    grid_column={"initial": "span 1", "md": "span 2"},
+                ),
+                
+                # Coluna 3-4: Últimos Alertas
+                rx.box(
+                    rx.vstack(
+                        ui.heading("Alertas Recentes", level=3),
+                        ui.card(
+                            rx.cond(
+                                State.qc_records_with_alerts.length() > 0,
+                                rx.vstack(
+                                    rx.foreach(
+                                        State.qc_records_with_alerts[:4],
+                                        lambda r: rx.hstack(
+                                            rx.box(width="8px", height="8px", border_radius="full", bg=Color.ERROR),
+                                            rx.vstack(
+                                                ui.text(r["exam_name"], size="label"),
+                                                ui.text(r["date"], size="small"),
+                                                spacing="0", align_items="start"
+                                            ),
+                                            rx.spacer(),
+                                            ui.status_badge("CV: " + r["cv"].to_string() + "%", status="error"),
+                                            width="100%", align_items="center",
+                                            padding=Spacing.XS, border_radius=Design.RADIUS_MD, _hover={"bg": Color.ERROR_BG}
+                                        )
+                                    ),
+                                    style={"gap": "8px"},
+                                ),
+                                rx.center(
+                                    rx.vstack(
+                                        rx.icon(tag="sparkles", size=48, color=Color.TEXT_SECONDARY),
+                                        ui.text("Tudo certo!", size="body_large", color=Color.TEXT_SECONDARY),
+                                        style={"gap": Spacing.SM}, align_items="center",
+                                    ),
+                                    height="100%", width="100%", bg=Color.BACKGROUND, border_radius=Design.RADIUS_LG, padding=Spacing.XL
                                 )
                             ),
-                            style={"gap": "8px"},
+                            height="100%", min_height="250px", padding=Spacing.LG,
                         ),
-                        rx.center(
-                            rx.vstack(
-                                rx.icon(tag="sparkles", size=48, color=Color.TEXT_SECONDARY),
-                                ui.text("Tudo certo!", size="body_large", color=Color.TEXT_SECONDARY),
-                                style={"gap": Spacing.SM}, align_items="center",
-                            ),
-                            height="100%", width="100%", bg=Color.BACKGROUND, border_radius=Design.RADIUS_LG, padding=Spacing.XL
-                        )
+                        width="100%",
                     ),
-                    height="100%", min_height="250px", padding=Spacing.LG,
+                    grid_column={"initial": "span 1", "md": "span 2"},
                 ),
-                width="100%",
+                
+                columns={"initial": "1", "sm": "2", "md": "2", "lg": "4"},
+                spacing="4", width="100%",
             ),
-            
-            columns={"initial": "1", "md": "2"},
-            spacing="6", width="100%", max_width="6xl", margin_x="auto"
+            max_width="6xl", margin_x="auto", width="100%"
         ),
 
         # Tabela Recente
@@ -218,7 +227,7 @@ def dashboard_tab() -> rx.Component:
                                             color=rx.cond(r["status"] == "OK", Color.SUCCESS, Color.ERROR)
                                         )
                                     ),
-                                    rx.table.cell(ui.status_badge(r["status"], status=rx.cond(r["status"] == "OK", "success", "error")), text_align="right"),
+                                    rx.table.cell(ui.status_badge(r["status"], status=rx.cond(r["status"] == "OK", "success", rx.cond(r["status"].contains("ALERTA"), "warning", "error"))), text_align="right"),
                                 )
                             )
                         ),
@@ -279,7 +288,7 @@ def registro_qc_tab() -> rx.Component:
                 rx.grid(
                     ui.form_field("Medição (Obrigatório)", ui.input(placeholder="0.00", value=State.qc_value, on_change=State.update_qc_value), required=True),
                     ui.form_field("Valor Alvo (Obrigatório)", ui.input(placeholder="0.00", value=State.qc_target_value, on_change=State.update_qc_target_value), required=True),
-                    ui.form_field("Desvio Padrão (Obrigatório)", ui.input(placeholder="0.00", value=State.qc_target_sd, on_change=State.set_qc_target_sd), required=True),
+                    ui.form_field("Desvio Padrão (Automático)", ui.input(placeholder="0.00", value=State.qc_target_sd, on_change=State.set_qc_target_sd, read_only=True)),
                     # CV% with dynamic color indicator
                     ui.form_field(
                         "Variação % (Automático)",
@@ -327,6 +336,10 @@ def registro_qc_tab() -> rx.Component:
                     rx.callout(State.qc_success_message, icon="circle_check", color_scheme="green", width="100%", margin_top=Spacing.MD),
                 ),
                 rx.cond(
+                    State.qc_warning_message != "",
+                    rx.callout(State.qc_warning_message, icon="triangle_alert", color_scheme="yellow", width="100%", margin_top=Spacing.MD),
+                ),
+                rx.cond(
                     State.qc_error_message != "",
                     rx.callout(State.qc_error_message, icon="triangle_alert", color_scheme="red", width="100%", margin_top=Spacing.MD),
                 ),
@@ -372,7 +385,7 @@ def registro_qc_tab() -> rx.Component:
                                         rx.table.cell(rx.text(r.exam_name, font_weight="600")),
                                         rx.table.cell(r.value.to_string()),
                                         rx.table.cell(rx.text(r.cv.to_string() + "%", font_weight="600", color=rx.cond(r.status == "OK", Color.SUCCESS, Color.ERROR))),
-                                        rx.table.cell(ui.status_badge(r.status, status=rx.cond(r.status == "OK", "success", "error"))),
+                                        rx.table.cell(ui.status_badge(r.status, status=rx.cond(r.status == "OK", "success", rx.cond(r.status.contains("ALERTA"), "warning", "error")))),
                                         rx.table.cell(
                                             rx.button(
                                                 rx.icon(tag="trash_2", size=14, color=Color.ERROR),
@@ -558,41 +571,65 @@ def relatorios_tab() -> rx.Component:
             spacing="1", align_items="start", margin_bottom=Spacing.LG, width="100%"
         ),
         
-        # Section: Exportação PDF
+        # Section: Exportação PDF (Split View)
         ui.card(
             rx.vstack(
                 rx.hstack(
                     rx.box(rx.icon(tag="file_text", size=20, color=Color.PRIMARY), bg=Color.PRIMARY_LIGHT, p="2", border_radius="8px"),
                     ui.heading("Exportar Tabela QC (PDF)", level=3),
-                    style={"gap": "8px"}, align_items="center", margin_bottom=Spacing.MD
-                ),
-                rx.grid(
-                    rx.box(
-                        ui.text("Período", size="label", margin_bottom="4px"),
-                        ui.select(["Mês Atual", "Mês Específico", "3 Meses", "6 Meses", "Ano Atual", "Ano Específico"], value=State.qc_report_type, on_change=State.set_qc_report_type)
-                    ),
+                    rx.spacer(),
                     rx.cond(
-                        State.qc_report_type == "Mês Específico",
+                        State.qc_pdf_preview != "",
+                        rx.badge("Preview Ativo", color_scheme="green", variant="soft")
+                    ),
+                    style={"gap": "8px"}, align_items="center", margin_bottom=Spacing.MD, width="100%"
+                ),
+                
+                rx.hstack(
+                    # Controls Column
+                    rx.vstack(
+                        rx.grid(
+                            rx.box(
+                                ui.text("Período", size="label", margin_bottom="4px"),
+                                ui.select(["Mês Atual", "Mês Específico", "3 Meses", "6 Meses", "Ano Atual", "Ano Específico"], value=State.qc_report_type, on_change=State.set_qc_report_type)
+                            ),
+                            rx.cond(
+                                State.qc_report_type == "Mês Específico",
+                                rx.box(
+                                    ui.text("Mês", size="label", margin_bottom="4px"),
+                                    ui.select(["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"], value=State.qc_report_month, on_change=State.set_qc_report_month, placeholder="Mês")
+                                )
+                            ),
+                            rx.cond(
+                                (State.qc_report_type == "Mês Específico") | (State.qc_report_type == "Ano Específico"),
+                                rx.box(
+                                    ui.text("Ano", size="label", margin_bottom="4px"),
+                                    ui.input(value=State.qc_report_year, on_change=State.set_qc_report_year, placeholder="Ano (ex: 2024)")
+                                )
+                            ),
+                            columns={"initial": "1", "sm": "2"}, style={"gap": Spacing.MD}, width="100%"
+                        ),
                         rx.box(
-                            ui.text("Mês", size="label", margin_bottom="4px"),
-                            ui.select(["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"], value=State.qc_report_month, on_change=State.set_qc_report_month, placeholder="Mês")
+                             ui.button("Baixar PDF", icon="download", on_click=State.generate_qc_report_pdf, is_loading=State.is_generating_qc_report, variant="primary", width="100%", margin_top="24px"),
+                        ),
+                        rx.cond(
+                            State.qc_error_message != "",
+                            rx.callout(State.qc_error_message, icon="triangle_alert", color_scheme="red", width="100%", margin_top=Spacing.MD)
+                        ),
+                        width=rx.cond(State.qc_pdf_preview != "", "40%", "100%"), transition="width 0.3s ease"
+                    ),
+                    
+                    # Preview Column
+                    rx.cond(
+                        State.qc_pdf_preview != "",
+                        rx.box(
+                            rx.html(
+                                f'<iframe src="data:application/pdf;base64,' + State.qc_pdf_preview + '" width="100%" height="400px" style="border: none; border-radius: 8px; background: white;"></iframe>'
+                            ),
+                            width="60%", height="400px", bg=Color.BACKGROUND, border_radius="12px", border=f"1px solid {Color.BORDER}"
                         )
                     ),
-                    rx.cond(
-                        (State.qc_report_type == "Mês Específico") | (State.qc_report_type == "Ano Específico"),
-                        rx.box(
-                            ui.text("Ano", size="label", margin_bottom="4px"),
-                            ui.input(value=State.qc_report_year, on_change=State.set_qc_report_year, placeholder="Ano (ex: 2024)")
-                        )
-                    ),
-                    rx.box(
-                         ui.button("Baixar PDF", icon="download", on_click=State.generate_qc_report_pdf, is_loading=State.is_generating_qc_report, variant="primary", width="100%", margin_top="24px"),
-                    ),
-                    columns={"initial": "1", "sm": "2", "md": "4"}, style={"gap": Spacing.MD}, width="100%"
-                ),
-                rx.cond(
-                    State.qc_error_message != "",
-                    rx.callout(State.qc_error_message, icon="triangle_alert", color_scheme="red", width="100%", margin_top=Spacing.MD)
+                    width="100%", spacing="6", align_items="start"
                 )
             ),
             border_left=f"4px solid {Color.PRIMARY}", margin_bottom=Spacing.LG,
@@ -637,17 +674,23 @@ def relatorios_tab() -> rx.Component:
                         rx.recharts.line(data_key="value", stroke=Color.PRIMARY, stroke_width=2, dot=True, name="Valor"),
                         rx.recharts.line(data_key="target", stroke=Color.SUCCESS, stroke_width=1, stroke_dash_array="5 5", dot=False, name="Alvo"),
                         rx.recharts.x_axis(data_key="date"),
-                        rx.recharts.y_axis(),
-                        rx.recharts.cartesian_grid(stroke_dasharray="3 3", opacity=0.3),
+                        rx.recharts.y_axis(domain=[State.lj_min_domain, State.lj_max_domain]),
+                        # Westgard Zones (Background)
+                        rx.recharts.reference_area(y1=State.lj_target_minus_1sd.to_string(), y2=State.lj_target_plus_1sd.to_string(), fill=Color.SUCCESS, fill_opacity=0.1),
+                        rx.recharts.reference_area(y1=State.lj_target_plus_1sd.to_string(), y2=State.lj_target_plus_2sd.to_string(), fill=Color.WARNING, fill_opacity=0.15),
+                        rx.recharts.reference_area(y1=State.lj_target_minus_2sd.to_string(), y2=State.lj_target_minus_1sd.to_string(), fill=Color.WARNING, fill_opacity=0.15),
+                        rx.recharts.reference_area(y1=State.lj_target_plus_2sd.to_string(), y2=State.lj_max_domain.to_string(), fill=Color.ERROR, fill_opacity=0.1),
+                        rx.recharts.reference_area(y1=State.lj_min_domain.to_string(), y2=State.lj_target_minus_2sd.to_string(), fill=Color.ERROR, fill_opacity=0.1),
+                        rx.recharts.cartesian_grid(stroke_dasharray="3 3", opacity=0.4),
                         rx.recharts.graphing_tooltip(),
                         rx.recharts.legend(),
-                        rx.recharts.reference_line(y=State.lj_target_plus_1sd.to_string(), stroke=Color.SUCCESS, stroke_dasharray="3 3", label="+1 DP"),
-                        rx.recharts.reference_line(y=State.lj_target_minus_1sd.to_string(), stroke=Color.SUCCESS, stroke_dasharray="3 3", label="-1 DP"),
-                        rx.recharts.reference_line(y=State.lj_target_plus_2sd.to_string(), stroke=Color.WARNING, stroke_dasharray="3 3", label="+2 DP"),
-                        rx.recharts.reference_line(y=State.lj_target_minus_2sd.to_string(), stroke=Color.WARNING, stroke_dasharray="3 3", label="-2 DP"),
-                        rx.recharts.reference_line(y=State.lj_target_plus_3sd.to_string(), stroke=Color.ERROR, stroke_dasharray="3 3", label="+3 DP"),
-                        rx.recharts.reference_line(y=State.lj_target_minus_3sd.to_string(), stroke=Color.ERROR, stroke_dasharray="3 3", label="-3 DP"),
-                        data=State.levey_jennings_chart_data, width="100%", height=350,
+                        rx.recharts.reference_line(y=State.lj_target_plus_1sd.to_string(), stroke=Color.SUCCESS, stroke_width=1, stroke_dasharray="3 3", label="+1s"),
+                        rx.recharts.reference_line(y=State.lj_target_minus_1sd.to_string(), stroke=Color.SUCCESS, stroke_width=1, stroke_dasharray="3 3", label="-1s"),
+                        rx.recharts.reference_line(y=State.lj_target_plus_2sd.to_string(), stroke=Color.WARNING, stroke_width=1, stroke_dasharray="3 3", label="+2s"),
+                        rx.recharts.reference_line(y=State.lj_target_minus_2sd.to_string(), stroke=Color.WARNING, stroke_width=1, stroke_dasharray="3 3", label="-2s"),
+                        rx.recharts.reference_line(y=State.lj_target_plus_3sd.to_string(), stroke=Color.ERROR, stroke_width=1, stroke_dasharray="3 3", label="+3s"),
+                        rx.recharts.reference_line(y=State.lj_target_minus_3sd.to_string(), stroke=Color.ERROR, stroke_width=1, stroke_dasharray="3 3", label="-3s"),
+                        data=State.levey_jennings_chart_data, width="100%", height=400,
                     ),
                     width="100%", padding=Spacing.MD
                 ),

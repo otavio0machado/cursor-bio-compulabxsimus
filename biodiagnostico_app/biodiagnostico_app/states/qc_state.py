@@ -11,6 +11,8 @@ from typing import List, Dict, Any, Optional
 from ..models import QCRecord, ReagentLot, MaintenanceRecord, LeveyJenningsPoint
 from ..utils.qc_pdf_report import generate_qc_pdf
 from ..services.qc_service import QCService
+from ..services.mapping_service import mapping_service
+from ..services.westgard_service import WestgardService
 from .dashboard_state import DashboardState
 
 class QCState(DashboardState):
@@ -34,6 +36,7 @@ class QCState(DashboardState):
     qc_date: str = ""
     is_saving_qc: bool = False
     qc_success_message: str = ""
+    qc_warning_message: str = ""
     qc_error_message: str = ""
     
     # ProIn Import State
@@ -84,12 +87,66 @@ class QCState(DashboardState):
     qc_report_type: str = "Mês Atual"
     qc_report_month: str = str(datetime.now().month)
     qc_report_year: str = str(datetime.now().year)
+    qc_pdf_preview: str = "" # Base64 preview
 
     def set_qc_report_type(self, value: str):
+        """Define o tipo de relatório (Mês Atual, Específico, etc)"""
         self.qc_report_type = value
-
+        return self.update_qc_preview()
     def set_qc_report_month(self, value: str):
+        """Define o mês para o relatório específico"""
         self.qc_report_month = value
+        return self.update_qc_preview()
+    def set_qc_exam_name(self, value: str):
+        """Define o nome do exame selecionado"""
+        self.qc_exam_name = value
+
+    def set_qc_lot_number(self, value: str):
+        """Define o número do lote"""
+        self.qc_lot_number = value
+
+    def set_maintenance_notes(self, value: str):
+        """Define as notas de manutenção"""
+        self.maintenance_notes = value
+
+    def set_qc_date(self, value: str):
+        self.qc_date = value
+
+    def set_maintenance_type(self, value: str):
+        self.maintenance_type = value
+
+    def set_qc_target_sd(self, value: str):
+        self.qc_target_sd = value
+
+    def set_qc_equipment(self, value: str):
+        self.qc_equipment = value
+
+    def set_qc_analyst(self, value: str):
+        self.qc_analyst = value
+
+    def set_reagent_name(self, value: str):
+        self.reagent_name = value
+
+    def set_reagent_lot_number(self, value: str):
+        self.reagent_lot_number = value
+    
+    def set_reagent_expiry_date(self, value: str):
+        self.reagent_expiry_date = value
+    
+    def set_reagent_quantity(self, value: str):
+        self.reagent_quantity = value
+    
+    def set_reagent_manufacturer(self, value: str):
+        self.reagent_manufacturer = value
+
+    def set_reagent_storage_temp(self, value: str):
+        self.reagent_storage_temp = value
+
+    def set_reagent_initial_stock(self, value: str):
+        self.reagent_initial_stock = value
+
+    def set_reagent_daily_consumption(self, value: str):
+        self.reagent_daily_consumption = value
 
     # Computed CV & Status
     @rx.var
@@ -156,17 +213,50 @@ class QCState(DashboardState):
     def lj_target_minus_3sd(self) -> float: return self.lj_target_val - (3 * self.lj_target_sd_val)
     
     @rx.var
+    def lj_min_domain(self) -> float:
+        """Limite inferior fixo do gráfico (Target - 4 SD)"""
+        if self.lj_target_sd_val == 0: return 0.0 # Auto
+        return self.lj_target_val - (4 * self.lj_target_sd_val)
+
+    @rx.var
+    def lj_max_domain(self) -> float:
+        """Limite superior fixo do gráfico (Target + 4 SD)"""
+        if self.lj_target_sd_val == 0: return 100.0 # Auto fallback
+        return self.lj_target_val + (4 * self.lj_target_sd_val)
+
+    # Lista restrita de exames permitidos no QC (Nomes Canônicos)
+    ALLOWED_QC_EXAMS: List[str] = [
+        "GLICOSE",
+        "COLESTEROL TOTAL",
+        "TRIGLICERIDEOS",
+        "UREIA",
+        "CREATININA",
+        "ACIDO URICO",
+        "GOT",
+        "GPT",
+        "GAMA GT",
+        "FOSFATASE ALCALINA",
+        "AMILASE",
+        "CREATINOFOSFOQUINASE",
+        "COLESTEROL HDL",
+        "COLESTEROL LDL"
+    ]
+
+    @rx.var
     def unique_exam_names(self) -> List[str]:
         """Lista única de exames para dropdown"""
         names = set(r.exam_name for r in self.qc_records)
+        names.update(self.ALLOWED_QC_EXAMS)
         return sorted(list(names))
 
     def set_qc_report_year(self, value: str):
+        """Define o ano para o relatório"""
         self.qc_report_year = value
-
+        return self.update_qc_preview()
     is_generating_qc_report: bool = False
 
     def set_proin_tab(self, tab: str):
+        """Alterna a tab ativa do ProIn"""
         self.proin_current_tab = tab
 
     async def load_data_from_db(self, force: bool = False):
@@ -283,14 +373,14 @@ class QCState(DashboardState):
             pass
 
     def update_qc_value(self, value: str):
-        """Atualiza valor da medição e recalcula SD"""
+        """Atualiza valor da medição e recalcula SD automaticamente"""
         self.qc_value = value
-        self.calculate_sd()
+        self.calculate_sd()  # Calcula SD automaticamente
         
     def update_qc_target_value(self, value: str):
-        """Atualiza valor alvo e recalcula SD"""
+        """Atualiza valor alvo e recalcula SD automaticamente"""
         self.qc_target_value = value
-        self.calculate_sd()
+        self.calculate_sd()  # Calcula SD automaticamente
 
     # Levey-Jennings Utils
     @rx.var
@@ -337,22 +427,72 @@ class QCState(DashboardState):
     # QC CRUD Actions
     async def save_qc_record(self):
         self.is_saving_qc = True
+        self.reset_qc_messages()
         try:
+             # Normalizar nome do exame antes de salvar
+             canonical_name = mapping_service.get_canonical_name_sync(self.qc_exam_name)
+             
+             # Prepare history for Westgard check (Filter by same exam)
+             # Assuming self.qc_records is sorted by date descending
+             history = [r for r in self.qc_records if r.exam_name == canonical_name]
+             
+             # Valores Numéricos
+             val = float(self.qc_value or 0)
+             target = float(self.qc_target_value or 0)
+             sd_target = float(self.qc_target_sd or 0)
+             
+             # Calcular CV
+             cv = 0.0
+             if target > 0:
+                 diff = abs(val - target)
+                 cv = (diff / target) * 100
+
              new_record = QCRecord(
                  id=str(len(self.qc_records) + 1),
                  date=self.qc_date or datetime.now().isoformat(),
-                 exam_name=self.qc_exam_name,
-                 level="Normal",
+                 exam_name=canonical_name,
+                 level="Normal", # TODO: Parametrizar Nível no Form (N1, N2, N3)
                  lot_number=self.qc_lot_number,
-                 value=float(self.qc_value or 0),
-                 target_value=float(self.qc_target_value or 0),
-                 target_sd=float(self.qc_target_sd or 0),
-                 cv=0.0,
-                 status="OK"
+                 value=val,
+                 target_value=target,
+                 target_sd=sd_target,
+                 cv=cv,
+                 status="OK",
+                 westgard_violations=[]
              )
+             
+             # Validação Westgard
+             violations = WestgardService.check_rules(new_record, history)
+             
+             if violations:
+                 new_record.westgard_violations = violations
+                 # Determine status severity
+                 rejections = [v for v in violations if v["severity"] == "rejection"]
+                 warnings = [v for v in violations if v["severity"] == "warning"]
+                 
+                 if rejections:
+                     rule = rejections[0]['rule']
+                     new_record.status = f"ERRO ({rule})"
+                     self.qc_error_message = f"Regra {rule} violada: {rejections[0]['description']}"
+                     self.qc_success_message = "" # Limpa sucesso se houve erro crítico
+                 elif warnings:
+                     rule = warnings[0]['rule']
+                     new_record.status = f"ALERTA ({rule})"
+                     self.qc_warning_message = f"Salvo com Alerta ({rule}): {warnings[0]['description']}"
+                     self.qc_success_message = ""
+                 else:
+                     new_record.status = "OK"
+             else:
+                 self.qc_success_message = "Registro salvo! Sem violações de regras."
+                 self.qc_error_message = ""
+                 self.qc_warning_message = ""
+             
              self.qc_records.insert(0, new_record)
-             self.qc_success_message = "Registro salvo!"
-             self.clear_qc_form()
+             
+             # Se houve erro, não limpa o form imediatamente para permitir ajuste se foi digitação errada?
+             # Por enquanto limpa para seguir fluxo normal, mas mantém msg
+             self.qc_value = ""
+             
         except Exception as e:
             self.qc_error_message = f"Erro: {e}"
         finally:
@@ -365,15 +505,31 @@ class QCState(DashboardState):
         self.qc_records = []
 
     def clear_qc_form(self):
+        """Limpa o formulário de registro de CQ"""
         self.qc_value = ""
+        self.reset_qc_messages()
+        
+    def reset_qc_messages(self):
         self.qc_success_message = ""
+        self.qc_warning_message = ""
         self.qc_error_message = ""
 
-    async def generate_qc_report_pdf(self):
-        """Gera PDF das tabelas de QC baseado nos filtros"""
+    async def update_qc_preview(self):
+        """Gera o preview do PDF QC sem baixar"""
         self.is_generating_qc_report = True
         yield
-        
+        try:
+            pdf_bytes, filename = await self._generate_pdf_bytes()
+            if pdf_bytes:
+                self.qc_pdf_preview = base64.b64encode(pdf_bytes).decode('utf-8')
+                self.qc_error_message = ""
+        except Exception as e:
+            self.qc_error_message = f"Erro ao gerar preview: {str(e)}"
+        finally:
+            self.is_generating_qc_report = False
+
+    async def _generate_pdf_bytes(self):
+        """Helper para gerar bytes do PDF"""
         try:
             now = datetime.now()
             start_date = None
@@ -395,27 +551,80 @@ class QCState(DashboardState):
                     period_desc = f"{month:02d}/{year}"
                 except:
                     self.qc_error_message = "Mês/Ano inválidos"
-                    self.is_generating_qc_report = False
-                    return
+                    return None, None
 
             elif self.qc_report_type == "3 Meses":
                 start_date = (now - timedelta(days=90)).date().isoformat()
                 end_date = now.date().isoformat()
                 period_desc = "Últimos 3 Meses"
+            
+            # Year specific
+            elif self.qc_report_type == "Ano Atual":
+                start_date = now.replace(month=1, day=1).date().isoformat()
+                end_date = now.replace(month=12, day=31).date().isoformat()
+                period_desc = f"Ano {now.year}"
+                
+            elif self.qc_report_type == "Ano Específico":
+                 try:
+                    year = int(self.qc_report_year)
+                    start_date = f"{year}-01-01"
+                    end_date = f"{year}-12-31"
+                    period_desc = f"Ano {year}"
+                 except:
+                    self.qc_error_message = "Ano inválido"
+                    return None, None
 
             # Buscar dados (Mock via Service)
-            records = await QCService.get_qc_records(limit=2000)
+            # records = await QCService.get_qc_records(limit=2000)
+            records = self.qc_records # Use local state records
             
-            if not records:
+            filtered_records = []
+            if start_date and end_date:
+                for r in records:
+                    # r.date format iso string
+                    if r.date >= start_date and r.date <= (end_date + "T23:59:59"):
+                        filtered_records.append(r)
+            else:
+                filtered_records = records
+            
+            # Sort by date
+            filtered_records.sort(key=lambda x: x.date, reverse=True)
+            
+            if not filtered_records:
                 self.qc_error_message = "Nenhum registro encontrado no período."
-                return
-
-            pdf_bytes = generate_qc_pdf(records, period_desc)
-            b64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
-            yield rx.download(
-                data=f"data:application/pdf;base64,{b64_pdf}",
-                filename=f"QC_Report_{period_desc.replace('/', '_').replace(' ', '_')}.pdf"
+                # Allow generating empty report or return None
+                # return None, None
+            
+            # Executar em thread pool
+            loop = asyncio.get_event_loop()
+            pdf_bytes = await loop.run_in_executor(
+                None,
+                lambda: generate_qc_pdf(filtered_records, period_desc)
             )
+            
+            filename = f"QC_Report_{period_desc.replace('/', '_').replace(' ', '_')}.pdf"
+            return pdf_bytes, filename
+
+        except Exception as e:
+            print(f"Erro interno PDF Generation: {e}")
+            raise e
+
+    async def generate_qc_report_pdf(self):
+        """Gera PDF das tabelas de QC e inicia download"""
+        self.is_generating_qc_report = True
+        yield
+        
+        try:
+            pdf_bytes, filename = await self._generate_pdf_bytes()
+            
+            if pdf_bytes:
+                b64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
+                self.qc_pdf_preview = b64_pdf # Update preview too
+                
+                yield rx.download(
+                    data=f"data:application/pdf;base64,{b64_pdf}",
+                    filename=filename
+                )
 
         except Exception as e:
             print(f"Erro ao gerar PDF QC: {e}")

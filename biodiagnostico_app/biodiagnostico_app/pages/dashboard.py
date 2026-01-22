@@ -35,7 +35,7 @@ def quick_access_card(title: str, description: str, icon: str, page: str, delay:
 def hero_metric_card() -> rx.Component:
     """Card de faturamento destaque com design premium"""
     return rx.box(
-        rx.hstack(
+        rx.flex(
             # Coluna de texto
             rx.vstack(
                 rx.hstack(
@@ -63,7 +63,8 @@ def hero_metric_card() -> rx.Component:
                     style={"gap": "8px"}
                 ),
                 align_items="start",
-                style={"gap": "8px"}
+                style={"gap": "8px"},
+                width="100%"
             ),
             rx.spacer(),
             # Ícone destaque
@@ -71,15 +72,18 @@ def hero_metric_card() -> rx.Component:
                 rx.icon(tag="banknote", size=40, color="white"),
                 bg=Color.GRADIENT_PRIMARY,
                 p="4", border_radius="20px",
+                display={"initial": "none", "md": "block"}, # Esconde em mobile/tablet vertical, mostra em desktop
                 box_shadow=f"0 8px 24px -4px {Color.PRIMARY}60"
             ),
             width="100%",
-            align_items="center"
+            align_items="center",
+            direction={"initial": "column", "md": "row"}, # Stack vert em mobile
+            gap="4"
         ),
         bg=Color.SURFACE,
         border=f"1px solid {Color.BORDER}",
         border_radius="20px",
-        padding=Spacing.XL,
+        padding=[Spacing.MD, Spacing.LG, Spacing.XL], # Padding responsivo
         box_shadow=Design.SHADOW_MD,
         transition="all 0.3s ease",
         _hover={"box_shadow": Design.SHADOW_LG, "border_color": Color.PRIMARY},
@@ -182,8 +186,10 @@ def dashboard_page() -> rx.Component:
                         align_items="center",
                         style={"gap": "4px"}
                     ),
-                    padding_y=Spacing.XL, width="100%", display="flex", justify_content="center",
-                    animation="fadeInUp 0.4s ease-out both"
+                    width="100%", display="flex", justify_content="center",
+                    animation="fadeInUp 0.4s ease-out both",
+                    padding_y=[Spacing.MD, Spacing.LG, Spacing.XL],
+                    padding_x=[Spacing.MD, Spacing.LG]
                 ),
                 
                 # Main Grid - Scoreboard

@@ -13,6 +13,7 @@ Esta skill serve como um "Linter" de conhecimento para evitar erros comuns de co
 A causa #1 de falhas é chamar variáveis ou métodos na UI (`State.minha_var`) que não existem ou foram renomeados no `state.py`.
 - **Regra**: Antes de adicionar qualquer `State.xyz` na UI, vá ao `state.py` e defina `xyz`.
 - **Validação**: Execute o script de integridade (`scripts/check_integrity.py`) para varrer o projeto em busca de chamadas órfãs.
+- **HMR Optimization**: Evite definir variáveis pesadas no `State` se elas não precisarem ser acessadas pela UI. Use `computed_vars` para transformações e mantenha o estado "magro" para evitar lentidão no hot-reload.
 
 ### 2. Acesso em Loops (Listas vs Dicionários)
 Ao iterar sobre listas com `rx.foreach`:
@@ -24,6 +25,7 @@ Ao iterar sobre listas com `rx.foreach`:
 Nunca assuma que um componente existe.
 - Ao usar `ui.novo_componente`, verifique **obrigatoriamente** se ele está definido em `biodiagnostico_app/components/ui.py`.
 - Se não estiver, crie-o primeiro ou use um componente nativo `rx.*`.
+- **Component Wrapping**: Se precisar de uma prop Radix não disponível no Reflex, use `rx.Component.create` ou passe via dicionário `custom_attrs`.
 
 ### 4. Ícones (Lucide)
 Padrão atual do Reflex para ícones Lucide:

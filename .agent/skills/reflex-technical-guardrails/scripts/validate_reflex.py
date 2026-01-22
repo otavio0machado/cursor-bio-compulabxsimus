@@ -12,7 +12,7 @@ def check_reflex_errors(directory):
     grid_list_pattern = re.compile(r'columns=\[.*\]')
     
     # Regex para componentes inexistentes comuns
-    deprecated_comps = re.compile(r'rx\.(circle|square|spacer_circle)')
+    deprecated_comps = re.compile(r'rx\.(circle|square|spacer_circle|visually_hidden)')
 
     for root, dirs, files in os.walk(directory):
         for file in files:
@@ -33,8 +33,10 @@ def check_reflex_errors(directory):
                         print(f"[ERRO] {path}: Uso de componente depreciado (rx.circle/square).")
                         errors_found = True
 
-                    if "import reflex as rx" not in content:
-                        print(f"[ERRO] {path}: Falta o 'import reflex as rx'.")
+                    # Only require reflex import if the file uses rx. or is in UI-related directories
+                    needs_reflex = "rx." in content or "rxconfig" in file or "pages" in root or "components" in root or "states" in root
+                    if needs_reflex and "import reflex as rx" not in content:
+                        print(f"[ERRO] {path}: Falta o 'import reflex as rx' em arquivo vinculado ao framework.")
                         errors_found = True
 
     if not errors_found:

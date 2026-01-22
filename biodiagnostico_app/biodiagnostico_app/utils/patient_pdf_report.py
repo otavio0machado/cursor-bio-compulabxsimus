@@ -10,6 +10,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER
 from datetime import datetime
 from io import BytesIO
+from ..styles import Color
 
 def generate_patient_history_pdf(patient_name: str, history: list) -> bytes:
     """
@@ -31,7 +32,7 @@ def generate_patient_history_pdf(patient_name: str, history: list) -> bytes:
         'MainTitle',
         parent=styles['Heading1'],
         fontSize=20,
-        textColor=colors.HexColor('#1B5E20'),
+        textColor=colors.HexColor(Color.DEEP),
         alignment=TA_CENTER,
         spaceAfter=10
     )
@@ -40,7 +41,7 @@ def generate_patient_history_pdf(patient_name: str, history: list) -> bytes:
         'SectionHeader',
         parent=styles['Heading2'],
         fontSize=14,
-        textColor=colors.HexColor('#2E7D32'),
+        textColor=colors.HexColor(Color.SECONDARY),
         spaceBefore=15,
         spaceAfter=10
     )
@@ -68,8 +69,8 @@ def generate_patient_history_pdf(patient_name: str, history: list) -> bytes:
     
     summary_table = Table(summary_data, colWidths=[6*cm, 6*cm, 6*cm])
     summary_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#E8F5E9')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#1B5E20')),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor(Color.PRIMARY_LIGHT)),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor(Color.DEEP)),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
@@ -100,7 +101,7 @@ def generate_patient_history_pdf(patient_name: str, history: list) -> bytes:
     
     hist_table = Table(data, colWidths=col_widths, repeatRows=1)
     hist_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1B5E20')),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor(Color.DEEP)),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
@@ -108,7 +109,7 @@ def generate_patient_history_pdf(patient_name: str, history: list) -> bytes:
         ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
         ('TOPPADDING', (0, 0), (-1, 0), 12),
         ('GRID', (0, 0), (-1, -1), 0.2, colors.grey),
-        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F9FAFB')]),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor(Color.BACKGROUND)]),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
     ]))
     

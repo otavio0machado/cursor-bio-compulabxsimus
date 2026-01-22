@@ -58,6 +58,13 @@ class AIState(AnalysisState):
         """Define o modelo selecionado"""
         self.ai_model = val
         self.ai_error = ""
+
+    # OpenAI specific (used in some components)
+    openai_api_key: str = ""
+
+    def set_api_key(self, key: str):
+        """Define a chave de API da OpenAI"""
+        self.openai_api_key = key
         
     async def run_ai_analysis(self):
         """Executa a análise de IA usando o provedor e modelo selecionados"""

@@ -11,8 +11,7 @@ from .pdf_processor import (
     extract_simus_patients,
     generate_excel_from_pdfs,
     load_from_csv,
-    load_from_excel,
-    EXAM_NAME_MAPPING
+    load_from_excel
 )
 from .comparison import compare_patients, compute_difference_breakdown, format_divergences_to_json
 

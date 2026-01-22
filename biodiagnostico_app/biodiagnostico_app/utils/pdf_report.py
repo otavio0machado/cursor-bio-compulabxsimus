@@ -10,6 +10,7 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from datetime import datetime
 from decimal import Decimal
 from io import BytesIO
+from ..styles import Color
 
 
 def format_currency(value):
@@ -51,7 +52,7 @@ def generate_analysis_pdf(
         'CustomTitle',
         parent=styles['Heading1'],
         fontSize=20,
-        textColor=colors.HexColor('#1B5E20'),
+        textColor=colors.HexColor(Color.DEEP),
         spaceAfter=30,
         alignment=TA_CENTER
     )
@@ -60,7 +61,7 @@ def generate_analysis_pdf(
         'CustomHeading',
         parent=styles['Heading2'],
         fontSize=14,
-        textColor=colors.HexColor('#1B5E20'),
+        textColor=colors.HexColor(Color.DEEP),
         spaceAfter=12,
         spaceBefore=12
     )
@@ -92,7 +93,7 @@ def generate_analysis_pdf(
     
     summary_table = Table(summary_data, colWidths=[8*cm, 8*cm])
     summary_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#4CAF50')),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor(Color.PRIMARY)),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
@@ -100,7 +101,7 @@ def generate_analysis_pdf(
         ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
         ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
         ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor(Color.BACKGROUND)]),
     ]))
     
     story.append(summary_table)
@@ -120,14 +121,14 @@ def generate_analysis_pdf(
     
     breakdown_table = Table(breakdown_data, colWidths=[8*cm, 8*cm])
     breakdown_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#FF9800')),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor(Color.WARNING)),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
         ('ALIGN', (1, 1), (1, -1), 'RIGHT'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, 0), 12),
         ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.lightgrey),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor(Color.BACKGROUND)),
         ('GRID', (0, 0), (-1, -1), 1, colors.black),
     ]))
     
@@ -138,10 +139,10 @@ def generate_analysis_pdf(
     if missing_patients:
         story.append(Paragraph(f"Pacientes Faltantes no SIMUS ({len(missing_patients)} registros)", heading_style))
         
-        # Criar tabela com TODOS os pacientes - sem limite
+        # Criar tabela com Todos os pacientes - sem limite
         patients_data = [['Paciente', 'Qtd. Exames', 'Valor Total (R$)']]
         
-        # Processar TODOS os pacientes faltantes
+        # Processar Todos os pacientes faltantes
         for idx, item in enumerate(missing_patients):
             # Handle both dicts and objects (PatientModel)
             if isinstance(item, dict):
@@ -162,7 +163,7 @@ def generate_analysis_pdf(
         # Criar tabela com todos os dados
         patients_table = Table(patients_data, colWidths=[8*cm, 4*cm, 4*cm], repeatRows=1)
         patients_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#FF9800')),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor(Color.WARNING)),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
             ('ALIGN', (1, 1), (1, -1), 'CENTER'),
@@ -174,7 +175,7 @@ def generate_analysis_pdf(
             ('TOPPADDING', (0, 0), (-1, 0), 12),
             ('BACKGROUND', (0, 1), (-1, -1), colors.white),
             ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor(Color.BACKGROUND)]),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ]))
         
@@ -185,10 +186,10 @@ def generate_analysis_pdf(
     if missing_exams:
         story.append(Paragraph(f"Exames Faltantes no SIMUS ({len(missing_exams)} registros)", heading_style))
         
-        # Criar tabela com TODOS os registros - sem limite
+        # Criar tabela com Todos os registros - sem limite
         exam_data = [['Paciente', 'Exame', 'Valor (R$)']]
         
-        # Processar TODOS os exames faltantes
+        # Processar Todos os exames faltantes
         total_exams = len(missing_exams)
         for idx, item in enumerate(missing_exams):
             # Handle both dicts and objects (AnalysisResult)
@@ -210,7 +211,7 @@ def generate_analysis_pdf(
         # Criar tabela com todos os dados
         exam_table = Table(exam_data, colWidths=[6*cm, 7*cm, 3*cm], repeatRows=1)
         exam_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#F44336')),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor(Color.ERROR)),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
             ('ALIGN', (2, 1), (2, -1), 'RIGHT'),
@@ -221,7 +222,7 @@ def generate_analysis_pdf(
             ('TOPPADDING', (0, 0), (-1, 0), 12),
             ('BACKGROUND', (0, 1), (-1, -1), colors.white),
             ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor(Color.BACKGROUND)]),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ]))
         
@@ -262,7 +263,7 @@ def generate_analysis_pdf(
         # Criar tabela com todos os dados
         div_table = Table(div_data, colWidths=[4*cm, 5*cm, 2.5*cm, 2.5*cm, 2.5*cm], repeatRows=1)
         div_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2196F3')),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor(Color.PRIMARY)),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
             ('ALIGN', (2, 1), (-1, -1), 'RIGHT'),
@@ -273,7 +274,7 @@ def generate_analysis_pdf(
             ('TOPPADDING', (0, 0), (-1, 0), 12),
             ('BACKGROUND', (0, 1), (-1, -1), colors.white),
             ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor(Color.BACKGROUND)]),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ]))
         
@@ -332,7 +333,7 @@ def generate_analysis_pdf(
                     
                     ai_table = Table(csv_data, colWidths=col_widths, repeatRows=1)
                     ai_table.setStyle(TableStyle([
-                        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#673AB7')), # Deep Purple
+                        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor(Color.SECONDARY)),
                         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
                         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
                         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
@@ -342,7 +343,7 @@ def generate_analysis_pdf(
                         ('TOPPADDING', (0, 0), (-1, 0), 12),
                         ('BACKGROUND', (0, 1), (-1, -1), colors.white),
                         ('GRID', (0, 0), (-1, -1), 1, colors.black),
-                        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lavender]),
+                        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor(Color.BACKGROUND)]),
                         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
                     ]))
                     

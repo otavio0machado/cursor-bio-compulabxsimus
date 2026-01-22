@@ -40,6 +40,10 @@ def get_attributes_from_file(file_path, class_name):
                     states_dir = os.path.join(current_dir, "states")
                     mixin_path = os.path.join(states_dir, mixin_filename)
                     
+                    # If not found in /states, try current directory (already in states dir)
+                    if not os.path.exists(mixin_path):
+                        mixin_path = os.path.join(current_dir, mixin_filename)
+                        
                     if os.path.exists(mixin_path):
                         print(f"Scanning Mixin: {mixin_name} at {mixin_path}")
                         mixin_attrs = get_attributes_from_file(mixin_path, mixin_name)
@@ -82,7 +86,7 @@ def check_pages_for_integrity(app_dir, state_attrs):
     # Regex to find State.attribute usage
     # Matches State.attr_name but stops at ( or . or space or end of line
     # Doesn't handle State.attr.subattr perfectly but good enough for 1st level
-    state_usage_pattern = re.compile(r'State\.([a-zA-Z0-9_]+)')
+    state_usage_pattern = re.compile(r'(?<!rx\.)State\.([a-zA-Z0-9_]+)')
     
     files_to_scan = glob.glob(os.path.join(app_dir, "**/*.py"), recursive=True)
     

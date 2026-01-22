@@ -12,6 +12,7 @@ Esta skill define a identidade visual "Biodiagnóstico 2.0". Ela deve ser utiliz
 2. **Respiro Visual**: Espaçamentos generosos baseados em múltiplos de 4 (utilizando a classe `Spacing`).
 3. **Micro-interações**: Botões e elementos clicáveis devem reagir suavemente ao hover e clique (escalonamento, brilho).
 4. **Legibilidade**: Contraste alto usando `Color.DEEP` para títulos e `Color.TEXT_PRIMARY` para o corpo.
+5. **Motion System**: Animações não devem ser aleatórias. Use `transition_duration="200ms"` para interações rápidas e `300ms` para entradas de página com `transition_timing_function="ease-in-out"`.
 
 ## 🛠️ Ferramentas e Tokens
 Os tokens estão definidos no arquivo `biodiagnostico_app/biodiagnostico_app/styles.py`.
@@ -35,6 +36,33 @@ Sempre verifique a pasta `examples/` nesta skill para snippets prontos de:
 3. **Animação**: Toda página deve carregar com uma animação de `fadeInUp`.
 4. **Layout Oficial**: Novas páginas devem, por padrão, ser integradas ao `authenticated_layout()` ou conter a `navbar()` e o fundo `Color.BACKGROUND` para evitar o aspecto de "página solta".
 5. **Harmonia**: O uso de `GLASS_STYLE` deve ser moderado (modais/overlays). Cards de dashboard devem preferir `Color.SURFACE` sólido com `_hover` para profundidade.
+6. **Acessibilidade ARIA**: Sempre que usar um ícone como botão sem texto, adicione `aria_label="Descrição da ação"`.
+
+## 🎨 Ferramentas de Design (Scripts)
+
+Use esses "fiscais" para garantir que o app continue lindo e rápido:
+
+1.  **Auditoria Visual** (O Fiscal):
+    - Comando: `py .agent/skills/ui-ux-reflex-premium/scripts/auditoria_visual.py`
+    - Função: Garante que ninguém usou cores fora do padrão (Hex soltos).
+
+2.  **Alinhador Automático** (O Alinhador):
+    - Comando: `py .agent/skills/ui-ux-reflex-premium/scripts/alinhador_auto.py`
+    - Função: Verifica se o "respiro" entre os elementos segue os tokens `Spacing`.
+
+3.  **Otimizador de Imagens** (O Otimizador):
+    - Comando: `py .agent/skills/ui-ux-reflex-premium/scripts/otimizador_img.py`
+    - Função: Diminui o peso das imagens em `assets/` para carregamento instantâneo.
+
+4.  **Verificador de Contraste** (O Verificador):
+    - Comando: `py .agent/skills/ui-ux-reflex-premium/scripts/check_contraste.py`
+    - Função: Garante que o texto está legível (WCAG AA). ⚠️ A paleta atual pode ter problemas de contraste.
+
+5.  **Gerador de Ícones** (O Artesão):
+    - Comando: `py .agent/skills/ui-ux-reflex-premium/scripts/gerador_icones.py`
+    - Função: Cria automaticamente favicons e ícones mobile na pasta `assets`.
+
+---
 
 ## 👁️ Check de Referência Visual
 Antes de entregar, compare o código com as imagens de referência do projeto (Dashboard e Controle de Qualidade):

@@ -11,6 +11,7 @@ def navbar_link(text: str, url: str, icon: str) -> rx.Component:
         "conversor": "/conversor",
         "analise": "/analise",
         "proin": "/proin",
+        "detetive": "/detetive",
         "api": "/settings"
     }
     href = route_map.get(url, "/")
@@ -93,6 +94,7 @@ def navbar() -> rx.Component:
                 navbar_link("Conversor PDF", "conversor", "file_text"),
                 navbar_link("Análise", "analise", "chart_bar"),
                 navbar_link("Proin QC", "proin", "activity"),
+                navbar_link("Bio IA", "detetive", "dna"),
                 style={"gap": "8px"},
                 display=["none", "none", "lg", "flex"],
                 padding=Spacing.XS,
@@ -183,6 +185,7 @@ def mobile_nav_trigger() -> rx.Component:
             rx.menu.item(rx.hstack(rx.icon(tag="file_text", size=18), rx.text("Conversor PDF", font_size="1rem")), on_select=lambda: State.set_page("conversor"), padding="12px"),
             rx.menu.item(rx.hstack(rx.icon(tag="chart_bar", size=18), rx.text("Análise", font_size="1rem")), on_select=lambda: State.set_page("analise"), padding="12px"),
             rx.menu.item(rx.hstack(rx.icon(tag="activity", size=18), rx.text("Proin QC", font_size="1rem")), on_select=lambda: State.set_page("proin"), padding="12px"),
+            rx.menu.item(rx.hstack(rx.icon(tag="dna", size=18), rx.text("Bio IA", font_size="1rem")), on_select=lambda: State.set_page("detetive"), padding="12px"),
             rx.menu.separator(),
             rx.menu.item(rx.hstack(rx.icon(tag="settings", size=18), rx.text("Configurações", font_size="1rem")), on_select=lambda: State.set_page("api"), padding="12px"),
             rx.menu.item(rx.hstack(rx.icon(tag="log_out", size=18), rx.text("Sair", font_size="1rem")), color="red", on_select=State.logout, padding="12px"),

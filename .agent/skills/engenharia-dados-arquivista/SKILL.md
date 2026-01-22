@@ -11,6 +11,8 @@ Esta skill organiza a camada de dados do Biodiagnóstico, promovendo o padrão R
 - Centralizar queries SQL/Supabase em classes de Repositório.
 - Eliminar duplicidade de código de acesso a dados nas páginas.
 - Garantir validação de dados com Pydantic antes da persistência.
+- **Sincronização em Tempo Real**: Usar canais de broadcast do Supabase para refletir mudanças instantaneamente na UI Reflex.
+- **Versionamento de Schema**: Uso obrigatório de migrações para qualquer alteração de DDL.
 - Fornecer snippets para operações complexas (Upsert, Joins).
 
 ## 📂 Estrutura Recomendada
@@ -80,10 +82,22 @@ except ValueError as e:
     print(f"Dados inválidos: {e}")
 ```
 
+## 🛠️ Ferramentas do Arquivista (Scripts)
+
+A pasta `scripts/` contém seus "ajudantes" automatizados para manter o banco de dados saudável. Execute-os sempre que precisar de uma faxina ou mudança:
+
+1.  **`limpar_duplicatas.py`**: (O Faxineiro) Remove registros idênticos que foram salvos por erro.
+2.  **`snapshot_seguranca.py`**: (O Backup) Cria uma cópia de segurança dos dados de CQ antes de você fazer grandes alterações.
+3.  **`verificar_integridade.py`**: (O Alerta) Identifica exames que estão sem informações obrigatórias.
+4.  **`importador_excel.py`**: (O Tradutor) Use para subir dados de planilhas externas para dentro do sistema.
+5.  **`ajustar_horarios.py`**: (O Relojoeiro) Mantém todas as datas dos exames sincronizadas e padronizadas.
+
+---
+
 ## 🚨 Guardrails do Arquivista
 1. **Nunca** chame `supabase.table` diretamente dentro de um `render` ou componente UI. Use sempre via `State`.
-2. Evite `SELECT *` em tabelas gigantes. Selecione apenas as colunas necessárias (`select("id, name")`).
-3. Trate erros de conexão/timeout. O Repositório deve lançar exceções de domínio, não exceções brutas da lib client.
-
-## 🔍 Scripts Úteis
-- `scripts/migrate_to_repo.py`: (Futuro) Script para identificar chamadas diretas ao supabase e sugerir refatoração.
+2. **Real-time Caution**: Ao usar `rx.event_source`, garanta que o canal seja fechado ao sair da página para evitar vazamento de memória.
+3. **Migrações Primeiro**: Nunca altere o banco via Dashboard do Supabase em produção. Crie um arquivo SQL em `supabase/migrations/`.
+4. Evite `SELECT *` em tabelas gigantes. Selecione apenas as colunas necessárias (`select("id, name")`).
+5. Trate erros de conexão/timeout. O Repositório deve lançar exceções de domínio, não exceções brutas da lib client.
+6. **Rotina de Limpeza**: É recomendável rodar o `verificar_integridade.py` toda segunda-feira para garantir que os dados do laboratório estão corretos.

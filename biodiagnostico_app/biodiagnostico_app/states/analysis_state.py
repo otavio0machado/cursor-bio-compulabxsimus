@@ -10,6 +10,7 @@ from ..services.cloudinary_service import CloudinaryService
 from ..services.audit_service import AuditService
 from ..models import AnalysisResult, PatientHistoryEntry, PatientModel, TopOffender
 from ..utils import pdf_processor # Import module to access functions dynamically
+from ..utils.analysis_pdf_report import generate_analysis_pdf
 from .qc_state import QCState
 from ..styles import Color
 
@@ -86,6 +87,7 @@ class AnalysisState(QCState):
     
     # PDF da análise
     analysis_pdf: str = ""
+    pdf_preview_b64: str = "" # Base64 for Split View Preview
     
     # Divergence Resolution & Patient History
     resolutions: Dict[str, str] = {} # Key: "patient_name|exam_name"
@@ -295,19 +297,49 @@ class AnalysisState(QCState):
         return int((resolved_count / total) * 100)
 
     def view_patient_history(self, patient_name: str):
-        """Mock: Carrega histórico do paciente"""
+        """Mock: Carrega histórico do paciente com dados formatados corretamente"""
         self.selected_patient_name = patient_name
         self.is_showing_patient_history = True
-        # Em produção, buscaria no banco real
+        
+        # Simular busca no banco com os campos corretos do model PatientHistoryEntry
         self.patient_history_data = [
-            PatientHistoryEntry(id="123", date="2024-01-01", exam="HEMOGRAMA", last_value=0.0, trend="stable")
+            PatientHistoryEntry(
+                id="PAT-10892", 
+                patient_name=patient_name,
+                exam_name="HEMOGRAMA COMPLETO", 
+                status="Divergente",
+                last_value=45.90, 
+                notes="Diferença de arredondamento em glóbulos brancos",
+                created_at="21/01/2026"
+            ),
+            PatientHistoryEntry(
+                id="PAT-10850", 
+                patient_name=patient_name,
+                exam_name="GLICEMIA EM JEJUM", 
+                status="Normal",
+                last_value=22.40, 
+                notes="",
+                created_at="15/01/2026"
+            ),
+            PatientHistoryEntry(
+                id="PAT-10700", 
+                patient_name=patient_name,
+                exam_name="CREATININA", 
+                status="Normal",
+                last_value=12.00, 
+                notes="",
+                created_at="10/12/2025"
+            )
         ]
 
-    def toggle_resolution(self, patient: str, exam: str):
-        """Marca/Desmarca item como resolvido"""
+    async def toggle_resolution(self, patient: str, exam: str):
+        """Marca/Desmarca item como resolvido e atualiza PDF"""
         key = f"{patient}|{exam}"
         current = self.resolutions.get(key, "")
         self.resolutions[key] = "resolvido" if current != "resolvido" else ""
+        yield
+        # Regenerar PDF para refletir mudanças
+        await self.generate_pdf_report()
     
     async def run_analysis(self):
         """Executa a análise comparativa REAL baseada nos arquivos carregados"""
@@ -515,6 +547,8 @@ class AnalysisState(QCState):
             
             yield  # Propagate state to frontend
             
+            yield  # Propagate state to frontend
+            
         except Exception as e:
             print(f"DEBUG: run_analysis EXCEPTION: {e}")
             import traceback
@@ -526,13 +560,50 @@ class AnalysisState(QCState):
             self.is_analyzing = False
             print("DEBUG: run_analysis FINISHED")
             yield
+            # Gerar preview do PDF automaticamente após análise
+            if not self.error_message:
+                await self.generate_pdf_report()
             
     # generate_ai_analysis foi movido para AIState
             
     async def generate_pdf_report(self):
-        """Gera relatório PDF da análise"""
-        # Placeholder
-        pass
+        """Gera relatório PDF da análise para preview e download"""
+        if not self.has_analysis:
+            return
+            
+        try:
+             # Filtrar itens resolvidos para o relatório
+            def is_resolved(item):
+                p = getattr(item, 'patient', '') or item.get('patient', '')
+                e = getattr(item, 'exam_name', '') or item.get('exam_name', '')
+                return self.resolutions.get(f"{p}|{e}") == "resolvido"
+
+            filtered_missing = [x for x in self.missing_exams if not is_resolved(x)]
+            filtered_divergences = [x for x in self.value_divergences if not is_resolved(x)]
+            filtered_extras = [x for x in self.extra_simus_exams if not is_resolved(x)]
+            
+             # Executar em thread pool para não bloquear
+            loop = asyncio.get_event_loop()
+            pdf_bytes = await loop.run_in_executor(
+                None,
+                lambda: generate_analysis_pdf(
+                    self.compulab_total,
+                    self.simus_total,
+                    self.missing_patients, # Pacientes faltantes não têm resolução individual por exame aqui
+                    filtered_missing,
+                    filtered_divergences,
+                    filtered_extras,
+                    self.top_offenders
+                )
+            )
+            
+            self.pdf_preview_b64 = base64.b64encode(pdf_bytes).decode('utf-8')
+            # self.analysis_pdf = ... (Upload logic if needed later)
+            print("DEBUG: PDF Preview Generated")
+            
+        except Exception as e:
+            print(f"Erro ao gerar PDF: {e}")
+            self.error_message = f"Erro ao gerar PDF: {str(e)}"
 
     # ===== UPLOAD HANDLERS =====
 
@@ -846,17 +917,42 @@ class AnalysisState(QCState):
             compulab_bytes = b""
             simus_bytes = b""
             
+            # DEBUG: Log para diagnóstico
+            print(f"DEBUG generate_csvs: compulab_file_path='{self.compulab_file_path}'")
+            print(f"DEBUG generate_csvs: simus_file_path='{self.simus_file_path}'")
+            print(f"DEBUG generate_csvs: compulab_file_path exists={os.path.exists(self.compulab_file_path) if self.compulab_file_path else 'N/A'}")
+            print(f"DEBUG generate_csvs: simus_file_path exists={os.path.exists(self.simus_file_path) if self.simus_file_path else 'N/A'}")
+            
             if self.compulab_file_path and os.path.exists(self.compulab_file_path):
                 with open(self.compulab_file_path, 'rb') as f:
                     compulab_bytes = f.read()
+                print(f"DEBUG generate_csvs: compulab_bytes lidos do disco, tamanho={len(compulab_bytes)} bytes")
             else:
                 compulab_bytes = self.compulab_file_bytes
+                print(f"DEBUG generate_csvs: usando compulab_file_bytes em memória, tamanho={len(compulab_bytes)} bytes")
             
             if self.simus_file_path and os.path.exists(self.simus_file_path):
                 with open(self.simus_file_path, 'rb') as f:
                     simus_bytes = f.read()
+                print(f"DEBUG generate_csvs: simus_bytes lidos do disco, tamanho={len(simus_bytes)} bytes")
             else:
                 simus_bytes = self.simus_file_bytes
+                print(f"DEBUG generate_csvs: usando simus_file_bytes em memória, tamanho={len(simus_bytes)} bytes")
+            
+            # Validar se os bytes foram lidos
+            if len(compulab_bytes) == 0:
+                self.error_message = "ERRO: Arquivo COMPULAB está vazio ou não foi carregado. Tente fazer upload novamente."
+                print("DEBUG generate_csvs: ERRO - compulab_bytes está vazio!")
+                yield
+                return
+                
+            if len(simus_bytes) == 0:
+                self.error_message = "ERRO: Arquivo SIMUS está vazio ou não foi carregado. Tente fazer upload novamente."
+                print("DEBUG generate_csvs: ERRO - simus_bytes está vazio!")
+                yield
+                return
+            
+            print(f"DEBUG generate_csvs: Iniciando processamento com ThreadPoolExecutor...")
             
             with ThreadPoolExecutor() as executor:
                 future = executor.submit(
@@ -885,12 +981,18 @@ class AnalysisState(QCState):
                 self.csv_progress_percentage = 100
                 self.csv_stage = "Concluído"
                 self.success_message = "SUCESSO: CSVs gerados com sucesso!"
+                print(f"DEBUG generate_csvs: SUCESSO! compulab_csv={len(compulab_csv) if compulab_csv else 0} chars, simus_csv={len(simus_csv) if simus_csv else 0} chars")
                 yield
             else:
                 self.error_message = "ERRO: Erro ao gerar CSVs. Verifique os arquivos."
+                print("DEBUG generate_csvs: Falha - success=False retornado por generate_excel_from_pdfs")
                 yield
         except Exception as e:
+            import traceback
+            print(f"DEBUG generate_csvs: EXCEÇÃO: {e}")
+            traceback.print_exc()
             self.error_message = f"ERRO: Erro: {str(e)}"
             yield
         finally:
             self.is_generating_csv = False
+
