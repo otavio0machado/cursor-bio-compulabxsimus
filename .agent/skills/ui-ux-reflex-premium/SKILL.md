@@ -25,6 +25,9 @@ Sempre verifique a pasta `examples/` nesta skill para snippets prontos de:
 - `glass_card.py`: Cards com efeito de vidro.
 - `premium_button.py`: Botões com gradiente e animação.
 - `data_table.py`: Tabelas formatadas para leitura de dados médicos.
+- `advanced_data_table.py`: Tabela complexa com badges, ações e scroll.
+- `metric_card_chart.py`: Card de métrica com gráfico sparkline embutido.
+- `pdf_export_template.py`: Modal de configuração para exportação de relatórios.
 
 ## 🚨 Regras Inegociáveis
 1. **Acessibilidade**: Todo input deve ter `min_height="44px"`.

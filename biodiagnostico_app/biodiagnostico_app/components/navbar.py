@@ -4,7 +4,20 @@ from ..styles import Color, Spacing, Design
 
 def navbar_link(text: str, url: str, icon: str) -> rx.Component:
     """Link de navegação com estados visuais claros e acessíveis"""
-    is_active = State.current_page == url
+    
+    # Map internal IDs to routes
+    route_map = {
+        "dashboard": "/dashboard",
+        "conversor": "/conversor",
+        "analise": "/analise",
+        "proin": "/proin",
+        "api": "/settings"
+    }
+    href = route_map.get(url, "/")
+    
+    # Use the router path to detect active page (works with direct navigation)
+    is_active = rx.State.router.page.path == href
+
     return rx.link(
         rx.vstack(
             rx.hstack(
@@ -44,7 +57,7 @@ def navbar_link(text: str, url: str, icon: str) -> rx.Component:
             spacing="0",
             align="center",
         ),
-        on_click=lambda: State.set_page(url),
+        href=href,
         text_decoration="none",
         _focus_visible={
             "outline": f"2px solid {Color.PRIMARY}",

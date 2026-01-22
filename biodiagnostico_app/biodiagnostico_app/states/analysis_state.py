@@ -11,6 +11,7 @@ from ..services.audit_service import AuditService
 from ..models import AnalysisResult, PatientHistoryEntry, PatientModel, TopOffender
 from ..utils import pdf_processor # Import module to access functions dynamically
 from .qc_state import QCState
+from ..styles import Color
 
 # Cloudinary Service Instance
 cloudinary_service = CloudinaryService()
@@ -148,6 +149,13 @@ class AnalysisState(QCState):
         return f"R$ {self.simus_total:,.2f}"
 
     @rx.var
+    def has_analysis(self) -> bool:
+        """Verifica se há análise disponível (REATIVO - usa acesso direto)"""
+        result = self.compulab_total > 0 or self.simus_total > 0
+        print(f"DEBUG has_analysis (AnalysisState): compulab={self.compulab_total}, simus={self.simus_total}, result={result}")
+        return result
+
+    @rx.var
     def formatted_difference(self) -> str:
         diff = self.compulab_total - self.simus_total
         return f"R$ {diff:,.2f}"
@@ -168,7 +176,7 @@ class AnalysisState(QCState):
     def explained_total(self) -> float:
         """Total explicado pelas divergências encontradas"""
         extras = sum(
-            float(item.get('simus_value', 0) or item.get('value', 0)) 
+            float(getattr(item, 'simus_value', 0) or getattr(item, 'value', 0)) 
             for item in self.extra_simus_exams
         ) if isinstance(self.extra_simus_exams, list) else 0
         return self.missing_patients_total + self.missing_exams_total + self.divergences_total + extras
@@ -198,6 +206,64 @@ class AnalysisState(QCState):
         return [TopOffender(name=str(name), count=int(count)) for name, count in sorted_exams]
 
     # Patient History & Actions
+
+    @rx.var
+    def formatted_total_leakage(self) -> str:
+        """Total de perda financeira identificada"""
+        total = self.missing_patients_total + self.missing_exams_total + self.divergences_total
+        return f"R$ {total:,.2f}"
+
+    @rx.var
+    def revenue_distribution_data(self) -> List[Dict[str, Any]]:
+        """Dados para o gráfico de pizza de distribuição de receita/perda"""
+        return [
+            {"name": "Pacientes Faltantes", "value": float(self.missing_patients_total), "fill": Color.WARNING},
+            {"name": "Exames Faltantes", "value": float(self.missing_exams_total), "fill": Color.ERROR},
+            {"name": "Divergência Valores", "value": float(self.divergences_total), "fill": Color.PRIMARY},
+        ]
+        
+    @rx.var
+    def top_exams_discrepancy_data(self) -> List[Dict[str, Any]]:
+        """Dados para o gráfico de barras dos top exames com problemas"""
+        # Convert TopOffender objects to dict for Recharts
+        return [
+            {"name": item.name, "value": item.count} 
+            for item in self.top_offenders
+        ]
+
+    @rx.var
+    def action_center_insights(self) -> List[Dict[str, str]]:
+        """Gera insights acionáveis baseados nos dados"""
+        insights = []
+        
+        # Insight 1: Maior ofensor
+        if self.missing_patients_total > self.missing_exams_total and self.missing_patients_total > self.divergences_total:
+            insights.append({
+                "icon": "users", "title": "Foco em Recepção", 
+                "description": f"Pacientes não lançados representam a maior perda (R$ {self.missing_patients_total:,.2f}). Verifique processos de cadastro."
+            })
+        elif self.missing_exams_total > 0:
+            insights.append({
+                 "icon": "file-warning", "title": "Auditoria de Lançamento",
+                 "description": f"Exames esquecidos somam R$ {self.missing_exams_total:,.2f}. Treinamento de equipe sugerido."
+            })
+            
+        # Insight 2: Divergencias
+        if self.divergences_count > 5:
+             insights.append({
+                 "icon": "git-compare", "title": "Revisão de Tabela de Preços",
+                 "description": f"Detectadas {self.divergences_count} divergências de valor. Possível inconsistência cadastral entre sistemas."
+             })
+             
+        # Insight 3: Default se vazio
+        if not insights:
+            insights.append({
+                "icon": "circle-check", "title": "Tudo parece em ordem", 
+                "description": "Nenhuma anomalia grave detectada na análise preliminar."
+            })
+            
+        return insights
+
     @rx.var
     def selected_patient_id(self) -> str:
         if self.patient_history_data:
@@ -237,45 +303,231 @@ class AnalysisState(QCState):
             PatientHistoryEntry(id="123", date="2024-01-01", exam="HEMOGRAMA", last_value=0.0, trend="stable")
         ]
 
-    def toggle_resolution(self, key: str):
+    def toggle_resolution(self, patient: str, exam: str):
         """Marca/Desmarca item como resolvido"""
+        key = f"{patient}|{exam}"
         current = self.resolutions.get(key, "")
         self.resolutions[key] = "resolvido" if current != "resolvido" else ""
     
     async def run_analysis(self):
-        """Executa a análise comparativa"""
+        """Executa a análise comparativa REAL baseada nos arquivos carregados"""
+        print("DEBUG: run_analysis STARTED - REAL ANALYSIS")
         self.is_analyzing = True
         self.analysis_stage = "Iniciando análise..."
+        self.error_message = ""
         yield
+        
         try:
-            # Mock analysis logic from original state
-            # Ensure attributes are set so UI doesn't crash
-            self.missing_patients_count = 5
-            self.missing_patients_total = 1500.00
-            self.missing_exams_count = 12
-            self.missing_exams_total = 450.00
-            self.divergences_count = 3
-            self.divergences_total = 120.50
-            self.compulab_total = 50000.00
-            self.simus_total = 48000.00
+            # Importar funções de processamento
+            from ..utils.pdf_processor import load_from_excel, exam_names_match
+            from decimal import Decimal
+            import requests
+            import io
             
-            # Populate lists with dummy data if empty to prevent UI glitches
-            if not self.missing_patients:
-                self.missing_patients = [
-                    AnalysisResult(patient="Paciente Teste", exam_name="Checkup", value=300.0)
-                ]
+            # Verificar se os arquivos estão disponíveis (via URL ou path)
+            compulab_data = None
+            simus_data = None
+            
+            self.analysis_stage = "Carregando arquivo COMPULAB..."
+            self.analysis_progress_percentage = 10
+            yield
+            
+            # Carregar COMPULAB
+            if self.compulab_file_path and os.path.exists(self.compulab_file_path):
+                print(f"DEBUG: Carregando COMPULAB de arquivo local: {self.compulab_file_path}")
+                compulab_patients, compulab_total_val = load_from_excel(self.compulab_file_path)
+            elif self.compulab_file_url:
+                print(f"DEBUG: Carregando COMPULAB de URL: {self.compulab_file_url}")
+                response = requests.get(self.compulab_file_url)
+                if response.status_code == 200:
+                    compulab_patients, compulab_total_val = load_from_excel(response.content)
+                else:
+                    raise Exception(f"Erro ao baixar COMPULAB: HTTP {response.status_code}")
+            else:
+                raise Exception("Arquivo COMPULAB não disponível")
+            
+            if compulab_patients is None:
+                raise Exception("Falha ao processar arquivo COMPULAB")
+            
+            self.analysis_stage = "Carregando arquivo SIMUS..."
+            self.analysis_progress_percentage = 30
+            yield
+            
+            # Carregar SIMUS
+            if self.simus_file_path and os.path.exists(self.simus_file_path):
+                print(f"DEBUG: Carregando SIMUS de arquivo local: {self.simus_file_path}")
+                simus_patients, simus_total_val = load_from_excel(self.simus_file_path)
+            elif self.simus_file_url:
+                print(f"DEBUG: Carregando SIMUS de URL: {self.simus_file_url}")
+                response = requests.get(self.simus_file_url)
+                if response.status_code == 200:
+                    simus_patients, simus_total_val = load_from_excel(response.content)
+                else:
+                    raise Exception(f"Erro ao baixar SIMUS: HTTP {response.status_code}")
+            else:
+                raise Exception("Arquivo SIMUS não disponível")
+            
+            if simus_patients is None:
+                raise Exception("Falha ao processar arquivo SIMUS")
+            
+            print(f"DEBUG: COMPULAB: {len(compulab_patients)} pacientes, Total: {compulab_total_val}")
+            print(f"DEBUG: SIMUS: {len(simus_patients)} pacientes, Total: {simus_total_val}")
+            
+            self.analysis_stage = "Comparando dados..."
+            self.analysis_progress_percentage = 50
+            yield
+            
+            # Atualizar totais
+            self.compulab_total = float(compulab_total_val or 0)
+            self.simus_total = float(simus_total_val or 0)
+            
+            # Armazenar dados internos para comparação
+            self._compulab_patients = dict(compulab_patients)
+            self._simus_patients = dict(simus_patients)
+            
+            # Listas de resultados
+            missing_patients_list = []
+            missing_exams_list = []
+            value_divergences_list = []
+            extra_simus_list = []
+            
+            # ANÁLISE 1: Pacientes no COMPULAB que não estão no SIMUS
+            compulab_patient_names = set(compulab_patients.keys())
+            simus_patient_names = set(simus_patients.keys())
+            
+            patients_only_in_compulab = compulab_patient_names - simus_patient_names
+            for patient_name in patients_only_in_compulab:
+                patient_data = compulab_patients[patient_name]
+                total_val = float(patient_data['total'])
+                exams_count = len(patient_data['exams'])
+                missing_patients_list.append(AnalysisResult(
+                    patient=patient_name,
+                    exam_name=f"{exams_count} exame(s)",
+                    value=total_val,
+                    exams_count=exams_count,
+                    total_value=total_val
+                ))
+            
+            self.analysis_stage = "Analisando exames..."
+            self.analysis_progress_percentage = 70
+            yield
+            
+            # ANÁLISE 2: Para cada paciente comum, verificar exames faltantes e divergências
+            common_patients = compulab_patient_names & simus_patient_names
+            for patient_name in common_patients:
+                compulab_exams = compulab_patients[patient_name]['exams']
+                simus_exams = simus_patients[patient_name]['exams']
+                
+                # Indexar exames SIMUS por nome normalizado
+                simus_exam_map = {}
+                for exam in simus_exams:
+                    exam_key = exam['exam_name'].upper().strip()
+                    if exam_key not in simus_exam_map:
+                        simus_exam_map[exam_key] = []
+                    simus_exam_map[exam_key].append(exam)
+                
+                # Verificar cada exame COMPULAB
+                for comp_exam in compulab_exams:
+                    comp_name = comp_exam['exam_name'].upper().strip()
+                    comp_value = float(comp_exam['value'])
+                    
+                    # Procurar exame correspondente no SIMUS
+                    found_match = False
+                    matched_simus_exam = None
+                    
+                    for simus_key, simus_exam_list in simus_exam_map.items():
+                        if exam_names_match(comp_name, simus_key):
+                            for simus_exam in simus_exam_list:
+                                if not simus_exam.get('_matched'):
+                                    matched_simus_exam = simus_exam
+                                    found_match = True
+                                    simus_exam['_matched'] = True
+                                    break
+                            if found_match:
+                                break
+                    
+                    if not found_match:
+                        # Exame faltante no SIMUS
+                        missing_exams_list.append(AnalysisResult(
+                            patient=patient_name,
+                            exam_name=comp_exam['exam_name'],
+                            value=comp_value,
+                            compulab_value=comp_value
+                        ))
+                    elif matched_simus_exam:
+                        # Verificar divergência de valor
+                        simus_value = float(matched_simus_exam['value'])
+                        diff = abs(comp_value - simus_value)
+                        if diff > 0.01:  # Tolerância de 1 centavo
+                            value_divergences_list.append(AnalysisResult(
+                                patient=patient_name,
+                                exam_name=comp_exam['exam_name'],
+                                compulab_value=comp_value,
+                                simus_value=simus_value,
+                                difference=comp_value - simus_value
+                            ))
+            
+            # ANÁLISE 3: Exames no SIMUS que não estão no COMPULAB (exames "fantasma")
+            for patient_name in common_patients:
+                simus_exams = simus_patients[patient_name]['exams']
+                for simus_exam in simus_exams:
+                    if not simus_exam.get('_matched'):
+                        extra_simus_list.append(AnalysisResult(
+                            patient=patient_name,
+                            exam_name=simus_exam['exam_name'],
+                            simus_value=float(simus_exam['value'])
+                        ))
+            
+            # Também verificar pacientes somente no SIMUS
+            patients_only_in_simus = simus_patient_names - compulab_patient_names
+            for patient_name in patients_only_in_simus:
+                patient_data = simus_patients[patient_name]
+                for exam in patient_data['exams']:
+                    extra_simus_list.append(AnalysisResult(
+                        patient=patient_name,
+                        exam_name=exam['exam_name'],
+                        simus_value=float(exam['value'])
+                    ))
+            
+            # Atualizar estados com resultados
+            self.missing_patients = missing_patients_list
+            self.missing_exams = missing_exams_list
+            self.value_divergences = value_divergences_list
+            self.extra_simus_exams = extra_simus_list
+            
+            # Calcular totais
+            self.missing_patients_count = len(missing_patients_list)
+            self.missing_patients_total = sum(r.value for r in missing_patients_list)
+            self.missing_exams_count = len(missing_exams_list)
+            self.missing_exams_total = sum(r.compulab_value for r in missing_exams_list)
+            self.divergences_count = len(value_divergences_list)
+            self.divergences_total = sum(abs(r.difference) for r in value_divergences_list)
+            self.extra_simus_exams_count = len(extra_simus_list)
             
             self.analysis_progress_percentage = 100
             self.analysis_stage = "Concluído"
+            
+            print(f"DEBUG: Análise concluída!")
+            print(f"  - Pacientes faltantes: {self.missing_patients_count}")
+            print(f"  - Exames faltantes: {self.missing_exams_count}")
+            print(f"  - Divergências: {self.divergences_count}")
+            print(f"  - Exames fantasma: {self.extra_simus_exams_count}")
+            
+            yield  # Propagate state to frontend
+            
+        except Exception as e:
+            print(f"DEBUG: run_analysis EXCEPTION: {e}")
+            import traceback
+            traceback.print_exc()
+            self.error_message = f"Erro na análise: {str(e)}"
+            self.analysis_stage = "Erro"
+            yield
         finally:
             self.is_analyzing = False
+            print("DEBUG: run_analysis FINISHED")
+            yield
             
-    async def generate_ai_analysis(self):
-        """Gera análise via AIState (Delegation)"""
-        # Como AIState é um mixin irmão, podemos chamar seus métodos se herdados juntos
-        # Mas aqui self é AnalysisState. Em runtime, self será State(AnalysisState, AIState)
-        if hasattr(self, 'run_ai_analysis'):
-            await self.run_ai_analysis()
+    # generate_ai_analysis foi movido para AIState
             
     async def generate_pdf_report(self):
         """Gera relatório PDF da análise"""
@@ -580,7 +832,7 @@ class AnalysisState(QCState):
         yield
         
         try:
-            from .utils.pdf_processor import generate_excel_from_pdfs
+            from ..utils.pdf_processor import generate_excel_from_pdfs
             
             # Variável compartilhada para armazenar progresso (thread-safe)
             progress_state = {"percentage": 0, "stage": ""}

@@ -63,11 +63,13 @@ O Reflex é estrito com tipos em condicionais (`rx.cond`).
 ## 🔍 Processo de Validação
 Antes de finalizar qualquer tarefa, eu (Antigravity) executarei este checklist:
 1. **Verificação de Integridade**: Use `python .agent/skills/reflex-technical-guardrails/scripts/check_integrity.py`.
-2. **Teste de Execução**: Sempre execute `reflex run` no diretório do app. Se houver erro, corrija antes de entregar.
-3. Existem grids com colunas definidas em lista? (Corrigir para dict).
-4. Os nomes dos ícones seguem o padrão sugerido pelo compilador nos logs?
-5. Variáveis usadas em `rx.cond(var > X)` são numéricas no State?
+2. **Pré-Check Completo**: Execute `python .agent/skills/reflex-technical-guardrails/scripts/pre_push_check.py` para validar tudo de uma vez.
+3. **Teste de Execução**: Sempre execute `reflex run` no diretório do app. Se houver erro, corrija antes de entregar.
+4. Existem grids com colunas definidas em lista? (Corrigir para dict).
+5. Os nomes dos ícones seguem o padrão sugerido pelo compilador nos logs?
+6. Variáveis usadas em `rx.cond(var > X)` são numéricas no State?
 
 ## 🛠️ Scripts Úteis
 - `scripts/check_integrity.py`: Script CRÍTICO para validar se todas as chamadas `State.*` na UI possuem definição correspondente no `state.py`.
+- `scripts/pre_push_check.py`: Wrapper que executa integridade, validação e testes unitários. Use antes de subir código.
 

@@ -37,3 +37,8 @@ class AuthState(rx.State):
         self.login_password = ""
         self.login_error = ""
         return rx.redirect("/login")
+
+    def check_auth(self):
+        """Verifica se o usuário está autenticado e redireciona se não estiver"""
+        if not self.is_authenticated:
+            return rx.redirect("/")

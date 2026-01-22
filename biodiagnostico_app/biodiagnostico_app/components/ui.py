@@ -179,20 +179,28 @@ def text_area(placeholder: str = "", **props) -> rx.Component:
     return rx.text_area(**base_style)
 
 def status_badge(text: str, status: str = "default") -> rx.Component:
-    """Badge de status (success, error, warning, info) usando Design System"""
-    colors = {
-        "success": {"bg": Color.SUCCESS_BG, "color": Color.SUCCESS},
-        "error": {"bg": Color.ERROR_BG, "color": Color.ERROR},
-        "warning": {"bg": Color.WARNING_BG, "color": Color.WARNING},
-        "info": {"bg": Color.PRIMARY_LIGHT, "color": Color.PRIMARY},
-        "primary": {"bg": Color.PRIMARY_LIGHT, "color": Color.PRIMARY},
-        "default": {"bg": Color.BACKGROUND, "color": Color.TEXT_SECONDARY},
+    """Badge de status (success, error, warning, info)    # Ícone e Cor baseados no tipo"""
+    icon_map = {
+        "success": ("circle_check", Color.SUCCESS, Color.SUCCESS_BG),
+        "warning": ("triangle_alert", Color.WARNING, Color.WARNING_BG),
+        "error": ("circle_x", Color.ERROR, Color.ERROR_BG),
+        "info": ("info", Color.PRIMARY, Color.PRIMARY_LIGHT),
+        "neutral": ("circle_help", Color.TEXT_SECONDARY, Color.BACKGROUND),
+        "primary": ("info", Color.PRIMARY, Color.PRIMARY_LIGHT), # Added primary to icon_map
+        "default": ("circle_help", Color.TEXT_SECONDARY, Color.BACKGROUND), # Added default to icon_map
     }
-    style = colors.get(status, colors["default"])
+    
+    icon_tag, color, bg_color = icon_map.get(status, icon_map["default"])
+
     return rx.badge(
-        text,
-        bg=style["bg"],
-        color=style["color"],
+        rx.hstack(
+            rx.icon(tag=icon_tag, size=14),
+            rx.text(text),
+            spacing="1",
+            align_items="center"
+        ),
+        bg=bg_color,
+        color=color,
         variant="soft",
         radius="full",
         padding_x=Spacing.MD,
@@ -256,7 +264,7 @@ def data_table(headers: list[str], rows: list[list], striped: bool = True, **pro
 def toast(message: str, status: str = "info") -> rx.Component:
     """Notificação toast (Aspirada: Removido hexadecimais)"""
     config = {
-        "success": {"bg": Color.SUCCESS_BG, "color": Color.SUCCESS, "icon": "check-circle"},
+        "success": {"bg": Color.SUCCESS_BG, "color": Color.SUCCESS, "icon": "circle_check"},
         "error": {"bg": Color.ERROR_BG, "color": Color.ERROR, "icon": "circle-x"},
         "warning": {"bg": Color.WARNING_BG, "color": Color.WARNING, "icon": "triangle-alert"},
         "info": {"bg": Color.PRIMARY_LIGHT, "color": Color.PRIMARY, "icon": "info"},
@@ -277,14 +285,17 @@ def toast(message: str, status: str = "info") -> rx.Component:
         position="fixed", bottom="2rem", right="2rem", z_index="9999",
     )
 
-def loading_spinner(text: str = "") -> rx.Component:
-    """Spinner padronizado"""
-    return rx.vstack(
-        rx.spinner(size="3", color=Color.PRIMARY),
-        rx.cond(text != "", rx.text(text, style=Typography.BODY_SECONDARY)),
-        align_items="center",
-        justify_content="center",
-        style={"gap": Spacing.MD},
+def loading_spinner(text: str = "Carregando...") -> rx.Component:
+    """Spinner de carregamento com texto"""
+    return rx.center(
+        rx.vstack(
+            rx.spinner(size="3", color=Color.PRIMARY),
+            rx.text(text, color=Color.TEXT_SECONDARY, font_size="0.875rem"),
+            spacing="3",
+            align_items="center"
+        ),
+        width="100%",
+        padding=Spacing.XL
     )
 
 def empty_state(icon: str, title: str, description: str, action_label: str = "", on_action=None) -> rx.Component:

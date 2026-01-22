@@ -25,7 +25,7 @@ def main_content() -> rx.Component:
     )
 
 
-def authenticated_layout() -> rx.Component:
+def authenticated_layout(content: rx.Component = None) -> rx.Component:
     """Layout com navbar no topo - Design Moderno"""
     return rx.box(
         rx.vstack(
@@ -34,7 +34,7 @@ def authenticated_layout() -> rx.Component:
             
             # Conteúdo principal
             rx.box(
-                main_content(),
+                content if content else main_content(), # Usa o conteúdo passado ou o padrão dinâmico
                 width="100%",
                 max_width="1400px",
                 margin_x="auto",
@@ -60,6 +60,22 @@ def index() -> rx.Component:
     )
 
 
+def index_dashboard() -> rx.Component:
+    """Rota Dashboard"""
+    return authenticated_layout(dashboard_page())
+
+def route_conversor() -> rx.Component:
+    """Rota Conversor"""
+    return authenticated_layout(conversor_page())
+
+def route_analise() -> rx.Component:
+    """Rota Análise"""
+    return authenticated_layout(analise_page())
+
+def route_proin() -> rx.Component:
+    """Rota ProIn QC"""
+    return authenticated_layout(proin_page())
+
 # Configurar aplicação
 app = rx.App(
     theme=rx.theme(
@@ -80,4 +96,9 @@ app = rx.App(
     ],
 )
 
-app.add_page(index, route="/", title="Biodiagnóstico - Sistema de Administração", on_load=State.load_data_from_db)
+# Adicionar rotas explícitas - Isso resolve os erros 404 e permite refresh
+app.add_page(index, route="/", title="Biodiagnóstico - Login", on_load=State.load_data_from_db)
+app.add_page(index_dashboard, route="/dashboard", title="Biodiagnóstico - Dashboard", on_load=State.load_data_from_db)
+app.add_page(route_conversor, route="/conversor", title="Biodiagnóstico - Conversor PDF")
+app.add_page(route_analise, route="/analise", title="Biodiagnóstico - Análise")
+app.add_page(route_proin, route="/proin", title="Biodiagnóstico - ProIn QC", on_load=State.load_data_from_db)
