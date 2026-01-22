@@ -1,0 +1,59 @@
+{
+    "tech_stack": [
+        "Python",
+        "Reflex",
+        "Supabase",
+        "Google Gemini",
+        "n8n",
+        "Pandas",
+        "Playwright"
+    ],
+    "features": [
+        {
+            "name": "Financial Audit (Compulab x SIMUS)",
+            "description": "Upload of PDF reports from Compulab and SIMUS systems, comparison of data, and identification of financial discrepancies.",
+            "files": [
+                "biodiagnostico_app/biodiagnostico_app/pages/analise.py",
+                "biodiagnostico_app/biodiagnostico_app/states/analysis_state.py",
+                "biodiagnostico_app/biodiagnostico_app/services/audit_service.py",
+                "biodiagnostico_app/biodiagnostico_app/services/mapping_service.py"
+            ]
+        },
+        {
+            "name": "Quality Control (QC)",
+            "description": "Management of analytical quality control, applying Westgard rules and rendering Levey-Jennings charts.",
+            "files": [
+                "biodiagnostico_app/biodiagnostico_app/pages/proin.py",
+                "biodiagnostico_app/biodiagnostico_app/states/qc_state.py",
+                "biodiagnostico_app/biodiagnostico_app/services/qc_service.py",
+                "biodiagnostico_app/biodiagnostico_app/services/westgard_service.py"
+            ]
+        },
+        {
+            "name": "Data Detective (AI)",
+            "description": "Intelligent assistant for data analysis and clinical insights using Google Gemini.",
+            "files": [
+                "biodiagnostico_app/biodiagnostico_app/pages/insight_chat.py",
+                "biodiagnostico_app/biodiagnostico_app/states/detective_state.py",
+                "biodiagnostico_app/biodiagnostico_app/services/ai_service.py",
+                "biodiagnostico_app/biodiagnostico_app/services/n8n_service.py"
+            ]
+        },
+        {
+            "name": "Executive Dashboard",
+            "description": "Real-time KPIs and financial/quality metrics visualization.",
+            "files": [
+                "biodiagnostico_app/biodiagnostico_app/pages/dashboard.py",
+                "biodiagnostico_app/biodiagnostico_app/states/dashboard_state.py"
+            ]
+        },
+        {
+            "name": "Utility Tools",
+            "description": "PDF to Excel conversion and platform maintenance tools.",
+            "files": [
+                "biodiagnostico_app/biodiagnostico_app/pages/conversor.py",
+                "biodiagnostico_app/biodiagnostico_app/services/maintenance_service.py"
+            ]
+        }
+    ]
+}

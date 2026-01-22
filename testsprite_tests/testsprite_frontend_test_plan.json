@@ -1,0 +1,369 @@
+[
+  {
+    "id": "TC001",
+    "title": "Upload valid PDF reports and detect financial discrepancies",
+    "description": "Verify that uploading valid Compulab and SIMUS PDF reports triggers automatic data comparison and correctly identifies discrepancies including missing patients, uncoded exams, and value mismatches.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to Financial Audit section"
+      },
+      {
+        "type": "action",
+        "description": "Upload valid Compulab PDF report"
+      },
+      {
+        "type": "action",
+        "description": "Upload valid SIMUS PDF report"
+      },
+      {
+        "type": "assertion",
+        "description": "System compares data automatically"
+      },
+      {
+        "type": "assertion",
+        "description": "System identifies missing patients"
+      },
+      {
+        "type": "assertion",
+        "description": "System identifies uncoded exams"
+      },
+      {
+        "type": "assertion",
+        "description": "System flags value discrepancies"
+      },
+      {
+        "type": "assertion",
+        "description": "System generates detailed Excel report capturing all detected discrepancies"
+      }
+    ]
+  },
+  {
+    "id": "TC002",
+    "title": "Handle corrupted or invalid PDF report upload",
+    "description": "Verify that the system gracefully handles corrupted or invalid PDF uploads in the Financial Audit module by displaying proper error messages and preventing further processing.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to Financial Audit section"
+      },
+      {
+        "type": "action",
+        "description": "Attempt to upload corrupted or invalid PDF report"
+      },
+      {
+        "type": "assertion",
+        "description": "System rejects the upload"
+      },
+      {
+        "type": "assertion",
+        "description": "System displays informative error message about invalid PDF format"
+      },
+      {
+        "type": "assertion",
+        "description": "No discrepancy analysis is triggered"
+      }
+    ]
+  },
+  {
+    "id": "TC003",
+    "title": "Verify completeness and accuracy of generated Excel report from Financial Audit",
+    "description": "Ensure that the Excel report generated after comparison fully and accurately reflects all detected discrepancies, with correct formatting and data integrity.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Upload matching Compulab and SIMUS reports with known discrepancies"
+      },
+      {
+        "type": "action",
+        "description": "Trigger Excel report generation"
+      },
+      {
+        "type": "assertion",
+        "description": "Excel file is generated and downloadable"
+      },
+      {
+        "type": "assertion",
+        "description": "Report contains all missing patients listed"
+      },
+      {
+        "type": "assertion",
+        "description": "Report lists all uncoded exams appropriately"
+      },
+      {
+        "type": "assertion",
+        "description": "Discrepancy values match source data"
+      },
+      {
+        "type": "assertion",
+        "description": "Excel formatting is clear and readable"
+      }
+    ]
+  },
+  {
+    "id": "TC004",
+    "title": "Validate Westgard rule application on exam data",
+    "description": "Verify that the system correctly applies Westgard quality control rules to exam metrics and flags exceptions appropriately.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to Quality Control section"
+      },
+      {
+        "type": "action",
+        "description": "Input exam metrics including mean and standard deviation"
+      },
+      {
+        "type": "action",
+        "description": "Provide test data designed to trigger various Westgard rule failures"
+      },
+      {
+        "type": "assertion",
+        "description": "System evaluates rules automatically"
+      },
+      {
+        "type": "assertion",
+        "description": "System flags exam results that violate Westgard rules"
+      },
+      {
+        "type": "assertion",
+        "description": "Flags include correct rule identification and description"
+      }
+    ]
+  },
+  {
+    "id": "TC005",
+    "title": "Render interactive Levey-Jennings charts with correct data points",
+    "description": "Ensure that Levey-Jennings charts display exam data variability accurately, are interactive, and reflect updates dynamically.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to Quality Control section"
+      },
+      {
+        "type": "action",
+        "description": "Load exam data with historical control values"
+      },
+      {
+        "type": "assertion",
+        "description": "Levey-Jennings chart renders correctly with all relevant data points"
+      },
+      {
+        "type": "assertion",
+        "description": "Chart scales and axes are accurate"
+      },
+      {
+        "type": "assertion",
+        "description": "Hovering over data points shows detailed values"
+      },
+      {
+        "type": "action",
+        "description": "Modify exam data values"
+      },
+      {
+        "type": "assertion",
+        "description": "Chart updates in real-time reflecting the changes"
+      }
+    ]
+  },
+  {
+    "id": "TC006",
+    "title": "AI Data Detective returns contextually relevant insights without hallucination",
+    "description": "Test that the AI-driven assistant provides accurate, relevant, and context-appropriate responses for conversational queries about financial and quality data.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to Data Detective assistant"
+      },
+      {
+        "type": "action",
+        "description": "Submit a variety of queries regarding financial discrepancies"
+      },
+      {
+        "type": "assertion",
+        "description": "AI responds with relevant answers supported by data"
+      },
+      {
+        "type": "action",
+        "description": "Submit queries related to quality control metrics and trends"
+      },
+      {
+        "type": "assertion",
+        "description": "AI correctly explains trends and suggests corrective actions"
+      },
+      {
+        "type": "assertion",
+        "description": "Responses do not contain hallucinated facts or unsupported statements"
+      }
+    ]
+  },
+  {
+    "id": "TC007",
+    "title": "AI Data Detective handles ambiguous or unsupported queries gracefully",
+    "description": "Verify the AI assistant's behavior when faced with queries outside its data scope or ambiguous questions, ensuring it declines or requests clarification without giving false information.",
+    "category": "error handling",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Ask AI assistant a vague or unrelated question"
+      },
+      {
+        "type": "assertion",
+        "description": "AI requests clarification or politely refuses to provide an unsupported answer"
+      },
+      {
+        "type": "action",
+        "description": "Ask AI about future projections or data it cannot access"
+      },
+      {
+        "type": "assertion",
+        "description": "AI does not generate hallucinated facts and indicates data unavailability"
+      }
+    ]
+  },
+  {
+    "id": "TC008",
+    "title": "Display and real-time update of Executive Dashboard KPIs",
+    "description": "Validate that the Executive Dashboard shows up-to-date financial and quality KPIs accurately and refreshes data in real-time or on-demand.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to Executive Dashboard"
+      },
+      {
+        "type": "assertion",
+        "description": "Dashboard displays all key financial metrics (e.g., discrepancy rates, revenue impact)"
+      },
+      {
+        "type": "assertion",
+        "description": "Dashboard displays quality control KPIs (e.g., Westgard rule violation counts)"
+      },
+      {
+        "type": "action",
+        "description": "Update underlying data by uploading new reports or exam metrics"
+      },
+      {
+        "type": "assertion",
+        "description": "Dashboard refreshes metrics automatically or on user request reflecting new data"
+      },
+      {
+        "type": "assertion",
+        "description": "Visualizations (charts, gauges) accurately represent current values"
+      }
+    ]
+  },
+  {
+    "id": "TC009",
+    "title": "PDF to Excel converter preserves data integrity accurately",
+    "description": "Ensure the utility tool converts a variety of laboratory PDF reports to Excel format without data loss, structural corruption, or formatting errors.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to Utility Tools section"
+      },
+      {
+        "type": "action",
+        "description": "Upload sample PDF reports of different layouts and contents"
+      },
+      {
+        "type": "action",
+        "description": "Trigger PDF to Excel conversion"
+      },
+      {
+        "type": "assertion",
+        "description": "Converted Excel files are generated successfully"
+      },
+      {
+        "type": "assertion",
+        "description": "Excel content matches the PDF source data accurately"
+      },
+      {
+        "type": "assertion",
+        "description": "Data tables, numeric values, and text formatting are preserved properly"
+      }
+    ]
+  },
+  {
+    "id": "TC010",
+    "title": "Platform maintenance utility performs cleanup and optimization without failures",
+    "description": "Verify that platform maintenance tools execute cleanup, optimization, and other upkeep tasks safely, maintaining platform stability and data integrity.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Access platform maintenance utilities"
+      },
+      {
+        "type": "action",
+        "description": "Initiate system cleanup operation"
+      },
+      {
+        "type": "assertion",
+        "description": "Maintenance operations complete successfully without errors"
+      },
+      {
+        "type": "assertion",
+        "description": "System performance metrics remain stable or improve"
+      },
+      {
+        "type": "action",
+        "description": "Trigger system integrity checks"
+      },
+      {
+        "type": "assertion",
+        "description": "No data corruption or loss is detected after maintenance"
+      }
+    ]
+  },
+  {
+    "id": "TC011",
+    "title": "System stability and responsiveness under expected load",
+    "description": "Test system performance and responsiveness when multiple users perform concurrent operations including report uploads, AI queries, and dashboard refreshes.",
+    "category": "performance",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Simulate multiple users uploading Compulab and SIMUS reports simultaneously"
+      },
+      {
+        "type": "action",
+        "description": "Simulate concurrent AI Data Detective queries on complex data"
+      },
+      {
+        "type": "action",
+        "description": "Trigger simultaneous refreshes of Executive Dashboard"
+      },
+      {
+        "type": "assertion",
+        "description": "System remains responsive with acceptable latency"
+      },
+      {
+        "type": "assertion",
+        "description": "No failures or crashes occur under load"
+      },
+      {
+        "type": "assertion",
+        "description": "Data correctness and accuracy maintained during concurrent operations"
+      }
+    ]
+  }
+]

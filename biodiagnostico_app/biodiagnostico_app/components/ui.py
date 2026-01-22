@@ -1,5 +1,5 @@
 import reflex as rx
-from ..styles import Color, Design, Typography, Animation, Spacing, CARD_STYLE, BUTTON_PRIMARY_STYLE, BUTTON_SECONDARY_STYLE, INPUT_STYLE
+from ..styles import Color, Design, Typography, Animation, Spacing, CARD_STYLE, BUTTON_PRIMARY_STYLE, BUTTON_SECONDARY_STYLE, BUTTON_XL_STYLE, INPUT_STYLE, INPUT_XL_STYLE
 
 # =============================================================================
 # BIODIAGNÓSTICO VIBE UI
@@ -66,7 +66,7 @@ def empty_state(icon: str, title: str, description: str, action_label: str = "",
 
 # --- Actions & Inputs ---
 
-def button(label: str, icon: str = None, variant: str = "primary", is_loading: bool = False, **props) -> rx.Component:
+def button(label: str, icon: str = None, variant: str = "primary", size: str = "default", is_loading: bool = False, **props) -> rx.Component:
     """Unified Vibe Button"""
     # Variants configuration
     variants = {
@@ -82,7 +82,14 @@ def button(label: str, icon: str = None, variant: str = "primary", is_loading: b
         }
     }
     
-    style = variants.get(variant, BUTTON_PRIMARY_STYLE).copy()
+    # Select Base Style
+    base_style = variants.get(variant, BUTTON_PRIMARY_STYLE).copy()
+    
+    # Apply Size Overrides
+    if size == "large" and variant == "primary":
+        base_style.update(BUTTON_XL_STYLE)
+    
+    style = base_style
     user_disabled = props.pop("disabled", False)
     style.update(props)
     
@@ -99,9 +106,12 @@ def button(label: str, icon: str = None, variant: str = "primary", is_loading: b
     
     return rx.button(content, disabled=is_loading | user_disabled, **style)
 
-def input(placeholder: str = "", **props) -> rx.Component:
+def input(placeholder: str = "", size: str = "default", **props) -> rx.Component:
     """Standard Input"""
     style = INPUT_STYLE.copy()
+    if size == "large":
+        style = INPUT_XL_STYLE.copy()
+        
     style["placeholder"] = placeholder
     style.update(props)
     return rx.input(**style)

@@ -134,6 +134,25 @@ INPUT_STYLE = {
     "_hover": {"border_color": Color.SECONDARY}
 }
 
+# --- Large Input (Matching Button XL) ---
+INPUT_XL_STYLE = {
+    "border": f"1px solid {Color.BORDER}",
+    "border_radius": Design.RADIUS_LG,
+    "padding": f"{Spacing.MD} {Spacing.XL}", # More breathing room
+    "height": "56px", # Matching Button XL
+    "width": "100%",  # Explicit Full Width
+    "bg": Color.SURFACE,
+    "color": Color.TEXT_PRIMARY,
+    "font_size": "1rem",
+    "transition": "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+    "_focus": {
+        "border_color": Color.PRIMARY,
+        "box_shadow": f"0 0 0 4px {Color.PRIMARY_LIGHT}",
+        "outline": "none"
+    },
+    "_hover": {"border_color": Color.SECONDARY}
+}
+
 # --- Primary Button ---
 BUTTON_PRIMARY_STYLE = {
     "bg": Color.PRIMARY,
@@ -151,6 +170,29 @@ BUTTON_PRIMARY_STYLE = {
     },
     "_active": {
         "transform": "scale(0.98)",
+        "box_shadow": "none",
+    }
+}
+
+# --- Large/XL Button (Impact) ---
+BUTTON_XL_STYLE = {
+    "bg": Color.PRIMARY,
+    "color": "white",
+    "padding_x": Spacing.XL,
+    "height": "56px", # Taller for impact
+    "width": "100%",  # Usually full width
+    "border_radius": Design.RADIUS_LG,
+    "font_weight": "700", # Bolder
+    "font_size": "1.125rem", # Larger Frame
+    "transition": "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+    "box_shadow": Design.SHADOW_MD,
+    "_hover": {
+        "bg": Color.PRIMARY_HOVER,
+        "transform": "translateY(-2px)",
+        "box_shadow": Design.SHADOW_LG,
+    },
+    "_active": {
+        "transform": "scale(0.99)",
         "box_shadow": "none",
     }
 }
