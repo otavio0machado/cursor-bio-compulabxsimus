@@ -1,0 +1,410 @@
+{
+    "name": "Detetive de Dados - Biodiagnóstico v7 (HTTP Tools)",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "detetive-dados",
+                "responseMode": "responseNode",
+                "options": {
+                    "allowedOrigins": "*"
+                }
+            },
+            "id": "webhook-trigger",
+            "name": "Webhook Detetive",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2,
+            "position": [
+                240,
+                320
+            ],
+            "webhookId": "detetive-dados-biodiagnostico"
+        },
+        {
+            "parameters": {
+                "promptType": "define",
+                "text": "={{ $json.body.message }}",
+                "options": {
+                    "systemMessage": "# 🕵️ DETETIVE DE DADOS - BIODIAGNÓSTICO\n\n## [C]ONTEXTO (Persona)\nVocê é o **Detetive de Dados**, um investigador financeiro especializado em:\n- 💰 Faturamento de laboratórios clínicos\n- 🧬 Controle de Qualidade (QC) com regras de Westgard\n- 📊 Análise de divergências entre sistemas (SIMUS vs Compulab)\n- ⚖️ Contestação técnica de glosas de convênios\n\nSeu cliente é o gestor de um laboratório que precisa de insights claros e ações práticas.\n\n## [R]ESTRIÇÕES (O que NÃO fazer)\n- ❌ Nunca invente dados financeiros\n- ❌ Nunca dê diagnósticos médicos\n- ❌ Nunca ignore violações de Westgard críticas (1-3s, R-4s)\n- ❌ Nunca responda sem consultar os dados de contexto primeiro\n\n## [E]STRUTURA (Chain-of-Thought)\nAntes de responder, SEMPRE siga este raciocínio mental:\n```\n<pensamento>\n1. 📊 DADOS: Quais informações tenho no contexto?\n2. 🛠️ FERRAMENTA: Qual tool devo usar?\n3. 🔍 PADRÃO: Existe repetição (mesmo convênio, mesmo exame)?\n4. 💰 IMPACTO: Qual o prejuízo estimado?\n5. 💡 AÇÃO: O que o gestor deve fazer?\n</pensamento>\n```\n\n## [F]ORMATO (Como Responder)\n- Use **Português Brasileiro** sempre\n- Use emojis para categorizar: 📊 dados, 🔍 análise, ⚠️ alerta, 💡 sugestão, 🧬 qualidade, 💰 financeiro\n- Formate valores como **R$ X.XXX,XX**\n- Use **metáforas** do mundo real para explicar conceitos (ex: \"Imagine que as glosas são como vazamentos num cano...\")\n- Termine com **1-3 ações práticas** que o gestor pode tomar\n\n## [O]BJETIVO\nTransformar dados brutos de divergências em **insights acionáveis** que:\n1. Identifiquem onde o laboratório está perdendo dinheiro\n2. Indiquem a causa raiz provável\n3. Sugiram a correção mais eficiente\n\n## 🛠️ FERRAMENTAS DISPONÍVEIS\n| Ferramenta | Quando Usar |\n|------------|-------------|\n| `calcular_perda` | Perguntas sobre prejuízo total, perdas, impacto financeiro |\n| `top_offenders` | Ranking de convênios/exames problemáticos |\n| `analisar_tendencia` | Verificar se está piorando ou melhorando |\n| `interpretador_westgard` | Validar resultados de QC (precisa: value, target_value, target_sd) |\n| `gerar_contestacao` | Criar carta profissional para contestar glosas |\n| `projecao_perda` | Estimar perda até o fim do mês |\n| `resumo_executivo` | Briefing diário com KPIs para gestão |\n| `detectar_anomalias` | Identificar valores fora do padrão esperado |\n| `comparar_tabelas` | Comparar preços do lab vs convênios |\n\n## 📋 DADOS DE CONTEXTO\n{{ $json.body.context }}"
+                }
+            },
+            "id": "ai-agent",
+            "name": "AI Agent Detetive",
+            "type": "@n8n/n8n-nodes-langchain.agent",
+            "typeVersion": 1.7,
+            "position": [
+                660,
+                320
+            ]
+        },
+        {
+            "parameters": {
+                "modelName": "models/gemini-2.0-flash",
+                "options": {
+                    "temperature": 0.25,
+                    "maxOutputTokens": 4096,
+                    "topP": 0.9,
+                    "topK": 40
+                }
+            },
+            "id": "gemini-chat",
+            "name": "Google Gemini Chat Model",
+            "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+            "typeVersion": 1,
+            "position": [
+                500,
+                540
+            ],
+            "credentials": {
+                "googleGeminiApi": {
+                    "id": "CONFIGURE_GEMINI_API",
+                    "name": "Google Gemini API"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "name": "calcular_perda",
+                "description": "Calcula o prejuízo financeiro total das divergências de faturamento. Esta ferramenta NÃO requer parâmetros de entrada - ela analisa automaticamente os dados de contexto.",
+                "code": "try {\n  const context = JSON.parse($input.item.json.context || '{}');\n  const divergencias = context.value_divergences || [];\n  const pacientesAusentes = context.missing_patients || [];\n  const examesFaltantes = context.missing_exams || [];\n\n  let totalDivergencias = 0;\n  let totalNaoFaturado = 0;\n  const porConvenio = {};\n  const porExame = {};\n\n  for (const div of divergencias) {\n    const perda = Math.abs((div.valor_simus || 0) - (div.valor_convenio || 0));\n    totalDivergencias += perda;\n    const conv = div.convenio || 'Desconhecido';\n    porConvenio[conv] = (porConvenio[conv] || 0) + perda;\n    const exam = div.exame || 'Desconhecido';\n    porExame[exam] = (porExame[exam] || 0) + perda;\n  }\n\n  for (const p of pacientesAusentes) {\n    totalNaoFaturado += (p.valor_total || 0);\n  }\n  for (const e of examesFaltantes) {\n    totalNaoFaturado += (e.valor || e.compulab_value || 0);\n  }\n\n  const totalGeral = totalDivergencias + totalNaoFaturado;\n  const formatBRL = (v) => `R$ ${v.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;\n\n  const top3Conv = Object.entries(porConvenio)\n    .sort((a, b) => b[1] - a[1])\n    .slice(0, 3)\n    .map(([nome, valor]) => ({ nome, valor: formatBRL(valor) }));\n\n  return {\n    sucesso: true,\n    total_perda: formatBRL(totalGeral),\n    breakdown: {\n      divergencias_valor: formatBRL(totalDivergencias),\n      nao_faturado: formatBRL(totalNaoFaturado)\n    },\n    top_convenios_perdendo: top3Conv,\n    quantidade_registros: divergencias.length + pacientesAusentes.length + examesFaltantes.length,\n    nivel_alerta: totalGeral > 10000 ? 'CRÍTICO ⚠️' : (totalGeral > 5000 ? 'ALTO' : 'NORMAL'),\n    metafora: totalGeral > 5000 ? '💧 Imagine um balde furado: quanto maior o furo, mais água (dinheiro) escapa sem você perceber.' : '✅ Vazamentos sob controle por enquanto.'\n  };\n} catch (e) {\n  return { sucesso: false, erro: 'Falha ao processar dados: ' + e.message };\n}"
+            },
+            "id": "tool-calcular",
+            "name": "calcular_perda",
+            "type": "@n8n/n8n-nodes-langchain.toolCode",
+            "typeVersion": 1,
+            "position": [
+                760,
+                540
+            ]
+        },
+        {
+            "parameters": {
+                "name": "top_offenders",
+                "description": "Identifica os convênios e exames com maior quantidade de problemas (ranking dos piores ofensores). Esta ferramenta NÃO requer parâmetros de entrada.",
+                "code": "try {\n  const context = JSON.parse($input.item.json.context || '{}');\n  const divergencias = context.value_divergences || [];\n\n  const porConvenio = {};\n  const porExame = {};\n\n  for (const div of divergencias) {\n    const conv = div.convenio || 'Desconhecido';\n    if (!porConvenio[conv]) porConvenio[conv] = { count: 0, valor: 0 };\n    porConvenio[conv].count++;\n    porConvenio[conv].valor += Math.abs((div.valor_simus || 0) - (div.valor_convenio || 0));\n\n    const exam = div.exame || 'Desconhecido';\n    if (!porExame[exam]) porExame[exam] = { count: 0, valor: 0 };\n    porExame[exam].count++;\n    porExame[exam].valor += Math.abs((div.valor_simus || 0) - (div.valor_convenio || 0));\n  }\n\n  const formatBRL = (v) => `R$ ${v.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;\n\n  const topConvenios = Object.entries(porConvenio)\n    .map(([nome, data]) => ({ nome, divergencias: data.count, perda: formatBRL(data.valor) }))\n    .sort((a, b) => b.divergencias - a.divergencias)\n    .slice(0, 5);\n\n  const topExames = Object.entries(porExame)\n    .map(([nome, data]) => ({ nome, divergencias: data.count, perda: formatBRL(data.valor) }))\n    .sort((a, b) => b.divergencias - a.divergencias)\n    .slice(0, 5);\n\n  const piorConvenio = topConvenios[0];\n\n  return {\n    sucesso: true,\n    top_convenios: topConvenios,\n    top_exames: topExames,\n    insight: piorConvenio ? `🎯 O convênio ${piorConvenio.nome} lidera o ranking negativo com ${piorConvenio.divergencias} divergências.` : 'Nenhuma divergência encontrada.',\n    acao_sugerida: piorConvenio ? `Agende uma reunião com o setor de auditoria do ${piorConvenio.nome} para revisar a tabela de preços.` : 'Manter monitoramento.'\n  };\n} catch (e) {\n  return { sucesso: false, erro: e.message };\n}"
+            },
+            "id": "tool-top",
+            "name": "top_offenders",
+            "type": "@n8n/n8n-nodes-langchain.toolCode",
+            "typeVersion": 1,
+            "position": [
+                900,
+                540
+            ]
+        },
+        {
+            "parameters": {
+                "name": "analisar_tendencia",
+                "description": "Analisa se os problemas estão aumentando ou diminuindo ao longo do tempo. Esta ferramenta NÃO requer parâmetros de entrada.",
+                "code": "try {\n  const context = JSON.parse($input.item.json.context || '{}');\n  const divergencias = context.value_divergences || [];\n\n  const hoje = new Date();\n  const semanaAtual = divergencias.filter(d => {\n    const dataDiv = new Date(d.data || hoje);\n    return (hoje - dataDiv) / (1000 * 60 * 60 * 24) <= 7;\n  }).length;\n\n  const semanaAnterior = divergencias.filter(d => {\n    const dataDiv = new Date(d.data || hoje);\n    const diff = (hoje - dataDiv) / (1000 * 60 * 60 * 24);\n    return diff > 7 && diff <= 14;\n  }).length;\n\n  let tendencia, emoji, recomendacao;\n  const variacao = semanaAnterior > 0 ? ((semanaAtual - semanaAnterior) / semanaAnterior * 100) : 0;\n\n  if (semanaAtual > semanaAnterior * 1.2) {\n    tendencia = 'PIORANDO';\n    emoji = '📈⚠️';\n    recomendacao = '🚨 Ação urgente! Investigue a causa raiz imediatamente.';\n  } else if (semanaAtual < semanaAnterior * 0.8) {\n    tendencia = 'MELHORANDO';\n    emoji = '📉✅';\n    recomendacao = '👏 Excelente! Continue com as ações atuais.';\n  } else {\n    tendencia = 'ESTÁVEL';\n    emoji = '➡️';\n    recomendacao = '👀 Monitore normalmente.';\n  }\n\n  return {\n    sucesso: true,\n    tendencia: tendencia,\n    emoji: emoji,\n    ultimos_7_dias: semanaAtual,\n    semana_anterior: semanaAnterior,\n    variacao_percentual: `${variacao.toFixed(1)}%`,\n    recomendacao: recomendacao,\n    metafora: tendencia === 'PIORANDO' ? '🔥 Imagine um incêndio pequeno que está crescendo. Melhor apagar agora antes de virar um incêndio florestal!' : ''\n  };\n} catch (e) {\n  return { sucesso: false, erro: e.message };\n}"
+            },
+            "id": "tool-tendencia",
+            "name": "analisar_tendencia",
+            "type": "@n8n/n8n-nodes-langchain.toolCode",
+            "typeVersion": 1,
+            "position": [
+                1040,
+                540
+            ]
+        },
+        {
+            "parameters": {
+                "name": "interpretador_westgard",
+                "description": "Valida resultados de Controle de Qualidade usando as regras de Westgard (1-2s, 1-3s). Requer parâmetros: value (valor medido), target_value (média esperada), target_sd (desvio padrão).",
+                "method": "POST",
+                "url": "={{ $json.body.app_base_url || 'https://seu-app.railway.app' }}/api/n8n-tools/westgard",
+                "authentication": "none",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ value: $fromAI('value', 'Valor medido', 'number'), target_value: $fromAI('target_value', 'Valor alvo/média', 'number'), target_sd: $fromAI('target_sd', 'Desvio padrão', 'number') }) }}",
+                "options": {}
+            },
+            "id": "tool-westgard",
+            "name": "interpretador_westgard",
+            "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+            "typeVersion": 1.1,
+            "position": [
+                760,
+                680
+            ]
+        },
+        {
+            "parameters": {
+                "name": "gerar_contestacao",
+                "description": "Gera uma carta profissional para contestar uma glosa de convênio. Parâmetros opcionais: convenio, exame, valor_cobrado, valor_pago, motivo, paciente.",
+                "method": "POST",
+                "url": "={{ $json.body.app_base_url || 'https://seu-app.railway.app' }}/api/n8n-tools/contestacao",
+                "authentication": "none",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ convenio: $fromAI('convenio', 'Nome do convênio', 'string') || '[Nome do Convênio]', exame: $fromAI('exame', 'Nome do exame', 'string') || '[Nome do Exame]', valor_cobrado: $fromAI('valor_cobrado', 'Valor cobrado', 'number') || 0, valor_pago: $fromAI('valor_pago', 'Valor pago', 'number') || 0, motivo: $fromAI('motivo', 'Motivo da glosa', 'string') || 'divergência de valores', paciente: $fromAI('paciente', 'Nome do paciente', 'string') || '[Nome do Paciente]' }) }}",
+                "options": {}
+            },
+            "id": "tool-contestacao",
+            "name": "gerar_contestacao",
+            "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+            "typeVersion": 1.1,
+            "position": [
+                900,
+                680
+            ]
+        },
+        {
+            "parameters": {
+                "name": "comparar_tabelas",
+                "description": "Compara valores entre a tabela do laboratório e as tabelas dos convênios para identificar defasagens de preço. Parâmetro: exame (nome do exame).",
+                "method": "POST",
+                "url": "={{ $json.body.app_base_url || 'https://seu-app.railway.app' }}/api/n8n-tools/comparar-tabelas",
+                "authentication": "none",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ exame: $fromAI('exame', 'Nome do exame', 'string') || 'HEMOGRAMA' }) }}",
+                "options": {}
+            },
+            "id": "tool-comparar",
+            "name": "comparar_tabelas",
+            "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+            "typeVersion": 1.1,
+            "position": [
+                1040,
+                680
+            ]
+        },
+        {
+            "parameters": {
+                "name": "projecao_perda",
+                "description": "Projeta a perda financeira estimada até o fim do mês baseado na tendência atual. Esta ferramenta NÃO requer parâmetros de entrada.",
+                "code": "try {\n  const context = JSON.parse($input.item.json.context || '{}');\n  const divergencias = context.value_divergences || [];\n\n  let perdaAtual = 0;\n  for (const div of divergencias) {\n    perdaAtual += Math.abs((div.valor_simus || 0) - (div.valor_convenio || 0));\n  }\n\n  const hoje = new Date();\n  const diaAtual = hoje.getDate();\n  const diasNoMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).getDate();\n  const diasRestantes = diasNoMes - diaAtual;\n\n  const mediaDiaria = diaAtual > 0 ? perdaAtual / diaAtual : 0;\n  const projecaoMensal = mediaDiaria * diasNoMes;\n  const perdaAdicional = mediaDiaria * diasRestantes;\n\n  const formatBRL = (v) => `R$ ${v.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;\n\n  let nivelAlerta, acaoRecomendada;\n  if (projecaoMensal > 20000) {\n    nivelAlerta = '🔴 CRÍTICO';\n    acaoRecomendada = '🚨 EMERGÊNCIA: Convoque reunião de crise com toda a equipe de faturamento.';\n  } else if (projecaoMensal > 10000) {\n    nivelAlerta = '🟠 ALTO';\n    acaoRecomendada = '⚠️ URGENTE: Priorize a resolução das maiores divergências.';\n  } else {\n    nivelAlerta = '🟢 NORMAL';\n    acaoRecomendada = '✅ Continuar rotina de monitoramento.';\n  }\n\n  return {\n    sucesso: true,\n    situacao_atual: {\n      perda_acumulada: formatBRL(perdaAtual),\n      dia_do_mes: `${diaAtual}/${diasNoMes}`,\n      media_diaria: formatBRL(mediaDiaria)\n    },\n    projecao: {\n      dias_restantes: diasRestantes,\n      perda_adicional_projetada: formatBRL(perdaAdicional),\n      total_projetado_fim_mes: formatBRL(projecaoMensal)\n    },\n    nivel_alerta: nivelAlerta,\n    acao_recomendada: acaoRecomendada,\n    metafora: '📈 Projeção é como olhar o velocímetro do carro: se você está a 120km/h numa estrada de 60km/h, já sabe que vai chegar ao destino (prejuízo) muito rápido.'\n  };\n} catch (e) {\n  return { sucesso: false, erro: e.message };\n}"
+            },
+            "id": "tool-projecao",
+            "name": "projecao_perda",
+            "type": "@n8n/n8n-nodes-langchain.toolCode",
+            "typeVersion": 1,
+            "position": [
+                760,
+                820
+            ]
+        },
+        {
+            "parameters": {
+                "name": "resumo_executivo",
+                "description": "Gera um resumo executivo diário completo para o gestor com KPIs principais, alertas críticos, pendências e ações recomendadas. Esta ferramenta NÃO requer parâmetros de entrada.",
+                "code": "try {\n  const context = JSON.parse($input.item.json.context || '{}');\n  const divergencias = context.value_divergences || [];\n  const pacientesAusentes = context.missing_patients || [];\n  const examesFaltantes = context.missing_exams || [];\n\n  let totalPerda = 0;\n  const porConvenio = {};\n\n  for (const div of divergencias) {\n    const perda = Math.abs((div.valor_simus || 0) - (div.valor_convenio || 0));\n    totalPerda += perda;\n    const conv = div.convenio || 'Desconhecido';\n    porConvenio[conv] = (porConvenio[conv] || 0) + 1;\n  }\n\n  for (const p of pacientesAusentes) { totalPerda += (p.valor_total || 0); }\n\n  const piorConvenio = Object.entries(porConvenio).sort((a, b) => b[1] - a[1])[0];\n  const formatBRL = (v) => `R$ ${v.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;\n  const dataHoje = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });\n\n  let nivelAlerta = 'NORMAL';\n  let corAlerta = '🟢';\n  if (totalPerda > 10000) { nivelAlerta = 'CRÍTICO'; corAlerta = '🔴'; }\n  else if (totalPerda > 5000) { nivelAlerta = 'ALTO'; corAlerta = '🟠'; }\n\n  const resumo = `\n╔════════════════════════════════════════════════════════════════╗\n║  📊 RESUMO EXECUTIVO - ${dataHoje.toUpperCase().substring(0, 30).padEnd(30)}   ║\n╚════════════════════════════════════════════════════════════════╝\n\n${corAlerta} STATUS GERAL: ${nivelAlerta}\n\n┌──────────────────────────────────────────────────────────────┐\n│  💰 IMPACTO FINANCEIRO                                        │\n├──────────────────────────────────────────────────────────────┤\n│  Perda Total Acumulada:   ${formatBRL(totalPerda).padEnd(33)}│\n└──────────────────────────────────────────────────────────────┘\n\n┌──────────────────────────────────────────────────────────────┐\n│  📈 VOLUME DE PENDÊNCIAS                                      │\n├──────────────────────────────────────────────────────────────┤\n│  Divergências de Valor:   ${String(divergencias.length).padEnd(33)}│\n│  Pacientes Ausentes:      ${String(pacientesAusentes.length).padEnd(33)}│\n│  Exames Faltantes:        ${String(examesFaltantes.length).padEnd(33)}│\n│  ─────────────────────────────────────────────────────────── │\n│  TOTAL DE PENDÊNCIAS:     ${String(divergencias.length + pacientesAusentes.length + examesFaltantes.length).padEnd(33)}│\n└──────────────────────────────────────────────────────────────┘\n\n┌──────────────────────────────────────────────────────────────┐\n│  ⚠️ MAIOR OFENSOR                                             │\n├──────────────────────────────────────────────────────────────┤\n│  ${piorConvenio ? `${piorConvenio[0]} (${piorConvenio[1]} ocorrências)`.padEnd(60) : 'Nenhum identificado'.padEnd(60)}│\n└──────────────────────────────────────────────────────────────┘\n\n🎯 AÇÕES RECOMENDADAS PARA HOJE:\n\n  1. ${totalPerda > 5000 ? '🔴 URGENTE: Revisar divergências de alto valor' : '✅ Manter rotina de monitoramento'}\n\n  2. ${piorConvenio ? `📞 Contatar auditoria do ${piorConvenio[0]}` : '📋 Nenhuma ação específica'}\n\n  3. ${pacientesAusentes.length > 5 ? '🔍 Investigar falhas na integração de sistemas' : '👀 Continuar processos normais'}\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n  Gerado pelo Detetive de Dados 🕵️ às ${new Date().toLocaleTimeString('pt-BR')}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;\n\n  return {\n    sucesso: true,\n    resumo_formatado: resumo,\n    kpis: {\n      perda_total: formatBRL(totalPerda),\n      total_pendencias: divergencias.length + pacientesAusentes.length + examesFaltantes.length,\n      pior_convenio: piorConvenio ? piorConvenio[0] : 'N/A'\n    },\n    nivel_alerta: nivelAlerta\n  };\n} catch (e) {\n  return { sucesso: false, erro: e.message };\n}"
+            },
+            "id": "tool-resumo",
+            "name": "resumo_executivo",
+            "type": "@n8n/n8n-nodes-langchain.toolCode",
+            "typeVersion": 1,
+            "position": [
+                900,
+                820
+            ]
+        },
+        {
+            "parameters": {
+                "name": "detectar_anomalias",
+                "description": "Identifica valores ou padrões anômalos nos dados, como picos de divergência, valores muito altos ou muito baixos fora do esperado. Esta ferramenta NÃO requer parâmetros de entrada.",
+                "code": "try {\n  const context = JSON.parse($input.item.json.context || '{}');\n  const divergencias = context.value_divergences || [];\n\n  if (divergencias.length === 0) {\n    return { sucesso: true, mensagem: 'Nenhum dado para analisar.', anomalias: [] };\n  }\n\n  const diferencas = divergencias.map(d => Math.abs((d.valor_simus || 0) - (d.valor_convenio || 0)));\n  const media = diferencas.reduce((a, b) => a + b, 0) / diferencas.length;\n  const variancia = diferencas.reduce((a, b) => a + Math.pow(b - media, 2), 0) / diferencas.length;\n  const desvio = Math.sqrt(variancia);\n\n  const anomalias = [];\n  for (let i = 0; i < divergencias.length; i++) {\n    const diff = diferencas[i];\n    const zScore = desvio > 0 ? (diff - media) / desvio : 0;\n    if (Math.abs(zScore) > 2) {\n      anomalias.push({\n        indice: i,\n        paciente: divergencias[i].paciente || 'N/A',\n        exame: divergencias[i].exame || 'N/A',\n        convenio: divergencias[i].convenio || 'N/A',\n        diferenca: `R$ ${diff.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`,\n        z_score: zScore.toFixed(2),\n        classificacao: zScore > 3 ? '🔴 EXTREMA' : '🟠 ALTA'\n      });\n    }\n  }\n\n  const formatBRL = (v) => `R$ ${v.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;\n\n  return {\n    sucesso: true,\n    estatisticas: {\n      media_diferenca: formatBRL(media),\n      desvio_padrao: formatBRL(desvio),\n      total_analisado: divergencias.length\n    },\n    anomalias_detectadas: anomalias.length,\n    anomalias: anomalias.slice(0, 10),\n    insight: anomalias.length > 0 ? `⚠️ ${anomalias.length} valor(es) fora do padrão detectado(s). Investigue prioritariamente.` : '✅ Nenhuma anomalia significativa detectada.',\n    metafora: '🎢 Pense nas anomalias como montanhas-russas num parque de diversões plano: chamam atenção justamente por serem diferentes do resto.'\n  };\n} catch (e) {\n  return { sucesso: false, erro: e.message };\n}"
+            },
+            "id": "tool-anomalias",
+            "name": "detectar_anomalias",
+            "type": "@n8n/n8n-nodes-langchain.toolCode",
+            "typeVersion": 1,
+            "position": [
+                1040,
+                820
+            ]
+        },
+        {
+            "parameters": {
+                "sessionIdType": "customKey",
+                "sessionKey": "detetive_session_biodiagnostico_v7"
+            },
+            "id": "memory-node",
+            "name": "Window Buffer Memory",
+            "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+            "typeVersion": 1.3,
+            "position": [
+                620,
+                680
+            ]
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={{ JSON.stringify({ success: true, response: $json.output, agent_thinking: $json.intermediateSteps || [], tools_used: ($json.intermediateSteps || []).map(s => s.tool || 'unknown'), timestamp: new Date().toISOString() }) }}",
+                "options": {
+                    "responseCode": 200,
+                    "responseHeaders": {
+                        "entries": [
+                            {
+                                "name": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "name": "Access-Control-Allow-Origin",
+                                "value": "*"
+                            }
+                        ]
+                    }
+                }
+            },
+            "id": "webhook-response",
+            "name": "Resposta Webhook",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1.1,
+            "position": [
+                1000,
+                320
+            ]
+        }
+    ],
+    "connections": {
+        "Webhook Detetive": {
+            "main": [
+                [
+                    {
+                        "node": "AI Agent Detetive",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "AI Agent Detetive": {
+            "main": [
+                [
+                    {
+                        "node": "Resposta Webhook",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Google Gemini Chat Model": {
+            "ai_languageModel": [
+                [
+                    {
+                        "node": "AI Agent Detetive",
+                        "type": "ai_languageModel",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "calcular_perda": {
+            "ai_tool": [
+                [
+                    {
+                        "node": "AI Agent Detetive",
+                        "type": "ai_tool",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "top_offenders": {
+            "ai_tool": [
+                [
+                    {
+                        "node": "AI Agent Detetive",
+                        "type": "ai_tool",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "analisar_tendencia": {
+            "ai_tool": [
+                [
+                    {
+                        "node": "AI Agent Detetive",
+                        "type": "ai_tool",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "interpretador_westgard": {
+            "ai_tool": [
+                [
+                    {
+                        "node": "AI Agent Detetive",
+                        "type": "ai_tool",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "gerar_contestacao": {
+            "ai_tool": [
+                [
+                    {
+                        "node": "AI Agent Detetive",
+                        "type": "ai_tool",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "comparar_tabelas": {
+            "ai_tool": [
+                [
+                    {
+                        "node": "AI Agent Detetive",
+                        "type": "ai_tool",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "projecao_perda": {
+            "ai_tool": [
+                [
+                    {
+                        "node": "AI Agent Detetive",
+                        "type": "ai_tool",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "resumo_executivo": {
+            "ai_tool": [
+                [
+                    {
+                        "node": "AI Agent Detetive",
+                        "type": "ai_tool",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "detectar_anomalias": {
+            "ai_tool": [
+                [
+                    {
+                        "node": "AI Agent Detetive",
+                        "type": "ai_tool",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Window Buffer Memory": {
+            "ai_memory": [
+                [
+                    {
+                        "node": "AI Agent Detetive",
+                        "type": "ai_memory",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1"
+    }
+}

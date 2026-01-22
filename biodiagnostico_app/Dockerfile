@@ -1,9 +1,5 @@
 # Dockerfile para Reflex + Nginx
-# Build: 2026-01-22T18:33:00Z - Force rebuild with nginx cache fix
 FROM python:3.11-slim
-
-# Cache bust to force fresh build
-ARG CACHEBUST=1
 
 WORKDIR /app
 
