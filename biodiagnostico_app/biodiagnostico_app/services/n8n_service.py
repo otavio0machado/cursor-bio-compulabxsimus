@@ -184,7 +184,7 @@ async def ask_detective_n8n(
     missing_patients: list = None,
     missing_exams: list = None,
     extra_simus_exams: list = None
-) -> str:
+) -> dict:
     """
     Função de conveniência para perguntar ao Detetive de Dados via n8n.
     
@@ -196,7 +196,7 @@ async def ask_detective_n8n(
         extra_simus_exams: Exames extras no SIMUS
         
     Returns:
-        Resposta formatada do agente
+        Dicionário com 'success', 'response' e 'agent_thinking'
     """
     try:
         service = get_n8n_service()
@@ -207,14 +207,9 @@ async def ask_detective_n8n(
             extra_simus_exams=extra_simus_exams
         )
         
-        result = await service.ask_agent(message, context)
-        
-        if result.get("success"):
-            return result.get("response", "Sem resposta do agente.")
-        else:
-            return result.get("response", "Erro desconhecido.")
+        return await service.ask_agent(message, context)
             
     except ValueError as e:
-        return f"⚠️ Configuração necessária: {str(e)}"
+        return {"success": False, "response": f"⚠️ Configuração necessária: {str(e)}", "agent_thinking": []}
     except Exception as e:
-        return f"❌ Erro inesperado: {str(e)}"
+        return {"success": False, "response": f"❌ Erro inesperado: {str(e)}", "agent_thinking": []}

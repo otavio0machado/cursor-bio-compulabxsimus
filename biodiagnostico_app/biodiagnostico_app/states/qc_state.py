@@ -1,4 +1,5 @@
 import reflex as rx
+import asyncio
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 import calendar
@@ -147,6 +148,22 @@ class QCState(DashboardState):
 
     def set_reagent_daily_consumption(self, value: str):
         self.reagent_daily_consumption = value
+
+    # Setters for Maintenance (Explicitly defined to avoid DeprecationWarning)
+    def set_maintenance_equipment(self, value: str):
+        self.maintenance_equipment = value
+
+    def set_maintenance_date(self, value: str):
+        self.maintenance_date = value
+
+    def set_maintenance_next_date(self, value: str):
+        self.maintenance_next_date = value
+
+    def set_maintenance_technician(self, value: str):
+        self.maintenance_technician = value
+
+    def set_qc_level(self, value: str):
+        self.qc_level = value
 
     # Computed CV & Status
     @rx.var
@@ -451,7 +468,7 @@ class QCState(DashboardState):
                  id=str(len(self.qc_records) + 1),
                  date=self.qc_date or datetime.now().isoformat(),
                  exam_name=canonical_name,
-                 level="Normal", # TODO: Parametrizar Nível no Form (N1, N2, N3)
+                 level=self.qc_level,
                  lot_number=self.qc_lot_number,
                  value=val,
                  target_value=target,

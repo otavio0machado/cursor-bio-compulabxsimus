@@ -1,0 +1,158 @@
+{
+    "name": "Detetive - Lembrete de QC Diário",
+    "nodes": [
+        {
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "cronExpression",
+                            "expression": "0 14 * * 1-5"
+                        }
+                    ]
+                }
+            },
+            "id": "cron-qc",
+            "name": "Cron 14h",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.2,
+            "position": [
+                240,
+                320
+            ]
+        },
+        {
+            "parameters": {
+                "method": "GET",
+                "url": "={{ $env.SUPABASE_URL }}/rest/v1/qc_records?select=*&created_at=gte.{{ $now.startOf('day').toISO() }}",
+                "authentication": "predefinedCredentialType",
+                "nodeCredentialType": "httpHeaderAuth",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "apikey",
+                            "value": "={{ $env.SUPABASE_KEY }}"
+                        },
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer {{ $env.SUPABASE_KEY }}"
+                        }
+                    ]
+                }
+            },
+            "id": "buscar-qc",
+            "name": "Buscar QC Hoje",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                460,
+                320
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const items = $input.all();\nlet registrosHoje = 0;\n\nfor (const item of items) {\n  const data = item.json;\n  if (Array.isArray(data)) {\n    registrosHoje = data.length;\n  }\n}\n\nconst semQC = registrosHoje === 0;\nconst mensagem = semQC ? `\n⚠️ *LEMBRETE DE CONTROLE DE QUALIDADE*\n\n🧬 Nenhum registro de QC foi encontrado hoje!\n\n📋 Por favor, verifique:\n1. Se os controles internos foram processados\n2. Se os dados foram inseridos no sistema\n3. Se há pendências de calibração\n\n🔬 Um laboratório sem QC é como um avião sem radar!\n` : `\n✅ *QC EM DIA*\n\n🧬 ${registrosHoje} registro(s) de QC encontrado(s) hoje.\n\nContinue o bom trabalho! 💪\n`;\n\nreturn [{ json: { semQC, mensagem, registrosHoje } }];"
+            },
+            "id": "processar-qc",
+            "name": "Verificar QC",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                680,
+                320
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "boolean": [
+                        {
+                            "value1": "={{ $json.semQC }}",
+                            "value2": true
+                        }
+                    ]
+                }
+            },
+            "id": "check-qc",
+            "name": "Sem QC?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [
+                900,
+                320
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "sendMessage",
+                "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+                "text": "={{ $json.mensagem }}",
+                "additionalFields": {
+                    "parse_mode": "Markdown"
+                }
+            },
+            "id": "enviar-lembrete",
+            "name": "Enviar Lembrete",
+            "type": "n8n-nodes-base.telegram",
+            "typeVersion": 1.2,
+            "position": [
+                1120,
+                260
+            ],
+            "credentials": {
+                "telegramApi": {
+                    "id": "CONFIGURE",
+                    "name": "Telegram API"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "Cron 14h": {
+            "main": [
+                [
+                    {
+                        "node": "Buscar QC Hoje",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Buscar QC Hoje": {
+            "main": [
+                [
+                    {
+                        "node": "Verificar QC",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Verificar QC": {
+            "main": [
+                [
+                    {
+                        "node": "Sem QC?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Sem QC?": {
+            "main": [
+                [
+                    {
+                        "node": "Enviar Lembrete",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                []
+            ]
+        }
+    }
+}

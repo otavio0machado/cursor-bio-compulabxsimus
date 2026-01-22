@@ -8,6 +8,8 @@ import gc
 from concurrent.futures import ThreadPoolExecutor
 from ..services.cloudinary_service import CloudinaryService
 from ..services.audit_service import AuditService
+from ..services.saved_analysis_service import saved_analysis_service
+from datetime import datetime, date
 from ..models import AnalysisResult, PatientHistoryEntry, PatientModel, TopOffender
 from ..utils import pdf_processor # Import module to access functions dynamically
 from ..utils.analysis_pdf_report import generate_analysis_pdf
@@ -97,6 +99,20 @@ class AnalysisState(QCState):
     is_showing_patient_history: bool = False
     resolution_notes: str = ""
     analysis_active_tab: str = "patients_missing"
+    
+    # ===== SALVAMENTO DE ANÁLISES =====
+    # Campos para o modal de salvar
+    save_analysis_name: str = ""              # Nome escolhido pelo usuário
+    save_analysis_date: str = ""              # Data escolhida (YYYY-MM-DD)
+    save_analysis_description: str = ""       # Descrição opcional
+    is_saving_analysis: bool = False          # Flag de loading
+    save_analysis_message: str = ""           # Mensagem de sucesso/erro
+    is_save_modal_open: bool = False          # Controla o modal
+    
+    # Lista de análises salvas (para exibição)
+    saved_analyses_list: List[Dict[str, Any]] = []
+    selected_saved_analysis_id: str = ""
+    is_loading_saved_analyses: bool = False
 
     def set_analysis_active_tab(self, val: Any):
         self.analysis_active_tab = val
@@ -996,3 +1012,271 @@ class AnalysisState(QCState):
         finally:
             self.is_generating_csv = False
 
+    # ===== SALVAMENTO DE ANÁLISES =====
+    
+    def set_save_analysis_name(self, val: str):
+        """Define o nome da análise a ser salva"""
+        self.save_analysis_name = val
+    
+    def set_save_analysis_date(self, val: str):
+        """Define a data da análise a ser salva"""
+        self.save_analysis_date = val
+    
+    def set_save_analysis_description(self, val: str):
+        """Define a descrição da análise"""
+        self.save_analysis_description = val
+    
+    def open_save_modal(self):
+        """Abre o modal de salvar análise com valores padrão"""
+        # Sugerir nome baseado na data atual
+        today = datetime.now()
+        self.save_analysis_name = f"Análise {today.strftime('%d/%m/%Y')}"
+        self.save_analysis_date = today.strftime('%Y-%m-%d')
+        self.save_analysis_description = ""
+        self.save_analysis_message = ""
+        self.is_save_modal_open = True
+    
+    def close_save_modal(self):
+        """Fecha o modal de salvar análise"""
+        self.is_save_modal_open = False
+        self.save_analysis_message = ""
+    
+    async def save_current_analysis(self):
+        """Salva a análise atual com o nome e data escolhidos pelo usuário"""
+        if not self.has_analysis:
+            self.save_analysis_message = "❌ Nenhuma análise para salvar. Execute a análise primeiro."
+            return
+        
+        if not self.save_analysis_name.strip():
+            self.save_analysis_message = "❌ Por favor, informe um nome para a análise."
+            return
+        
+        if not self.save_analysis_date:
+            self.save_analysis_message = "❌ Por favor, selecione uma data."
+            return
+        
+        self.is_saving_analysis = True
+        self.save_analysis_message = "💾 Salvando análise..."
+        yield
+        
+        try:
+            # Converter data string para date object
+            analysis_date = datetime.strptime(self.save_analysis_date, '%Y-%m-%d').date()
+            
+            # Converter PDF base64 para bytes se disponível
+            pdf_bytes = None
+            if self.pdf_preview_b64:
+                try:
+                    pdf_bytes = base64.b64decode(self.pdf_preview_b64)
+                except:
+                    pass
+            
+            # Chamar serviço de salvamento
+            result = await saved_analysis_service.save_complete_analysis(
+                name=self.save_analysis_name.strip(),
+                analysis_date=analysis_date,
+                description=self.save_analysis_description.strip(),
+                # Arquivos originais
+                compulab_file_url=self.compulab_file_url,
+                compulab_file_name=self.compulab_file_name,
+                simus_file_url=self.simus_file_url,
+                simus_file_name=self.simus_file_name,
+                # CSVs convertidos (se disponíveis como URLs)
+                converted_compulab_url=self.compulab_csv if self.compulab_csv.startswith('http') else "",
+                converted_simus_url=self.simus_csv if self.simus_csv.startswith('http') else "",
+                # PDF
+                pdf_bytes=pdf_bytes,
+                # Resultados
+                compulab_total=self.compulab_total,
+                simus_total=self.simus_total,
+                missing_patients_count=self.missing_patients_count,
+                missing_patients_total=self.missing_patients_total,
+                missing_exams_count=self.missing_exams_count,
+                missing_exams_total=self.missing_exams_total,
+                divergences_count=self.divergences_count,
+                divergences_total=self.divergences_total,
+                extra_simus_count=self.extra_simus_exams_count,
+                # Listas de itens
+                missing_patients=self.missing_patients,
+                missing_exams=self.missing_exams,
+                value_divergences=self.value_divergences,
+                extra_simus_exams=self.extra_simus_exams,
+                # Tags automáticas
+                tags=[
+                    f"compulab:{self.compulab_file_name}" if self.compulab_file_name else None,
+                    f"simus:{self.simus_file_name}" if self.simus_file_name else None,
+                ]
+            )
+            
+            if result.get('success'):
+                self.save_analysis_message = f"✅ {result.get('message', 'Análise salva com sucesso!')}"
+                self.success_message = f"Análise '{self.save_analysis_name}' salva!"
+                # Atualizar lista de análises salvas
+                await self.load_saved_analyses()
+            else:
+                self.save_analysis_message = f"❌ {result.get('message', 'Erro ao salvar')}"
+            
+            yield
+            
+        except ValueError as e:
+            self.save_analysis_message = f"❌ Data inválida: {str(e)}"
+            yield
+        except Exception as e:
+            print(f"Erro ao salvar análise: {e}")
+            self.save_analysis_message = f"❌ Erro: {str(e)}"
+            yield
+        finally:
+            self.is_saving_analysis = False
+    
+    async def load_saved_analyses(self):
+        """Carrega lista de análises salvas do banco de dados"""
+        self.is_loading_saved_analyses = True
+        yield
+        
+        try:
+            # Executar em thread pool para não bloquear
+            loop = asyncio.get_event_loop()
+            analyses = await loop.run_in_executor(
+                None,
+                lambda: saved_analysis_service.get_saved_analyses(limit=50)
+            )
+            self.saved_analyses_list = analyses
+        except Exception as e:
+            print(f"Erro ao carregar análises salvas: {e}")
+            if "Could not find the table" in str(e):
+                self.error_message = "⚠️ Tabela de análises não encontrada. Execute a migração '001_saved_analyses.sql' no Supabase."
+            self.saved_analyses_list = []
+        except Exception as e:
+            print(f"Erro ao carregar análises salvas: {e}")
+            if "Could not find the table" in str(e):
+                self.error_message = "⚠️ Tabela de análises não encontrada. Execute a migração '001_saved_analyses.sql' no Supabase."
+            self.saved_analyses_list = []
+        finally:
+            self.is_loading_saved_analyses = False
+    
+    async def load_saved_analysis(self, analysis_id: str):
+        """Carrega uma análise salva do banco e popula o estado"""
+        self.is_analyzing = True
+        self.analysis_stage = "Carregando análise salva..."
+        self.analysis_progress_percentage = 10
+        yield
+        
+        try:
+            # Carregar análise completa
+            loop = asyncio.get_event_loop()
+            analysis = await loop.run_in_executor(
+                None,
+                lambda: saved_analysis_service.load_analysis(analysis_id)
+            )
+            
+            if not analysis:
+                self.error_message = "Análise não encontrada"
+                return
+            
+            self.analysis_progress_percentage = 50
+            self.analysis_stage = "Restaurando dados..."
+            yield
+            
+            # Restaurar totais
+            self.compulab_total = float(analysis.get('compulab_total', 0))
+            self.simus_total = float(analysis.get('simus_total', 0))
+            self.missing_patients_count = analysis.get('missing_patients_count', 0)
+            self.missing_patients_total = float(analysis.get('missing_patients_total', 0))
+            self.missing_exams_count = analysis.get('missing_exams_count', 0)
+            self.missing_exams_total = float(analysis.get('missing_exams_total', 0))
+            self.divergences_count = analysis.get('divergences_count', 0)
+            self.divergences_total = float(analysis.get('divergences_total', 0))
+            self.extra_simus_exams_count = analysis.get('extra_simus_count', 0)
+            
+            # Restaurar listas de itens
+            self.missing_patients = [
+                AnalysisResult(
+                    patient=item.get('patient_name', ''),
+                    exam_name=item.get('exam_name', ''),
+                    value=float(item.get('compulab_value', 0)),
+                    exams_count=item.get('exams_count', 0),
+                    total_value=float(item.get('compulab_value', 0))
+                )
+                for item in analysis.get('missing_patients', [])
+            ]
+            
+            self.missing_exams = [
+                AnalysisResult(
+                    patient=item.get('patient_name', ''),
+                    exam_name=item.get('exam_name', ''),
+                    compulab_value=float(item.get('compulab_value', 0))
+                )
+                for item in analysis.get('missing_exams', [])
+            ]
+            
+            self.value_divergences = [
+                AnalysisResult(
+                    patient=item.get('patient_name', ''),
+                    exam_name=item.get('exam_name', ''),
+                    compulab_value=float(item.get('compulab_value', 0)),
+                    simus_value=float(item.get('simus_value', 0)),
+                    difference=float(item.get('difference', 0))
+                )
+                for item in analysis.get('divergences', [])
+            ]
+            
+            self.extra_simus_exams = [
+                AnalysisResult(
+                    patient=item.get('patient_name', ''),
+                    exam_name=item.get('exam_name', ''),
+                    simus_value=float(item.get('simus_value', 0))
+                )
+                for item in analysis.get('extra_simus', [])
+            ]
+            
+            # Restaurar nomes de arquivo
+            self.compulab_file_name = analysis.get('compulab_file_name', '')
+            self.compulab_file_url = analysis.get('compulab_file_url', '')
+            self.simus_file_name = analysis.get('simus_file_name', '')
+            self.simus_file_url = analysis.get('simus_file_url', '')
+            
+            self.selected_saved_analysis_id = analysis_id
+            
+            self.analysis_progress_percentage = 100
+            self.analysis_stage = "Carregado!"
+            self.success_message = f"Análise '{analysis.get('analysis_name', '')}' carregada com sucesso!"
+            
+            yield
+            
+            # Regenerar PDF preview
+            await self.generate_pdf_report()
+            
+        except Exception as e:
+            print(f"Erro ao carregar análise: {e}")
+            self.error_message = f"Erro ao carregar análise: {str(e)}"
+        finally:
+            self.is_analyzing = False
+    
+    async def delete_saved_analysis(self, analysis_id: str):
+        """Deleta uma análise salva"""
+        try:
+            loop = asyncio.get_event_loop()
+            success = await loop.run_in_executor(
+                None,
+                lambda: saved_analysis_service.delete_analysis(analysis_id)
+            )
+            
+            if success:
+                self.success_message = "Análise deletada com sucesso!"
+                # Atualizar lista
+                await self.load_saved_analyses()
+            else:
+                self.error_message = "Erro ao deletar análise"
+        except Exception as e:
+            self.error_message = f"Erro: {str(e)}"
+    
+    def search_saved_analyses(self, query: str):
+        """Busca análises salvas por nome"""
+        if not query.strip():
+            return
+        
+        try:
+            results = saved_analysis_service.search_analyses(query)
+            self.saved_analyses_list = results
+        except Exception as e:
+            print(f"Erro na busca: {e}")

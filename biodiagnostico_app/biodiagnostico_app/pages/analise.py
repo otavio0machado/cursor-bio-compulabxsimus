@@ -6,6 +6,7 @@ import reflex as rx
 from typing import Any
 from ..state import State
 from ..components.file_upload import compact_upload_card, upload_progress_indicator
+from ..components.save_analysis_modal import save_analysis_modal, saved_analyses_list
 from ..components import ui
 from ..styles import Color, Design, Typography, Spacing, GLASS_STYLE
 
@@ -372,6 +373,16 @@ def analise_page() -> rx.Component:
                 width="100%", display="flex", justify_content="center"
             ),
 
+            # === SAVED ANALYSES (COLLAPSIBLE) ===
+            rx.accordion.root(
+                rx.accordion.item(
+                    header=rx.text("📂 Histórico de Análises Salvas", weight="bold", color=Color.PRIMARY),
+                    content=saved_analyses_list(),
+                ),
+                width="100%", max_width="100%", margin_bottom="24px",
+                collapsible=True, variant="outline"
+            ),
+
             # === UPLOAD AREA ===
             rx.box(
                 rx.vstack(
@@ -397,7 +408,7 @@ def analise_page() -> rx.Component:
                     bg=Color.SURFACE,
                     padding=[Spacing.MD, Spacing.LG, "24px"],
                     border_radius="24px", border=f"1px solid {Color.BORDER}",
-                    box_shadow=Design.SHADOW_DEFAULT, max_width="800px", width="100%", margin_bottom="32px",
+                    box_shadow=Design.SHADOW_DEFAULT, width="100%", max_width="100%", margin_bottom="32px",
                     animation="fadeInUp 0.6s ease-out"
                 )
             ),
@@ -405,7 +416,7 @@ def analise_page() -> rx.Component:
             # === RESULTS SECTION ===
             rx.cond(
                 State.has_analysis,
-                rx.hstack(
+                rx.flex(
                     # === LEFT PANEL: ANALYSIS & EDITING ===
                     rx.vstack(
                         # KPIs
@@ -557,9 +568,11 @@ def analise_page() -> rx.Component:
                             width="100%"
                         ),
                         
-                        width="60%", animation="fadeInUp 0.8s ease-out 0.2s both",
-                        padding_right=Spacing.LG,
-                        transition="width 0.3s ease" # Smooth transition
+                        flex="1",
+                        min_width="0",
+                        animation="fadeInUp 0.8s ease-out 0.2s both",
+                        padding_right={"initial": "0", "lg": Spacing.LG},
+                        margin_bottom={"initial": "32px", "lg": "0"},
                     ),
 
                     # === RIGHT PANEL: PDF REAL-TIME PREVIEW ===
@@ -571,7 +584,7 @@ def analise_page() -> rx.Component:
                                     rx.icon("file-check", color=Color.PRIMARY, size=20),
                                     rx.text("Preview do Relatório", weight="bold", color=Color.DEEP),
                                     rx.spacer(),
-                                    rx.badge("TEMPO REAL", color_scheme="green", variant="soft", size="1"),
+                                    save_analysis_modal(),
                                     rx.button(
                                         rx.icon("refresh-cw", size=16),
                                         on_click=State.generate_pdf_report,
@@ -585,29 +598,34 @@ def analise_page() -> rx.Component:
                                         f'<iframe src="data:application/pdf;base64,' + State.pdf_preview_b64 + '" width="100%" height="100%" style="border: none; border-radius: 12px;"></iframe>'
                                     ),
                                     width="100%",
-                                    height="calc(100vh - 200px)", # Ajustar altura do iframe
+                                    height="calc(100vh - 220px)", 
+                                    min_height="500px",
                                     class_name="pdf-preview-container"
                                 ),
                                 height="100%", width="100%", spacing="2"
                             ),
-                            width="40%", # Panel width
+                            width={"initial": "100%", "lg": "450px"}, 
+                            min_width={"initial": "100%", "lg": "380px"},
+                            flex_shrink="0",
                             bg=Color.SURFACE,
-                            border_left=f"1px solid {Color.BORDER}",
-                            padding_left=Spacing.LG,
-                            height="auto",
-                            position="sticky", top="20px"
+                            border=f"1px solid {Color.BORDER}",
+                            border_radius=Design.RADIUS_LG,
+                            padding=Spacing.LG,
+                            height="fit-content",
+                            position={"initial": "relative", "lg": "sticky"}, 
+                            top="120px",
+                            box_shadow=Design.SHADOW_MD
                         ),
                         # Fallback empty (redundant if using rx.cond)
                         rx.box() 
                     ),
                     
                     width="100%",
-                    spacing="0",
+                    justify_content="start",
+                    direction={"initial": "column", "lg": "row"},
                     align_items="start"
                 ),
             ),
-            
-            patient_history_modal(),
             
             patient_history_modal(),
             

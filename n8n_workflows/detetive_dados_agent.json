@@ -1,5 +1,5 @@
 {
-    "name": "Detetive de Dados - Biodiagnóstico",
+    "name": "Detetive de Dados - Biodiagnóstico v2",
     "nodes": [
         {
             "parameters": {
@@ -25,7 +25,7 @@
                 "promptType": "define",
                 "text": "={{ $json.body.message }}",
                 "options": {
-                    "systemMessage": "Você é o \"Detetive de Dados\", um assistente especializado em análise de dados de laboratórios clínicos e faturamento de convênios de saúde.\n\nVocê está analisando dados de divergências entre o sistema SIMUS (laboratório) e as tabelas dos convênios (planos de saúde). Seu objetivo é ajudar o analista a identificar padrões, causas e soluções para as divergências encontradas.\n\nDados de contexto disponíveis:\n{{ $json.body.context }}\n\nDiretrizes:\n1. Responda SEMPRE em português brasileiro\n2. Seja objetivo e direto nas análises\n3. Use emojis para facilitar a leitura (📊 para dados, 🔍 para investigação, ⚠️ para alertas, 💡 para sugestões)\n4. Quando analisar divergências, identifique:\n   - Padrão (se houver)\n   - Impacto financeiro estimado\n   - Causa provável\n   - Ação recomendada\n5. Formate valores monetários como R$ X.XXX,XX\n6. Se não tiver dados suficientes, peça mais informações"
+                    "systemMessage": "Você é o \"Detetive de Dados\", um assistente especializado em análise de faturamento de laboratórios clínicos e controle de qualidade (QC).\n\n### PROCESSO DE PENSAMENTO (Chain-of-Thought):\nAntes de responder ao usuário, você deve SEMPRE estruturar seu raciocínio internamente:\n1. Identifique os dados de contexto disponíveis.\n2. Escolha a ferramenta (tool) adequada para investigar o problema.\n3. Identifique padrões (ex: glosas recorrentes de um mesmo convênio).\n\n### DIRETRIZES:\n1. Responda em Português Brasileiro.\n2. Use emojis: 📊 (dados), 🔍 (análise), ⚠️ (alerta), 💡 (sugestão), 🧬 (qualidade).\n3. Formate valores como R$ X.XXX,XX.\n4. Quando analisar divergências, sugira uma ação corretiva.\n\nDados de contexto:\n{{ $json.body.context }}"
                 }
             },
             "id": "ai-agent",
@@ -39,9 +39,9 @@
         },
         {
             "parameters": {
-                "modelName": "models/gemini-2.5-flash",
+                "modelName": "models/gemini-2.0-flash",
                 "options": {
-                    "temperature": 0.7,
+                    "temperature": 0.3,
                     "maxOutputTokens": 2048
                 }
             },
@@ -63,38 +63,38 @@
         {
             "parameters": {
                 "name": "analisar_divergencias",
-                "description": "Analisa as divergências de valores, pacientes ausentes e exames não encontrados nos dados de contexto. Use esta ferramenta quando o usuário pedir para analisar divergências, identificar padrões ou calcular impactos financeiros.",
+                "description": "Analisa divergências de valores e exames faltantes nos dados de contexto.",
                 "workflowId": "={{ $workflow.id }}",
                 "responsePropertyName": "analysis_result"
             },
             "id": "tool-analisar",
-            "name": "Tool: Analisar Divergências",
+            "name": "analisar_divergencias",
             "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
             "typeVersion": 2,
             "position": [
                 660,
-                540
+                520
             ]
         },
         {
             "parameters": {
-                "name": "calcular_perda_financeira",
-                "description": "Calcula o total de perda financeira baseado nas divergências. Use quando o usuário perguntar sobre impacto financeiro total, perdas ou valores não faturados.",
-                "code": "const context = JSON.parse($input.item.json.context || '{}');\nconst divergencias = context.value_divergences || [];\n\nlet totalPerda = 0;\nlet resumoPorConvenio = {};\n\nfor (const div of divergencias) {\n  const perda = (div.valor_simus || 0) - (div.valor_convenio || 0);\n  if (perda > 0) {\n    totalPerda += perda;\n    const convenio = div.convenio || 'Desconhecido';\n    resumoPorConvenio[convenio] = (resumoPorConvenio[convenio] || 0) + perda;\n  }\n}\n\nreturn {\n  total_perda: totalPerda,\n  total_formatado: `R$ ${totalPerda.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`,\n  por_convenio: resumoPorConvenio,\n  quantidade_divergencias: divergencias.length\n};"
+                "name": "calcular_perda",
+                "description": "Calcula o total de perda financeira baseado nas divergências.",
+                "code": "const context = JSON.parse($input.item.json.context || '{}');\nconst divergencias = context.value_divergences || [];\nlet total = 0;\nfor (const d of divergencias) total += ((d.valor_simus || 0) - (d.valor_convenio || 0));\nreturn { total_perda: total, total_formatado: `R$ ${total.toLocaleString('pt-BR')}` };"
             },
-            "id": "tool-calcular-perda",
-            "name": "Tool: Calcular Perda Financeira",
+            "id": "tool-calcular",
+            "name": "calcular_perda",
             "type": "@n8n/n8n-nodes-langchain.toolCode",
             "typeVersion": 1,
             "position": [
-                800,
-                540
+                780,
+                520
             ]
         },
         {
             "parameters": {
-                "name": "buscar_historico_paciente",
-                "description": "Busca o histórico de exames e divergências de um paciente específico no banco de dados. Use quando o usuário mencionar um nome de paciente ou pedir histórico.",
+                "name": "buscar_historico",
+                "description": "Busca histórico de um paciente no banco de dados.",
                 "method": "POST",
                 "url": "={{ $json.body.supabase_url }}/rest/v1/rpc/buscar_historico_paciente",
                 "authentication": "predefinedCredentialType",
@@ -110,12 +110,12 @@
                 }
             },
             "id": "tool-historico",
-            "name": "Tool: Buscar Histórico",
+            "name": "buscar_historico",
             "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
             "typeVersion": 1.1,
             "position": [
-                940,
-                540
+                900,
+                520
             ],
             "credentials": {
                 "supabaseApi": {
@@ -126,17 +126,32 @@
         },
         {
             "parameters": {
-                "name": "identificar_top_offenders",
-                "description": "Identifica os convênios ou exames com maior quantidade de divergências (top offenders). Use quando o usuário perguntar sobre os piores casos, maiores problemas ou ranking de divergências.",
-                "code": "const context = JSON.parse($input.item.json.context || '{}');\nconst divergencias = context.value_divergences || [];\nconst pacientesAusentes = context.missing_patients || [];\nconst examesAusentes = context.missing_exams || [];\n\n// Contar divergências por convênio\nconst porConvenio = {};\nfor (const div of divergencias) {\n  const convenio = div.convenio || 'Desconhecido';\n  porConvenio[convenio] = (porConvenio[convenio] || 0) + 1;\n}\n\n// Contar divergências por exame\nconst porExame = {};\nfor (const div of divergencias) {\n  const exame = div.exame || 'Desconhecido';\n  porExame[exame] = (porExame[exame] || 0) + 1;\n}\n\n// Ordenar e pegar top 5\nconst topConvenios = Object.entries(porConvenio)\n  .sort((a, b) => b[1] - a[1])\n  .slice(0, 5);\n\nconst topExames = Object.entries(porExame)\n  .sort((a, b) => b[1] - a[1])\n  .slice(0, 5);\n\nreturn {\n  top_convenios: topConvenios.map(([nome, count]) => ({ nome, divergencias: count })),\n  top_exames: topExames.map(([nome, count]) => ({ nome, divergencias: count })),\n  total_pacientes_ausentes: pacientesAusentes.length,\n  total_exames_ausentes: examesAusentes.length\n};"
+                "name": "top_offenders",
+                "description": "Identifica os convênios ou exames com mais divergências.",
+                "code": "const context = JSON.parse($input.item.json.context || '{}');\nconst div = context.value_divergences || [];\nconst counts = {};\nfor (const d of div) counts[d.convenio] = (counts[d.convenio] || 0) + 1;\nreturn { top_convenios: Object.entries(counts).sort((a,b) => b[1]-a[1]).slice(0,5) };"
             },
             "id": "tool-top-offenders",
-            "name": "Tool: Top Offenders",
+            "name": "top_offenders",
             "type": "@n8n/n8n-nodes-langchain.toolCode",
             "typeVersion": 1,
             "position": [
-                1080,
-                540
+                1020,
+                520
+            ]
+        },
+        {
+            "parameters": {
+                "name": "interpretador_westgard",
+                "description": "Valida resultados QC com regras de Westgard. Requer: value, target_value, target_sd.",
+                "code": "const i = $json.tool_input; let d = typeof i === 'string' ? JSON.parse(i) : i;\nconst z = (d.value - d.target_value) / d.target_sd;\nreturn { z_score: z.toFixed(2), status: Math.abs(z) > 3 ? 'REJEITADO (1-3s)' : (Math.abs(z) > 2 ? 'ALERTA (1-2s)' : 'OK') };"
+            },
+            "id": "tool-westgard",
+            "name": "interpretador_westgard",
+            "type": "@n8n/n8n-nodes-langchain.toolCode",
+            "typeVersion": 1,
+            "position": [
+                1140,
+                520
             ]
         },
         {
@@ -216,7 +231,7 @@
                 ]
             ]
         },
-        "Tool: Analisar Divergências": {
+        "analisar_divergencias": {
             "ai_tool": [
                 [
                     {
@@ -227,7 +242,7 @@
                 ]
             ]
         },
-        "Tool: Calcular Perda Financeira": {
+        "calcular_perda": {
             "ai_tool": [
                 [
                     {
@@ -238,7 +253,7 @@
                 ]
             ]
         },
-        "Tool: Buscar Histórico": {
+        "buscar_historico": {
             "ai_tool": [
                 [
                     {
@@ -249,7 +264,18 @@
                 ]
             ]
         },
-        "Tool: Top Offenders": {
+        "top_offenders": {
+            "ai_tool": [
+                [
+                    {
+                        "node": "AI Agent Detetive",
+                        "type": "ai_tool",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "interpretador_westgard": {
             "ai_tool": [
                 [
                     {

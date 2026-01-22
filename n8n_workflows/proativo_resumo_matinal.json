@@ -1,0 +1,196 @@
+{
+    "name": "Detetive - Resumo Matinal (Cron 08h)",
+    "nodes": [
+        {
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "cronExpression",
+                            "expression": "0 8 * * 1-5"
+                        }
+                    ]
+                }
+            },
+            "id": "cron-trigger",
+            "name": "Cron Matinal",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.2,
+            "position": [
+                240,
+                320
+            ]
+        },
+        {
+            "parameters": {
+                "method": "GET",
+                "url": "={{ $env.SUPABASE_URL }}/rest/v1/divergencias?select=*&created_at=gte.{{ $now.minus(1, 'day').toISODate() }}",
+                "authentication": "predefinedCredentialType",
+                "nodeCredentialType": "httpHeaderAuth",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "apikey",
+                            "value": "={{ $env.SUPABASE_KEY }}"
+                        },
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer {{ $env.SUPABASE_KEY }}"
+                        }
+                    ]
+                }
+            },
+            "id": "fetch-divergencias",
+            "name": "Buscar Divergências 24h",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                460,
+                320
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const items = $input.all();\nlet totalPerda = 0;\nlet countDiv = 0;\nconst porConvenio = {};\n\nfor (const item of items) {\n  const data = item.json;\n  if (Array.isArray(data)) {\n    for (const div of data) {\n      const perda = Math.abs((div.valor_simus || 0) - (div.valor_convenio || 0));\n      totalPerda += perda;\n      countDiv++;\n      const conv = div.convenio || 'Desconhecido';\n      porConvenio[conv] = (porConvenio[conv] || 0) + 1;\n    }\n  }\n}\n\nconst piorConvenio = Object.entries(porConvenio).sort((a, b) => b[1] - a[1])[0];\nconst formatBRL = (v) => `R$ ${v.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;\n\nconst resumo = `\n🕵️ *RESUMO MATINAL - DETETIVE DE DADOS*\n📅 ${new Date().toLocaleDateString('pt-BR')}\n\n💰 *Perdas nas últimas 24h:* ${formatBRL(totalPerda)}\n📊 *Divergências encontradas:* ${countDiv}\n⚠️ *Pior convênio:* ${piorConvenio ? `${piorConvenio[0]} (${piorConvenio[1]}x)` : 'Nenhum'}\n\n${totalPerda > 1000 ? '🚨 *ALERTA:* Perdas acima de R$ 1.000!' : '✅ Situação sob controle.'}\n`;\n\nreturn [{ json: { resumo, totalPerda, countDiv, piorConvenio: piorConvenio ? piorConvenio[0] : null, nivel: totalPerda > 1000 ? 'CRITICO' : 'NORMAL' } }];"
+            },
+            "id": "processar-resumo",
+            "name": "Processar Resumo",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                680,
+                320
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "boolean": [
+                        {
+                            "value1": "={{ $json.totalPerda > 0 }}",
+                            "value2": true
+                        }
+                    ]
+                }
+            },
+            "id": "check-perdas",
+            "name": "Tem Perdas?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [
+                900,
+                320
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{ $env.N8N_WEBHOOK_URL }}",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "message",
+                            "value": "Gere um resumo executivo completo para o gestor"
+                        },
+                        {
+                            "name": "context",
+                            "value": "={{ JSON.stringify({ resumo_matinal: true, total_perda: $json.totalPerda, count: $json.countDiv }) }}"
+                        }
+                    ]
+                }
+            },
+            "id": "chamar-agente",
+            "name": "Chamar Agente IA",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                1120,
+                260
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "sendMessage",
+                "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+                "text": "={{ $json.resumo }}",
+                "additionalFields": {
+                    "parse_mode": "Markdown"
+                }
+            },
+            "id": "enviar-telegram",
+            "name": "Enviar Telegram",
+            "type": "n8n-nodes-base.telegram",
+            "typeVersion": 1.2,
+            "position": [
+                1340,
+                260
+            ],
+            "credentials": {
+                "telegramApi": {
+                    "id": "CONFIGURE",
+                    "name": "Telegram API"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "Cron Matinal": {
+            "main": [
+                [
+                    {
+                        "node": "Buscar Divergências 24h",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Buscar Divergências 24h": {
+            "main": [
+                [
+                    {
+                        "node": "Processar Resumo",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Processar Resumo": {
+            "main": [
+                [
+                    {
+                        "node": "Tem Perdas?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Tem Perdas?": {
+            "main": [
+                [
+                    {
+                        "node": "Chamar Agente IA",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                []
+            ]
+        },
+        "Chamar Agente IA": {
+            "main": [
+                [
+                    {
+                        "node": "Enviar Telegram",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

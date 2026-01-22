@@ -152,7 +152,7 @@ def generate_analysis_pdf(
         ('LINEBELOW', (0,0), (-1,0), 1, colors.HexColor(Color.PRIMARY)),
         ('GRID', (0,0), (-1,-2), 0.5, colors.grey),
         ('BOX', (0,-1), (-1,-1), 1, colors.HexColor(Color.DEEP)), # Total box
-        ('BACKGROUND', (0,-1), (-1,-1), colors.HexColor('#f0f0f0')),
+        ('BACKGROUND', (0,-1), (-1,-1), colors.HexColor(Color.BACKGROUND)),
     ]))
     story.append(loss_table)
     story.append(Spacer(1, 0.5*cm))

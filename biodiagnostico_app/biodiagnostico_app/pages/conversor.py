@@ -140,7 +140,7 @@ def conversor_page() -> rx.Component:
                 feature_card("table", "Excel Estruturado", "Gera planilhas prontas para análise", "0.3s"),
                 feature_card("zap", "Alta Performance", "Processamento local seguro e rápido", "0.4s"),
                 columns={"initial": "1", "sm": "2", "lg": "4"},
-                spacing="4", width="100%", max_width="6xl", margin_x="auto"
+                spacing="4", width="100%", max_width="5xl", margin_x="auto"
             ),
             
             # Área Principal de Upload
@@ -148,7 +148,7 @@ def conversor_page() -> rx.Component:
                 rx.vstack(
                     rx.hstack(
                         rx.icon(tag="cloud-upload", size=24, color=Color.PRIMARY),
-                        ui.heading("Área de Upload", level=3),
+                        ui.heading("Importação de Dados", level=3),
                         spacing="3", align_items="center",
                         margin_bottom=Spacing.MD
                     ),

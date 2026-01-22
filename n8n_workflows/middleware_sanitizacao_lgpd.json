@@ -1,0 +1,72 @@
+{
+    "name": "Detetive - Sanitização LGPD (Middleware)",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "sanitizar-dados",
+                "responseMode": "lastNode",
+                "options": {
+                    "allowedOrigins": "*"
+                }
+            },
+            "id": "webhook-sanitizar",
+            "name": "Webhook Sanitização",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2,
+            "position": [
+                240,
+                320
+            ],
+            "webhookId": "sanitizar-dados-lgpd"
+        },
+        {
+            "parameters": {
+                "jsCode": "// Middleware de Sanitização LGPD\n// Remove ou mascara dados pessoais antes de enviar para APIs externas (Gemini, etc)\n\nconst data = $input.first().json.body || $input.first().json;\n\nfunction sanitizarNome(nome) {\n  if (!nome || typeof nome !== 'string') return 'PACIENTE_XXX';\n  // Mantém apenas iniciais: \"João da Silva\" -> \"J** d* S****\"\n  return nome.split(' ').map(parte => \n    parte.charAt(0) + '*'.repeat(Math.max(0, parte.length - 1))\n  ).join(' ');\n}\n\nfunction sanitizarCPF(cpf) {\n  if (!cpf) return null;\n  // 123.456.789-00 -> ***.456.***-**\n  return cpf.replace(/^(\\d{3})\\.?(\\d{3})\\.?(\\d{3})\\-?(\\d{2})$/, '***.\\$2.***-**');\n}\n\nfunction sanitizarTelefone(tel) {\n  if (!tel) return null;\n  // (11) 99999-9999 -> (11) *****-9999\n  return tel.replace(/(\\(\\d{2}\\)\\s?)(\\d{4,5})(-?\\d{4})/, '\\$1*****\\$3');\n}\n\nfunction sanitizarObjeto(obj) {\n  if (!obj || typeof obj !== 'object') return obj;\n  \n  const resultado = Array.isArray(obj) ? [] : {};\n  \n  for (const [key, value] of Object.entries(obj)) {\n    const keyLower = key.toLowerCase();\n    \n    if (keyLower.includes('paciente') || keyLower.includes('nome') || keyLower.includes('patient')) {\n      resultado[key] = sanitizarNome(value);\n    } else if (keyLower.includes('cpf')) {\n      resultado[key] = sanitizarCPF(value);\n    } else if (keyLower.includes('telefone') || keyLower.includes('phone')) {\n      resultado[key] = sanitizarTelefone(value);\n    } else if (keyLower.includes('email')) {\n      resultado[key] = value ? value.replace(/(.{2}).*(@.*)/, '\\$1***\\$2') : null;\n    } else if (typeof value === 'object') {\n      resultado[key] = sanitizarObjeto(value);\n    } else {\n      resultado[key] = value;\n    }\n  }\n  \n  return resultado;\n}\n\nconst dadosSanitizados = sanitizarObjeto(data);\n\nreturn [{ json: { \n  sucesso: true, \n  dados_sanitizados: dadosSanitizados,\n  lgpd_compliant: true,\n  campos_mascarados: ['paciente', 'cpf', 'telefone', 'email']\n} }];"
+            },
+            "id": "sanitizar",
+            "name": "Sanitizar PII",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                460,
+                320
+            ]
+        },
+        {
+            "parameters": {},
+            "id": "resposta",
+            "name": "Responder",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1.1,
+            "position": [
+                680,
+                320
+            ]
+        }
+    ],
+    "connections": {
+        "Webhook Sanitização": {
+            "main": [
+                [
+                    {
+                        "node": "Sanitizar PII",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Sanitizar PII": {
+            "main": [
+                [
+                    {
+                        "node": "Responder",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

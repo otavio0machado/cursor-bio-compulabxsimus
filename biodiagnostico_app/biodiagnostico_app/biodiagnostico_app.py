@@ -107,6 +107,6 @@ app = rx.App(
 app.add_page(index, route="/", title="Biodiagnóstico - Login", on_load=State.load_data_from_db)
 app.add_page(index_dashboard, route="/dashboard", title="Biodiagnóstico - Dashboard", on_load=State.load_data_from_db)
 app.add_page(route_conversor, route="/conversor", title="Biodiagnóstico - Conversor PDF")
-app.add_page(route_analise, route="/analise", title="Biodiagnóstico - Análise")
+app.add_page(route_analise, route="/analise", title="Biodiagnóstico - Análise", on_load=State.load_saved_analyses)
 app.add_page(route_proin, route="/proin", title="Biodiagnóstico - ProIn QC", on_load=State.load_data_from_db)
 app.add_page(route_insights, route="/detetive", title="Biodiagnóstico - Bio IA")

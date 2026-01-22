@@ -22,6 +22,7 @@ class Color:
     TEXT_SECONDARY = "#4B5563" # Gray 600 - Texto de apoio
     TEXT_LIGHT = "#9CA3AF"     # Gray 400 - Legendas e textos desativados
     BORDER = "#E5E7EB"       # Gray 200 - Bordas sutis
+    BACKGROUND_CARD = "#FFFFFF" # Fundo de cards (Alias para SURFACE)
     
     # Status Colors
     ERROR = "#EF4444"        # Vermelho erro

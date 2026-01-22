@@ -1,0 +1,126 @@
+{
+    "name": "Detetive - Relatório Semanal (Sexta 17h)",
+    "nodes": [
+        {
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "cronExpression",
+                            "expression": "0 17 * * 5"
+                        }
+                    ]
+                }
+            },
+            "id": "cron-semanal",
+            "name": "Cron Sexta 17h",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.2,
+            "position": [
+                240,
+                320
+            ]
+        },
+        {
+            "parameters": {
+                "method": "GET",
+                "url": "={{ $env.SUPABASE_URL }}/rest/v1/divergencias?select=*&created_at=gte.{{ $now.minus(7, 'days').toISODate() }}",
+                "authentication": "predefinedCredentialType",
+                "nodeCredentialType": "httpHeaderAuth",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "apikey",
+                            "value": "={{ $env.SUPABASE_KEY }}"
+                        },
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer {{ $env.SUPABASE_KEY }}"
+                        }
+                    ]
+                }
+            },
+            "id": "fetch-semana",
+            "name": "Buscar Divergências 7 dias",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                460,
+                320
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const items = $input.all();\nlet totalPerda = 0;\nlet countDiv = 0;\nconst porConvenio = {};\nconst porDia = {};\n\nfor (const item of items) {\n  const data = item.json;\n  if (Array.isArray(data)) {\n    for (const div of data) {\n      const perda = Math.abs((div.valor_simus || 0) - (div.valor_convenio || 0));\n      totalPerda += perda;\n      countDiv++;\n      \n      const conv = div.convenio || 'Desconhecido';\n      porConvenio[conv] = (porConvenio[conv] || 0) + perda;\n      \n      const dia = (div.created_at || '').substring(0, 10);\n      porDia[dia] = (porDia[dia] || 0) + 1;\n    }\n  }\n}\n\nconst top3Convenios = Object.entries(porConvenio)\n  .sort((a, b) => b[1] - a[1])\n  .slice(0, 3)\n  .map(([nome, valor]) => `   • ${nome}: R$ ${valor.toLocaleString('pt-BR')}`)\n  .join('\\n');\n\nconst tendenciaDias = Object.entries(porDia)\n  .sort((a, b) => a[0].localeCompare(b[0]))\n  .map(([dia, count]) => `   ${dia}: ${count} divergências`)\n  .join('\\n');\n\nconst formatBRL = (v) => `R$ ${v.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;\n\nconst relatorio = `\n📊 *RELATÓRIO SEMANAL - DETETIVE DE DADOS*\n📅 Semana de ${new Date(Date.now() - 7*24*60*60*1000).toLocaleDateString('pt-BR')} a ${new Date().toLocaleDateString('pt-BR')}\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n💰 *RESUMO FINANCEIRO*\n   Perda Total: ${formatBRL(totalPerda)}\n   Divergências: ${countDiv}\n   Média/Dia: ${formatBRL(totalPerda / 7)}\n\n🏆 *TOP 3 CONVÊNIOS (Perda)*\n${top3Convenios || '   Nenhum registro'}\n\n📈 *EVOLUÇÃO DIÁRIA*\n${tendenciaDias || '   Sem dados'}\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n${totalPerda > 5000 ? '⚠️ *ALERTA:* Perda semanal acima de R$ 5.000!' : '✅ Semana dentro do esperado.'}\n\n💡 *Recomendação:* ${totalPerda > 5000 ? 'Agende reunião com faturamento na segunda-feira.' : 'Manter rotina de monitoramento.'}\n`;\n\nreturn [{ json: { relatorio, totalPerda, countDiv, top3: Object.keys(porConvenio).slice(0, 3) } }];"
+            },
+            "id": "processar-relatorio",
+            "name": "Gerar Relatório",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                680,
+                320
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "sendMessage",
+                "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+                "text": "={{ $json.relatorio }}",
+                "additionalFields": {
+                    "parse_mode": "Markdown"
+                }
+            },
+            "id": "enviar-relatorio",
+            "name": "Enviar Relatório",
+            "type": "n8n-nodes-base.telegram",
+            "typeVersion": 1.2,
+            "position": [
+                900,
+                320
+            ],
+            "credentials": {
+                "telegramApi": {
+                    "id": "CONFIGURE",
+                    "name": "Telegram API"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "Cron Sexta 17h": {
+            "main": [
+                [
+                    {
+                        "node": "Buscar Divergências 7 dias",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Buscar Divergências 7 dias": {
+            "main": [
+                [
+                    {
+                        "node": "Gerar Relatório",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Gerar Relatório": {
+            "main": [
+                [
+                    {
+                        "node": "Enviar Relatório",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

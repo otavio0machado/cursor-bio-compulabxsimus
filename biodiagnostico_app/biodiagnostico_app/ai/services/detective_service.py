@@ -4,7 +4,7 @@ import asyncio
 import google.genai as genai
 from google.genai import types
 from string import Template
-from typing import Optional
+from typing import Optional, List
 from dotenv import load_dotenv, find_dotenv
 
 # Load env vars from .env file (search in current and parent dirs)
@@ -39,15 +39,28 @@ class DetectiveService:
             # Fallback inline prompt
             return f"Voce e um analista financeiro. Analise estes dados: {data_json}"
 
-    async def ask_detective(self, question: str, data_context: str) -> str:
+    async def ask_detective(self, question: str, data_context: str, images: Optional[List[dict]] = None) -> str:
         """
-        Sends the user's question and the data context to Gemini.
+        Sends the user's question, the data context, and optional images to Gemini.
         Includes retry logic with exponential backoff.
+        
+        images: List of dicts with {"data": bytes, "mime_type": str}
         """
         if not self.client:
             return "Erro: Chave de API do Gemini nao configurada."
 
         system_instruction = self._load_prompt(data_context)
+        
+        # Prepare contents
+        contents = [question]
+        if images:
+            for img in images:
+                contents.append(
+                    types.Part.from_bytes(
+                        data=img["data"],
+                        mime_type=img["mime_type"]
+                    )
+                )
         
         # List of models to try
         models_to_try = [self.model, self.fallback_model]
@@ -58,7 +71,7 @@ class DetectiveService:
                 try:
                     response = await self.client.aio.models.generate_content(
                         model=model_name,
-                        contents=question,
+                        contents=contents,
                         config=types.GenerateContentConfig(
                             system_instruction=system_instruction,
                             temperature=0.2,

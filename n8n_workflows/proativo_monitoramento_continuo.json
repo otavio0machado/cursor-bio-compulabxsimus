@@ -1,0 +1,158 @@
+{
+    "name": "Detetive - Monitoramento Contínuo (15min)",
+    "nodes": [
+        {
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "minutes",
+                            "minutesInterval": 15
+                        }
+                    ]
+                }
+            },
+            "id": "cron-15min",
+            "name": "A cada 15 minutos",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.2,
+            "position": [
+                240,
+                320
+            ]
+        },
+        {
+            "parameters": {
+                "method": "GET",
+                "url": "={{ $env.SUPABASE_URL }}/rest/v1/divergencias?select=*&created_at=gte.{{ $now.minus(15, 'minutes').toISO() }}&order=created_at.desc&limit=10",
+                "authentication": "predefinedCredentialType",
+                "nodeCredentialType": "httpHeaderAuth",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "apikey",
+                            "value": "={{ $env.SUPABASE_KEY }}"
+                        },
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer {{ $env.SUPABASE_KEY }}"
+                        }
+                    ]
+                }
+            },
+            "id": "fetch-recentes",
+            "name": "Buscar Últimos 15min",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                460,
+                320
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const items = $input.all();\nlet novasDivergencias = [];\nlet totalPerdaRecente = 0;\n\nfor (const item of items) {\n  const data = item.json;\n  if (Array.isArray(data)) {\n    for (const div of data) {\n      const perda = Math.abs((div.valor_simus || 0) - (div.valor_convenio || 0));\n      totalPerdaRecente += perda;\n      \n      // Alertar apenas se perda individual > R$ 200\n      if (perda >= 200) {\n        novasDivergencias.push({\n          convenio: div.convenio || 'N/A',\n          exame: div.exame || 'N/A',\n          perda: perda,\n          paciente: div.paciente ? div.paciente.substring(0, 3) + '***' : 'N/A'\n        });\n      }\n    }\n  }\n}\n\nconst temAlerta = novasDivergencias.length > 0;\n\nlet mensagem = '';\nif (temAlerta) {\n  const formatBRL = (v) => `R$ ${v.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;\n  const listaAlertas = novasDivergencias.map(d => \n    `   • ${d.convenio} | ${d.exame}: ${formatBRL(d.perda)}`\n  ).join('\\n');\n  \n  mensagem = `\n🔔 *NOVAS DIVERGÊNCIAS DETECTADAS*\n⏰ Últimos 15 minutos\n\n${listaAlertas}\n\n💰 Total: ${formatBRL(totalPerdaRecente)}\n\n🔍 Verifique no sistema para mais detalhes.\n`;\n}\n\nreturn [{ json: { temAlerta, mensagem, count: novasDivergencias.length, totalPerdaRecente } }];"
+            },
+            "id": "processar-monitoramento",
+            "name": "Processar Alertas",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                680,
+                320
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "boolean": [
+                        {
+                            "value1": "={{ $json.temAlerta }}",
+                            "value2": true
+                        }
+                    ]
+                }
+            },
+            "id": "check-alerta",
+            "name": "Tem Alerta?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [
+                900,
+                320
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "sendMessage",
+                "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+                "text": "={{ $json.mensagem }}",
+                "additionalFields": {
+                    "parse_mode": "Markdown"
+                }
+            },
+            "id": "enviar-alerta",
+            "name": "Enviar Alerta",
+            "type": "n8n-nodes-base.telegram",
+            "typeVersion": 1.2,
+            "position": [
+                1120,
+                260
+            ],
+            "credentials": {
+                "telegramApi": {
+                    "id": "CONFIGURE",
+                    "name": "Telegram API"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "A cada 15 minutos": {
+            "main": [
+                [
+                    {
+                        "node": "Buscar Últimos 15min",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Buscar Últimos 15min": {
+            "main": [
+                [
+                    {
+                        "node": "Processar Alertas",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Processar Alertas": {
+            "main": [
+                [
+                    {
+                        "node": "Tem Alerta?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Tem Alerta?": {
+            "main": [
+                [
+                    {
+                        "node": "Enviar Alerta",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                []
+            ]
+        }
+    }
+}

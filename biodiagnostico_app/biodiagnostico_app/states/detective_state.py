@@ -1,5 +1,5 @@
 import reflex as rx
-from typing import List, Dict
+from typing import List, Dict, Any
 import json
 import os
 from ..ai.services.detective_service import DetectiveService
@@ -25,6 +25,19 @@ class DetectiveState(AIState):
     is_loading: bool = False
     data_context: str = ""
     using_n8n: bool = USE_N8N
+    
+    # --- UX Improvements ---
+    thinking_steps: List[str] = []
+    suggested_actions: List[str] = [
+        "Quais são os principais motivos de glosa?",
+        "Qual convênio tem maior divergência?",
+        "Analisar QC usando as regras de Westgard.",
+        "Resuma as perdas financeiras deste mês.",
+        "Analisar erros de valor no Compulab vs Simus."
+    ]
+    
+    # Multimodal support
+    image_files: List[Dict[str, Any]] = [] # [{ "data": bytes, "mime_type": str, "name": str }]
 
     def set_input_text(self, value: str):
         self.input_text = value
@@ -78,6 +91,22 @@ class DetectiveState(AIState):
             self.data_context = get_mock_divergency_data()
             print("DEBUG: DetectiveState loaded MOCK data context.")
 
+    async def handle_image_upload(self, files: List[rx.UploadFile]):
+        """Lê os arquivos de imagem e armazena em memória."""
+        self.image_files = []
+        for file in files:
+            upload_data = await file.read()
+            self.image_files.append({
+                "data": upload_data,
+                "mime_type": file.content_type,
+                "name": file.filename
+            })
+        
+        # Feedback visual imediato
+        if self.image_files:
+            file_names = ", ".join([f["name"] for f in self.image_files])
+            self.messages.append({"role": "ai", "content": f"📸 Recebi {len(self.image_files)} imagem(ns): **{file_names}**. O que deseja que eu analise nelas?"})
+
     def handle_keys(self, key: str):
         """Monitora teclas pressionadas"""
         if key == "Enter":
@@ -103,8 +132,11 @@ class DetectiveState(AIState):
         try:
             if self.using_n8n:
                 # Usar n8n AI Agent
+                self.thinking_steps = ["Conectando ao agente n8n...", "Enviando contexto de dados..."]
+                yield
                 from ..services.n8n_service import ask_detective_n8n
-                response = await ask_detective_n8n(
+                # ... (rest of n8n logic)
+                result = await ask_detective_n8n(
                     message=user_msg,
                     value_divergences=[{
                         "paciente": div.patient,
@@ -124,13 +156,53 @@ class DetectiveState(AIState):
                         "valor": m.compulab_value
                     } for m in self.missing_exams]
                 )
-                self.messages.append({"role": "ai", "content": response})
+                
+                if result.get("success"):
+                    # Processar thinking steps (intermediate steps das ferramentas)
+                    steps = result.get("agent_thinking", [])
+                    for step in steps:
+                        tool = step.get("tool", "ferramenta")
+                        tool_input = step.get("toolInput", "")
+                        self.thinking_steps.append(f"🔍 Investigando com {tool}...")
+                        yield
+                        await asyncio.sleep(0.5)
+                    
+                    self.thinking_steps.append("✨ Análise finalizada!")
+                    yield
+                    self.messages.append({"role": "ai", "content": result.get("response", "")})
+                else:
+                    self.messages.append({"role": "ai", "content": result.get("response", "Erro desconhecido.")})
             else:
                 # Fallback: usar DetectiveService local
+                self.thinking_steps = ["Iniciando Bio IA...", "Analisando contexto de dados..."]
+                yield
+                await asyncio.sleep(1) # Simular processamento inicial
+                
+                self.thinking_steps.append("Consultando o Gemini (modelo 2.5-flash)...")
+                yield
+                
                 service = DetectiveService()
-                response = await service.ask_detective(user_msg, self.data_context)
+                response = await service.ask_detective(
+                    user_msg, 
+                    self.data_context,
+                    images=self.image_files if self.image_files else None
+                )
+                
+                self.thinking_steps.append("Análise concluída!")
+                yield
+                await asyncio.sleep(0.5)
+                
                 self.messages.append({"role": "ai", "content": response})
+                
+                # Limpar imagens após o envio
+                self.image_files = []
         except Exception as e:
             self.messages.append({"role": "ai", "content": f"⚠️ Erro ao processar: {str(e)}"})
         finally:
             self.is_loading = False
+            self.thinking_steps = []
+            
+    def select_suggested_action(self, action: str):
+        """Preenche o input com a ação sugerida e envia."""
+        self.input_text = action
+        return self.send_message()

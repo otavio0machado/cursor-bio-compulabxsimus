@@ -12,15 +12,47 @@ def chat_bubble(message: dict) -> rx.Component:
     is_user = message["role"] == "user"
     
     return rx.box(
-        rx.markdown(
-            message["content"],
-            # If user, white text. If AI, dark text.
-            style={
-                "color": rx.cond(is_user, "white", Color.TEXT_PRIMARY),
-                "& p": {"margin": 0}, # Remove default p margin
-            }
+        rx.vstack(
+            rx.markdown(
+                message["content"],
+                # If user, white text. If AI, dark text.
+                style={
+                    "color": rx.cond(is_user, "white", Color.TEXT_PRIMARY),
+                    "& p": {"margin": 0}, # Remove default p margin
+                }
+            ),
+            # Action Area for AI messages
+            rx.cond(
+                ~is_user,
+                rx.flex(
+                    rx.cond(
+                        message["content"].contains("divergência") | message["content"].contains("R$"),
+                        rx.button(
+                            rx.hstack(rx.icon("chart-bar", size=16), rx.text("Ver Detalhes")),
+                            size="1",
+                            variant="soft",
+                            color_scheme="green",
+                            on_click=State.navigate_to("analise"),
+                        ),
+                    ),
+                    rx.cond(
+                        message["content"].contains("glosa"),
+                        rx.button(
+                            rx.hstack(rx.icon("file-text", size=16), rx.text("Ver Relatório")),
+                            size="1",
+                            variant="soft",
+                            color_scheme="blue",
+                            on_click=State.navigate_to("conversor"),
+                        ),
+                    ),
+                    spacing="2",
+                    padding_top=Spacing.SM,
+                )
+            ),
+            spacing="2",
+            align_items="start",
         ),
-        bg=rx.cond(is_user, Color.SECONDARY, "#F3F4F6"), # Using SECONDARY/Gray
+        bg=rx.cond(is_user, Color.SECONDARY, Color.BACKGROUND), # Using SECONDARY/Gray
         padding=Spacing.MD,
         border_radius=Design.RADIUS_LG,
         # visual touches
@@ -48,6 +80,30 @@ def input_area() -> rx.Component:
             on_key_down=State.handle_keys,
             disabled=State.is_loading,
         ),
+        rx.upload(
+            rx.button(
+                rx.cond(
+                    State.image_files.length() > 0,
+                    rx.icon("image-plus", size=20, color=Color.PRIMARY),
+                    rx.icon("paperclip", size=20)
+                ),
+                bg="transparent",
+                color=rx.cond(State.image_files.length() > 0, Color.PRIMARY, Color.TEXT_SECONDARY),
+                _hover={"color": Color.PRIMARY, "bg": "rgba(76, 175, 80, 0.1)"},
+                cursor="pointer",
+                border="none",
+                box_shadow="none",
+                padding="0",
+                width="2.5rem",
+            ),
+            id="ai_image_upload",
+            multiple=True,
+            accept={"image/*": [".png", ".jpg", ".jpeg"]},
+            max_files=5,
+            on_drop=State.handle_image_upload(rx.upload_files(upload_id="ai_image_upload")),
+            border="none",
+            padding="0",
+        ),
         rx.button(
             rx.cond(
                 State.is_loading,
@@ -69,6 +125,67 @@ def input_area() -> rx.Component:
         padding_top=Spacing.MD,
         align_items="center",
         spacing="3"
+    )
+
+def suggested_chips() -> rx.Component:
+    return rx.flex(
+        rx.foreach(
+            State.suggested_actions,
+            lambda action: rx.badge(
+                action,
+                variant="outline",
+                color_scheme="green",
+                padding_x="12px",
+                padding_y="6px",
+                border_radius="full",
+                cursor="pointer",
+                _hover={
+                    "bg": Color.PRIMARY,
+                    "color": "white",
+                    "transform": "translateY(-2px)",
+                    "box_shadow": Design.SHADOW_SM,
+                },
+                on_click=State.select_suggested_action(action),
+                style={"transition": "all 0.2s ease"},
+            )
+        ),
+        spacing="2",
+        flex_wrap="wrap",
+        padding_y=Spacing.SM,
+        width="100%",
+    )
+
+def thinking_trace() -> rx.Component:
+    return rx.cond(
+        State.is_loading,
+        rx.box(
+            rx.vstack(
+                rx.foreach(
+                    State.thinking_steps,
+                    lambda step: rx.hstack(
+                        rx.icon("circle-check", size=14, color=Color.PRIMARY),
+                        rx.text(step, font_size="0.85rem", color=Color.TEXT_SECONDARY),
+                        spacing="2",
+                        align_items="center",
+                    )
+                ),
+                rx.hstack(
+                    rx.spinner(size="1", color=Color.PRIMARY),
+                    rx.text("Processando...", font_size="0.85rem", font_style="italic", color=Color.PRIMARY),
+                    spacing="2",
+                    align_items="center",
+                ),
+                spacing="1",
+                align_items="start",
+            ),
+            padding=Spacing.MD,
+            margin_bottom=Spacing.MD,
+            bg="rgba(76, 175, 80, 0.05)",
+            border_left=f"3px solid {Color.PRIMARY}",
+            border_radius=Design.RADIUS_MD,
+            width="100%",
+            animation="fadeIn 0.5s ease-in-out",
+        )
     )
 
 def insight_chat_page() -> rx.Component:
@@ -108,8 +225,14 @@ def insight_chat_page() -> rx.Component:
                         style={"paddingRight": "1rem"}
                     ),
                     
+                    # Thinking Trace
+                    thinking_trace(),
+
                     rx.spacer(),
                     
+                    # Suggestions
+                    suggested_chips(),
+
                     # Input
                     input_area(),
                     

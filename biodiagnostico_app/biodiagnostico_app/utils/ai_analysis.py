@@ -189,7 +189,7 @@ def pre_filter_data(compulab_patients: dict, simus_patients: dict) -> Tuple[Dict
         # Se sobrou algo de qualquer lado, mantem o paciente no dataset da IA
         # MAS, podemos otimizar e mandar SÓ os exames faltantes?
         # A IA precisa do contexto do paciente. Vamos simplificar:
-        # Se houve divergência, manda o paciente TODO (ou filtrado). 
+        # Se houve divergência, manda o paciente completo (ou filtrado). 
         # Mandar filtrado é melhor para economizar tokens.
         
         if unmatched_c_exams or unmatched_s_exams:

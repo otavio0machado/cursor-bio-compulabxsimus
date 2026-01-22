@@ -1,0 +1,174 @@
+{
+    "name": "Detetive - Alerta de Perda Crítica",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "alerta-perda-critica",
+                "responseMode": "lastNode",
+                "options": {
+                    "allowedOrigins": "*"
+                }
+            },
+            "id": "webhook-alerta",
+            "name": "Webhook Alerta",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2,
+            "position": [
+                240,
+                320
+            ],
+            "webhookId": "alerta-perda-critica"
+        },
+        {
+            "parameters": {
+                "jsCode": "const data = $input.first().json.body || $input.first().json;\nconst valorPerda = parseFloat(data.valor_perda || 0);\nconst limiteAlerta = parseFloat(data.limite || 500);\nconst convenio = data.convenio || 'Desconhecido';\nconst exame = data.exame || 'N/A';\nconst paciente = data.paciente || 'N/A';\n\nconst formatBRL = (v) => `R$ ${v.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;\n\nconst shouldAlert = valorPerda >= limiteAlerta;\n\nconst mensagem = shouldAlert ? `\n🚨 *ALERTA DE PERDA CRÍTICA*\n\n💰 *Valor:* ${formatBRL(valorPerda)}\n🏥 *Convênio:* ${convenio}\n🧪 *Exame:* ${exame}\n👤 *Paciente:* ${paciente}\n\n⚠️ Este valor ultrapassou o limite de ${formatBRL(limiteAlerta)}!\n\n📞 *Ação recomendada:* Verificar imediatamente com o setor de faturamento.\n` : 'Valor dentro do limite, sem alerta necessário.';\n\nreturn [{ json: { shouldAlert, mensagem, valorPerda, limite: limiteAlerta } }];"
+            },
+            "id": "processar-alerta",
+            "name": "Processar Alerta",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                460,
+                320
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "boolean": [
+                        {
+                            "value1": "={{ $json.shouldAlert }}",
+                            "value2": true
+                        }
+                    ]
+                }
+            },
+            "id": "check-alerta",
+            "name": "Deve Alertar?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [
+                680,
+                320
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "sendMessage",
+                "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+                "text": "={{ $json.mensagem }}",
+                "additionalFields": {
+                    "parse_mode": "Markdown"
+                }
+            },
+            "id": "enviar-telegram",
+            "name": "Enviar Telegram",
+            "type": "n8n-nodes-base.telegram",
+            "typeVersion": 1.2,
+            "position": [
+                900,
+                260
+            ],
+            "credentials": {
+                "telegramApi": {
+                    "id": "CONFIGURE",
+                    "name": "Telegram API"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "values": {
+                    "string": [
+                        {
+                            "name": "status",
+                            "value": "Alerta enviado com sucesso!"
+                        }
+                    ]
+                }
+            },
+            "id": "resposta-ok",
+            "name": "Resposta OK",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                1120,
+                260
+            ]
+        },
+        {
+            "parameters": {
+                "values": {
+                    "string": [
+                        {
+                            "name": "status",
+                            "value": "Valor dentro do limite, sem alerta."
+                        }
+                    ]
+                }
+            },
+            "id": "resposta-sem-alerta",
+            "name": "Sem Alerta",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                900,
+                400
+            ]
+        }
+    ],
+    "connections": {
+        "Webhook Alerta": {
+            "main": [
+                [
+                    {
+                        "node": "Processar Alerta",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Processar Alerta": {
+            "main": [
+                [
+                    {
+                        "node": "Deve Alertar?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Deve Alertar?": {
+            "main": [
+                [
+                    {
+                        "node": "Enviar Telegram",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Sem Alerta",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Enviar Telegram": {
+            "main": [
+                [
+                    {
+                        "node": "Resposta OK",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

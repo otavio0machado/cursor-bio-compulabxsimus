@@ -94,15 +94,7 @@ class DashboardState(AuthState):
     def has_expiring_lots(self) -> bool:
         return int(self.dashboard_expiring_lots) > 0
 
-    # NOTE: has_analysis foi movido para AnalysisState para reatividade correta
-    # @rx.var
-    # def has_analysis(self) -> bool:
-    #     """Verifica se há análise disponível"""
-    #     compulab = getattr(self, 'compulab_total', 0)
-    #     simus = getattr(self, 'simus_total', 0)
-    #     result = compulab > 0 or simus > 0
-    #     print(f"DEBUG has_analysis: compulab_total={compulab}, simus_total={simus}, result={result}")
-    #     return result
+
     
     @rx.var
     def difference(self) -> float:
