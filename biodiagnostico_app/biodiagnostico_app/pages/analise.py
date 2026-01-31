@@ -8,6 +8,7 @@ from ..state import State
 from ..components.file_upload import compact_upload_card, upload_progress_indicator
 from ..components.save_analysis_modal import save_analysis_modal, saved_analyses_list
 from ..components.analysis.widgets import metric_card_premium, insight_card, patient_history_modal, action_table
+from ..components.analysis.exam_link_modal import exam_link_modal
 from ..components import ui
 from ..styles import Color, Design, Spacing
 
@@ -88,6 +89,38 @@ def analise_page() -> rx.Component:
                             columns="2", spacing="6", width="100%"
                         ),
                         upload_progress_indicator(State.is_uploading),
+                        rx.cond(
+                            State.is_analyzing,
+                            rx.box(
+                                rx.vstack(
+                                    rx.hstack(
+                                        rx.spinner(size="2", color=Color.PRIMARY),
+                                        rx.text(State.analysis_stage, font_weight="600", color=Color.DEEP),
+                                        rx.spacer(),
+                                        rx.text(f"{State.analysis_progress_percentage.to_string()}%", font_weight="700", color=Color.PRIMARY),
+                                        width="100%", align_items="center"
+                                    ),
+                                    rx.box(
+                                        rx.box(
+                                            bg=Color.GRADIENT_PRIMARY, border_radius="full", transition="width 0.3s ease",
+                                            width=rx.cond(State.analysis_progress_percentage > 0, State.analysis_progress_percentage.to_string() + "%", "0%"),
+                                            height="100%",
+                                            position="relative", overflow="hidden",
+                                            _after={
+                                                "content": '""', "position": "absolute", "top": "0", "left": "0", "right": "0", "bottom": "0",
+                                                "background": "linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)",
+                                                "animation": "shimmer 1.5s infinite"
+                                            }
+                                        ),
+                                        width="100%", height="8px", bg=Color.BACKGROUND, border_radius="full", overflow="hidden"
+                                    ),
+                                    spacing="2", width="100%", align_items="center"
+                                ),
+                                bg=Color.PRIMARY_LIGHT, border=f"1px solid {Color.PRIMARY}30", border_radius=Design.RADIUS_LG, padding=Spacing.MD, margin_top=Spacing.LG,
+                                animation="fadeInUp 0.3s ease-out",
+                                width="100%", max_width="600px", margin_x="auto"
+                            )
+                        ),
                         
                         rx.cond(
                             ~State.is_analyzing,
@@ -103,6 +136,34 @@ def analise_page() -> rx.Component:
                     box_shadow="0 25px 50px -12px rgba(0, 0, 0, 0.1)", 
                     width="100%", max_width="1000px", margin_bottom="64px",
                     animation="fadeInUp 0.6s ease-out"
+                ),
+
+                # === EXAM LINKING CTA ===
+                rx.box(
+                    rx.hstack(
+                        rx.vstack(
+                            rx.text("Vincular Exames", weight="bold", color=Color.DEEP, size="4"),
+                            rx.text(
+                                "Cadastre equival\u00eancias SIMUS -> COMPULAB para reduzir pend\u00eancias.",
+                                color=Color.TEXT_SECONDARY,
+                                font_size="0.95rem",
+                            ),
+                            spacing="1",
+                            align_items="start",
+                        ),
+                        rx.spacer(),
+                        exam_link_modal(),
+                        align_items="center",
+                        width="100%",
+                    ),
+                    bg="rgba(255,255,255,0.7)",
+                    backdrop_filter="blur(12px)",
+                    padding="20px 24px",
+                    border_radius="20px",
+                    border=f"1px solid {Color.BORDER}",
+                    width="100%",
+                    max_width="1000px",
+                    margin_bottom="48px",
                 ),
                 
                 # === RESULTS SECTION ===
