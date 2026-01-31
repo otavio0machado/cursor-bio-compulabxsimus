@@ -1,0 +1,15 @@
+{
+  "name": "cursor-bio-compulabxsimus",
+  "version": "1.0.0",
+  "description": "Project for cursor-bio-compulabxsimus",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js",
+    "build": "echo 'No build step defined'"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {}
+}

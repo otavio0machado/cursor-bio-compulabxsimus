@@ -1,6 +1,9 @@
 -- migration_exam_mappings.sql
 -- Tabela para centralizar o mapeamento de nomes de exames entre sistemas (SIMUS -> COMPULAB)
 
+-- Extensao para UUID (se necessario)
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 CREATE TABLE IF NOT EXISTS public.exam_mappings (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     created_at timestamptz DEFAULT now(),
@@ -16,6 +19,13 @@ ALTER TABLE public.exam_mappings ENABLE ROW LEVEL SECURITY;
 -- Política de acesso público (ajuste conforme necessidade de segurança)
 DROP POLICY IF EXISTS "Permitir leitura pública exam_mappings" ON public.exam_mappings;
 CREATE POLICY "Permitir leitura pública exam_mappings" ON public.exam_mappings FOR SELECT USING (true);
+
+-- Políticas para escrita (necessárias para o Link de Exames)
+DROP POLICY IF EXISTS "Permitir escrita exam_mappings" ON public.exam_mappings;
+CREATE POLICY "Permitir escrita exam_mappings" ON public.exam_mappings FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Permitir update exam_mappings" ON public.exam_mappings;
+CREATE POLICY "Permitir update exam_mappings" ON public.exam_mappings FOR UPDATE USING (true) WITH CHECK (true);
 
 -- Popular com mapeamentos iniciais (extraídos do código legado)
 INSERT INTO public.exam_mappings (original_name, canonical_name) VALUES

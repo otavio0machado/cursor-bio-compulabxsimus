@@ -143,11 +143,20 @@ def extract_key_terms(exam_name):
     
     return set(key_terms)
 
+def canonicalize_exam_name(exam_name):
+    """Aplica mapeamento de sinônimos e normaliza para comparação."""
+    if not exam_name:
+        return ""
+    mapped = map_simus_to_compulab_exam_name(exam_name)
+    return normalize_exam_name(mapped)
+
 
 def exam_names_match(exam_name1, exam_name2):
     """Verifica se dois nomes de exame representam o mesmo exame"""
-    norm1 = normalize_exam_name_for_comparison(exam_name1)
-    norm2 = normalize_exam_name_for_comparison(exam_name2)
+    canon1 = canonicalize_exam_name(exam_name1)
+    canon2 = canonicalize_exam_name(exam_name2)
+    norm1 = normalize_exam_name_for_comparison(canon1)
+    norm2 = normalize_exam_name_for_comparison(canon2)
     
     if norm1 == norm2:
         return True
@@ -164,8 +173,8 @@ def exam_names_match(exam_name1, exam_name2):
         'T3': ['T3', 'TRIODOTIRONINA'],
     }
     
-    key_terms1 = extract_key_terms(exam_name1)
-    key_terms2 = extract_key_terms(exam_name2)
+    key_terms1 = extract_key_terms(canon1)
+    key_terms2 = extract_key_terms(canon2)
     
     if key_terms1 and key_terms2:
         if key_terms1.issubset(key_terms2) or key_terms2.issubset(key_terms1):

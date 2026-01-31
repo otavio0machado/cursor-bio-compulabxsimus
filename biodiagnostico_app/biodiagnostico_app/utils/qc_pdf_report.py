@@ -9,15 +9,17 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER
 from datetime import datetime
 from io import BytesIO
+from typing import Optional
 from ..styles import Color
 
-def generate_qc_pdf(qc_records: list, period_description: str) -> bytes:
+def generate_qc_pdf(qc_records: list, period_description: str, post_calibration_records: Optional[list] = None) -> bytes:
     """
     Gera PDF com tabelas de Controle de Qualidade
     
     Args:
         qc_records: Lista de dicionários ou objetos QCRecord
         period_description: Descrição do período (ex: "Janeiro 2024")
+        post_calibration_records: Lista de registros de pos-calibracao (opcional)
         
     Returns:
         bytes: Conteúdo do PDF em bytes
@@ -54,6 +56,22 @@ def generate_qc_pdf(qc_records: list, period_description: str) -> bytes:
     
     # Conteúdo
     story = []
+
+    def record_get(record, key, default=""):
+        if isinstance(record, dict):
+            return record.get(key, default)
+        return getattr(record, key, default)
+
+    post_by_id = {}
+    post_by_qc_record_id = {}
+    if post_calibration_records:
+        for post_record in post_calibration_records:
+            post_id = record_get(post_record, "id", "")
+            qc_record_id = record_get(post_record, "qc_record_id", "")
+            if post_id != "":
+                post_by_id[post_id] = post_record
+            if qc_record_id != "":
+                post_by_qc_record_id[qc_record_id] = post_record
     
     # Cabeçalho
     story.append(Paragraph("Relatório de Controle de Qualidade (QC)", title_style))
@@ -64,34 +82,57 @@ def generate_qc_pdf(qc_records: list, period_description: str) -> bytes:
         story.append(Paragraph("Nenhum registro encontrado para o período selecionado.", styles['Normal']))
     else:
         # Tabela
-        # Headers: Data, Exame, Nível, Lote, Valor, Alvo, DP, CV%, Status, Analista
-        table_data = [['Data', 'Exame', 'Nível', 'Lote', 'Valor', 'Alvo', 'Variação %', 'Status']]
+        # Headers: Data, Exame, Nível, Lote, Valor, Alvo, Variação %, Status, Passou CQ?, Nova Medição
+        table_data = [['Data', 'Exame', 'Nível', 'Lote', 'Valor', 'Alvo', 'Variação %', 'Status', 'Passou CQ?', 'Nova Medição']]
         
         for record in qc_records:
-            # Normalizar acesso aos dados (dict ou objeto)
-            if isinstance(record, dict):
-                date = record.get('date', '')[:16].replace('T', ' ')
-                exam = record.get('exam_name', '')
-                level = record.get('level', '')
-                lot = record.get('lot_number', '')
-                value = str(record.get('value', ''))
-                target = str(record.get('target_value', ''))
-                cv = f"{record.get('cv', 0):.2f}%"
-                status = record.get('status', '')
+            date = record_get(record, 'date', '')[:16].replace('T', ' ')
+            exam = record_get(record, 'exam_name', '')
+            level = record_get(record, 'level', '')
+            lot = record_get(record, 'lot_number', '')
+            value = str(record_get(record, 'value', ''))
+            target = str(record_get(record, 'target_value', ''))
+            cv = f"{record_get(record, 'cv', 0):.2f}%"
+            status = record_get(record, 'status', '')
+            needs_calibration = record_get(record, 'needs_calibration', None)
+            if needs_calibration is None:
+                needs_calibration = "ERRO" in str(status).upper()
+            passed_cq = "NAO" if needs_calibration else "SIM"
+
+            post_value = record_get(record, "post_calibration_value", None)
+            if post_value in [None, ""]:
+                post_id = record_get(record, "post_calibration_id", "")
+                if post_id and post_id in post_by_id:
+                    post_value = record_get(post_by_id[post_id], "post_calibration_value", None)
+
+            if post_value in [None, ""]:
+                qc_record_id = record_get(record, "id", "")
+                if qc_record_id and qc_record_id in post_by_qc_record_id:
+                    post_value = record_get(post_by_qc_record_id[qc_record_id], "post_calibration_value", None)
+
+            if needs_calibration:
+                if post_value in [None, ""]:
+                    post_value_display = "PENDENTE"
+                else:
+                    post_value_display = str(post_value)
             else:
-                date = getattr(record, 'date', '')[:16].replace('T', ' ')
-                exam = getattr(record, 'exam_name', '')
-                level = getattr(record, 'level', '')
-                lot = getattr(record, 'lot_number', '')
-                value = str(getattr(record, 'value', ''))
-                target = str(getattr(record, 'target_value', ''))
-                cv = f"{getattr(record, 'cv', 0):.2f}%"
-                status = getattr(record, 'status', '')
-                
-            table_data.append([date, exam, level, lot, value, target, cv, status])
-            
-        # Largura das colunas (Total ~27.7cm em landscape A4 com margens)
-        col_widths = [3.5*cm, 6.0*cm, 2.0*cm, 3.0*cm, 2.5*cm, 2.5*cm, 2.5*cm, 3.0*cm]
+                post_value_display = "-"
+
+            table_data.append([date, exam, level, lot, value, target, cv, status, passed_cq, post_value_display])
+
+        # Largura das colunas (Total ~26.7cm em landscape A4 com margens)
+        col_widths = [
+            3.0*cm,  # Data
+            5.0*cm,  # Exame
+            1.8*cm,  # Nível
+            2.5*cm,  # Lote
+            2.3*cm,  # Valor
+            2.3*cm,  # Alvo
+            2.3*cm,  # Variação %
+            2.8*cm,  # Status
+            2.0*cm,  # Passou CQ?
+            2.7*cm   # Nova Medição
+        ]
         
         table = Table(table_data, colWidths=col_widths, repeatRows=1)
         
@@ -101,6 +142,8 @@ def generate_qc_pdf(qc_records: list, period_description: str) -> bytes:
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
             ('ALIGN', (4, 1), (6, -1), 'RIGHT'), # Alinhar números à direita
+            ('ALIGN', (9, 1), (9, -1), 'RIGHT'), # Nova medição a direita
+            ('ALIGN', (8, 1), (8, -1), 'CENTER'),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('FONTSIZE', (0, 0), (-1, 0), 10),
             ('FONTSIZE', (0, 1), (-1, -1), 9),

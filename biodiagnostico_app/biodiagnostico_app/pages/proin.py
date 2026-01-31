@@ -13,6 +13,12 @@ from ..styles import Color, Design, Typography, Spacing
 from ..components import ui
 
 
+def format_cv(value) -> rx.Var:
+    """Format CV with two decimal places and comma separator."""
+    value_var = rx.Var.create(value).to(float)
+    return rx.Var.create(f"{value_var:.2f}").replace(".", ",")
+
+
 def tab_button(label: str, icon: str, tab_id: str) -> rx.Component:
     """Botão de aba do ProIn - Purificado"""
     is_active = State.proin_current_tab == tab_id
@@ -167,7 +173,7 @@ def dashboard_tab() -> rx.Component:
                                                 spacing="0", align_items="start"
                                             ),
                                             rx.spacer(),
-                                            ui.status_badge("CV: " + r["cv"].to_string() + "%", status="error"),
+                                            ui.status_badge("CV: " + format_cv(r["cv"]) + "%", status="error"),
                                             width="100%", align_items="center",
                                             padding=Spacing.XS, border_radius=Design.RADIUS_MD, _hover={"bg": Color.ERROR_BG}
                                         )
@@ -222,7 +228,7 @@ def dashboard_tab() -> rx.Component:
                                     rx.table.cell(ui.text(r["date"], size="small")),
                                     rx.table.cell(
                                         rx.text(
-                                            r["cv"].to_string() + "%",
+                                            format_cv(r["cv"]) + "%",
                                             font_weight="700",
                                             color=rx.cond(r["status"] == "OK", Color.SUCCESS, Color.ERROR)
                                         )
@@ -264,7 +270,7 @@ def registro_qc_tab() -> rx.Component:
                             State.unique_exam_names,
                             placeholder="Selecione o Exame",
                             value=State.qc_exam_name,
-                            on_change=State.set_qc_exam_name,
+                            on_change=State.on_exam_selected,
                         ),
                         required=True
                     ),
@@ -279,6 +285,29 @@ def registro_qc_tab() -> rx.Component:
                     ),
                     columns={"initial": "1", "sm": "1", "md": "3"},
                     spacing="4", width="100%",
+                ),
+
+                # Indicador de Referencia Ativa
+                rx.cond(
+                    State.has_active_reference,
+                    rx.callout(
+                        rx.hstack(
+                            rx.icon(tag="circle-check", size=16),
+                            rx.text("Referencia ativa: ", font_weight="600"),
+                            rx.text(State.current_exam_reference["name"]),
+                            rx.spacer(),
+                            rx.text("CV% Max: <=" + format_cv(State.current_cv_max_threshold) + "%", font_size="0.8rem"),
+                            width="100%", align_items="center", flex_wrap="wrap", gap="2"
+                        ),
+                        icon="info", color_scheme="green", width="100%", margin_y=Spacing.SM
+                    ),
+                    rx.cond(
+                        State.qc_exam_name != "",
+                        rx.callout(
+                            "Nenhuma referencia cadastrada para este exame. Usando limite padrao (10%).",
+                            icon="info", color_scheme="yellow", width="100%", margin_y=Spacing.SM
+                        )
+                    )
                 ),
                 
                 rx.divider(margin_y=Spacing.LG, opacity=0.3),
@@ -295,7 +324,7 @@ def registro_qc_tab() -> rx.Component:
                         rx.box(
                             rx.hstack(
                                 rx.text(
-                                    State.qc_calculated_cv.to_string() + "%",
+                                    format_cv(State.qc_calculated_cv) + "%",
                                     font_size="1.125rem", font_weight="bold",
                                     color=rx.cond(State.qc_cv_status == "ok", Color.SUCCESS, rx.cond(State.qc_cv_status == "warning", Color.WARNING, Color.ERROR))
                                 ),
@@ -374,6 +403,8 @@ def registro_qc_tab() -> rx.Component:
                                     rx.table.column_header_cell(rx.text("VALOR", style=Typography.CAPTION, color=Color.TEXT_SECONDARY)),
                                     rx.table.column_header_cell(rx.text("CV%", style=Typography.CAPTION, color=Color.TEXT_SECONDARY)),
                                     rx.table.column_header_cell(rx.text("STATUS", style=Typography.CAPTION, color=Color.TEXT_SECONDARY)),
+                                    rx.table.column_header_cell(rx.text("CALIBRAR?", style=Typography.CAPTION, color=Color.TEXT_SECONDARY)),
+                                    rx.table.column_header_cell(rx.text("REF.", style=Typography.CAPTION, color=Color.TEXT_SECONDARY)),
                                     rx.table.column_header_cell(""),
                                 )
                             ),
@@ -384,13 +415,52 @@ def registro_qc_tab() -> rx.Component:
                                         rx.table.cell(rx.text(r.date[:16], color=Color.TEXT_SECONDARY, font_size="0.875rem")),
                                         rx.table.cell(rx.text(r.exam_name, font_weight="600")),
                                         rx.table.cell(r.value.to_string()),
-                                        rx.table.cell(rx.text(r.cv.to_string() + "%", font_weight="600", color=rx.cond(r.status == "OK", Color.SUCCESS, Color.ERROR))),
+                                        rx.table.cell(rx.text(format_cv(r.cv) + "%", font_weight="600", color=rx.cond(r.status == "OK", Color.SUCCESS, Color.ERROR))),
                                         rx.table.cell(ui.status_badge(r.status, status=rx.cond(r.status == "OK", "success", rx.cond(r.status.contains("ALERTA"), "warning", "error")))),
                                         rx.table.cell(
-                                            rx.button(
-                                                rx.icon(tag="trash_2", size=14, color=Color.ERROR),
-                                                on_click=lambda: State.delete_qc_record(r.id),
-                                                variant="ghost", color_scheme="red", size="1"
+                                            rx.cond(
+                                                r.needs_calibration,
+                                                rx.cond(
+                                                    r.post_calibration_id != "",
+                                                    # Já tem pós-calibração registrada
+                                                    rx.tooltip(
+                                                        rx.badge("FEITO", color_scheme="blue", size="1", cursor="default"),
+                                                        content="Pós-calibração já registrada"
+                                                    ),
+                                                    # Precisa registrar pós-calibração - botão clicável
+                                                    rx.tooltip(
+                                                        rx.badge(
+                                                            "SIM",
+                                                            color_scheme="red",
+                                                            size="1",
+                                                            cursor="pointer",
+                                                            _hover={"opacity": "0.8", "transform": "scale(1.05)"},
+                                                            on_click=lambda: State.open_post_calibration_modal(r.id)
+                                                        ),
+                                                        content="Clique para registrar medição pós-calibração"
+                                                    )
+                                                ),
+                                                rx.badge("NAO", color_scheme="green", variant="outline", size="1")
+                                            )
+                                        ),
+                                        rx.table.cell(
+                                            rx.cond(
+                                                r.reference_id != "",
+                                                rx.tooltip(
+                                                    rx.icon(tag="link", size=14, color=Color.PRIMARY),
+                                                    content="Referencia vinculada"
+                                                ),
+                                                rx.text("-", color=Color.TEXT_SECONDARY, font_size="0.75rem")
+                                            )
+                                        ),
+                                        rx.table.cell(
+                                            rx.tooltip(
+                                                rx.button(
+                                                    rx.icon(tag="trash_2", size=14, color=Color.ERROR),
+                                                    on_click=lambda: State.open_delete_qc_record_modal(r.id, r.exam_name),
+                                                    variant="ghost", color_scheme="red", size="1"
+                                                ),
+                                                content="Excluir permanentemente"
                                             ),
                                             text_align="right"
                                         ),
@@ -699,7 +769,7 @@ def relatorios_tab() -> rx.Component:
                 rx.grid(
                     ui.stat_card("Média", State.lj_mean, "target", "primary"),
                     ui.stat_card("Desvio Padrão", State.lj_sd, "variable", "primary"),
-                    ui.stat_card("CV% Médio", State.lj_cv_mean.to_string() + "%", "percent", "primary"),
+                    ui.stat_card("CV% Médio", format_cv(State.lj_cv_mean) + "%", "percent", "primary"),
                     ui.stat_card("Pontos", State.levey_jennings_data.length(), "list", "primary"),
                     columns={"initial": "1", "sm": "2", "md": "2", "lg": "4"},
                     spacing="4", width="100%", margin_top=Spacing.LG
@@ -729,7 +799,7 @@ def relatorios_tab() -> rx.Component:
                                             rx.table.cell(rx.text(d.value.to_string(), font_weight="600")),
                                             rx.table.cell(d.target.to_string()),
                                             rx.table.cell(d.sd.to_string()),
-                                            rx.table.cell(rx.text(d.cv.to_string() + "%", font_weight="700", color=rx.cond(d.cv <= 5.0, Color.SUCCESS, rx.cond(d.cv <= 10.0, Color.WARNING, Color.ERROR)))),
+                                            rx.table.cell(rx.text(format_cv(d.cv) + "%", font_weight="700", color=rx.cond(d.cv <= 5.0, Color.SUCCESS, rx.cond(d.cv <= 10.0, Color.WARNING, Color.ERROR)))),
                                             rx.table.cell(ui.status_badge(rx.cond(d.cv <= 5.0, "OK", "ALERTA"), status=rx.cond(d.cv <= 5.0, "success", "error"))),
                                         )
                                     )
@@ -836,6 +906,448 @@ def importar_tab() -> rx.Component:
         width="100%", padding_bottom=Spacing.XL
     )
 
+
+def post_calibration_modal() -> rx.Component:
+    """Modal para registrar medição pós-calibração"""
+    return rx.dialog.root(
+        rx.dialog.content(
+            rx.dialog.title(
+                rx.hstack(
+                    rx.icon(tag="settings_2", size=24, color=Color.PRIMARY),
+                    rx.text("Medição Pós-Calibração", font_weight="700", font_size="1.25rem"),
+                    spacing="2", align_items="center"
+                )
+            ),
+            rx.dialog.description(
+                rx.text("Registre o novo valor após a calibração do equipamento", color=Color.TEXT_SECONDARY, font_size="0.875rem")
+            ),
+
+            rx.vstack(
+                # Informações do registro original
+                rx.cond(
+                    State.selected_qc_record_for_calibration != None,
+                    rx.box(
+                        rx.vstack(
+                            rx.text("Registro Original", font_weight="600", color=Color.TEXT_SECONDARY, font_size="0.75rem", style={"text_transform": "uppercase", "letter_spacing": "0.05em"}),
+                            rx.grid(
+                                rx.vstack(
+                                    rx.text("Exame", font_size="0.75rem", color=Color.TEXT_SECONDARY),
+                                    rx.text(State.selected_qc_record_for_calibration["exam_name"], font_weight="600"),
+                                    spacing="0", align_items="start"
+                                ),
+                                rx.vstack(
+                                    rx.text("Valor Original", font_size="0.75rem", color=Color.TEXT_SECONDARY),
+                                    rx.text(State.selected_qc_record_for_calibration["value"].to_string(), font_weight="600", color=Color.ERROR),
+                                    spacing="0", align_items="start"
+                                ),
+                                rx.vstack(
+                                    rx.text("CV% Original", font_size="0.75rem", color=Color.TEXT_SECONDARY),
+                                    rx.text(format_cv(State.selected_qc_record_for_calibration["cv"]) + "%", font_weight="600", color=Color.ERROR),
+                                    spacing="0", align_items="start"
+                                ),
+                                rx.vstack(
+                                    rx.text("Valor Alvo", font_size="0.75rem", color=Color.TEXT_SECONDARY),
+                                    rx.text(State.selected_qc_record_for_calibration["target_value"].to_string(), font_weight="600"),
+                                    spacing="0", align_items="start"
+                                ),
+                                columns="4", spacing="4", width="100%"
+                            ),
+                            spacing="2", width="100%"
+                        ),
+                        bg=Color.ERROR_BG, padding=Spacing.MD, border_radius=Design.RADIUS_LG, width="100%", margin_bottom=Spacing.MD
+                    )
+                ),
+
+                rx.divider(margin_y=Spacing.SM, opacity=0.3),
+
+                # Formulário de pós-calibração
+                rx.vstack(
+                    ui.form_field(
+                        "Nova Medição (Pós-Calibração)",
+                        ui.input(
+                            placeholder="Digite o novo valor...",
+                            value=State.post_cal_value,
+                            on_change=State.set_post_cal_value,
+                        ),
+                        required=True
+                    ),
+
+                    # Exibição do CV% calculado em tempo real
+                    rx.cond(
+                        State.post_cal_value != "",
+                        rx.box(
+                            rx.hstack(
+                                rx.text("CV% Pós-Calibração: ", font_size="0.875rem"),
+                                rx.text(
+                                    format_cv(State.post_cal_calculated_cv) + "%",
+                                    font_weight="700",
+                                    color=rx.cond(State.post_cal_calculated_cv <= 10.0, Color.SUCCESS, Color.WARNING)
+                                ),
+                                rx.cond(
+                                    State.post_cal_calculated_cv <= 10.0,
+                                    rx.icon(tag="circle_check", size=16, color=Color.SUCCESS),
+                                    rx.icon(tag="circle_alert", size=16, color=Color.WARNING)
+                                ),
+                                spacing="2", align_items="center"
+                            ),
+                            bg=rx.cond(State.post_cal_calculated_cv <= 10.0, Color.SUCCESS + "15", Color.WARNING + "15"),
+                            padding=Spacing.SM, border_radius=Design.RADIUS_MD, width="100%"
+                        )
+                    ),
+
+                    ui.form_field(
+                        "Analista Responsável",
+                        ui.input(
+                            placeholder="Nome do analista...",
+                            value=State.post_cal_analyst,
+                            on_change=State.set_post_cal_analyst
+                        )
+                    ),
+
+                    ui.form_field(
+                        "Observações",
+                        rx.text_area(
+                            placeholder="Descreva as ações tomadas na calibração...",
+                            value=State.post_cal_notes,
+                            on_change=State.set_post_cal_notes,
+                            width="100%", min_height="80px"
+                        )
+                    ),
+
+                    spacing="3", width="100%"
+                ),
+
+                # Mensagens de feedback
+                rx.cond(
+                    State.post_cal_success_message != "",
+                    rx.callout(State.post_cal_success_message, icon="circle_check", color_scheme="green", width="100%")
+                ),
+                rx.cond(
+                    State.post_cal_error_message != "",
+                    rx.callout(State.post_cal_error_message, icon="triangle_alert", color_scheme="red", width="100%")
+                ),
+
+                # Botões de ação
+                rx.hstack(
+                    ui.button("Cancelar", icon="x", variant="secondary", on_click=State.close_post_calibration_modal),
+                    ui.button(
+                        "Salvar Medição", icon="save",
+                        is_loading=State.is_saving_post_calibration,
+                        on_click=State.save_post_calibration
+                    ),
+                    spacing="3", width="100%", justify_content="flex-end", margin_top=Spacing.MD
+                ),
+
+                spacing="3", width="100%", padding_top=Spacing.MD
+            ),
+
+            style={"max_width": "500px"}
+        ),
+        open=State.show_post_calibration_modal
+    )
+
+
+def delete_qc_record_modal() -> rx.Component:
+    """Modal de confirmação para exclusão permanente de registro CQ"""
+    return rx.dialog.root(
+        rx.dialog.content(
+            rx.dialog.title(
+                rx.hstack(
+                    rx.icon(tag="triangle-alert", size=24, color=Color.ERROR),
+                    rx.text("Confirmar Exclusão", font_weight="700", font_size="1.25rem"),
+                    spacing="2", align_items="center"
+                )
+            ),
+            rx.dialog.description(
+                rx.text("Esta ação não pode ser desfeita!", color=Color.ERROR, font_size="0.875rem")
+            ),
+
+            rx.vstack(
+                rx.box(
+                    rx.vstack(
+                        rx.text("Você está prestes a excluir permanentemente o registro:", font_size="0.9rem"),
+                        rx.text(State.delete_qc_record_name, font_weight="700", font_size="1.1rem", color=Color.PRIMARY),
+                        rx.text("Este registro será removido do banco de dados e não poderá ser recuperado.", font_size="0.8rem", color=Color.TEXT_SECONDARY),
+                        spacing="2", align_items="center", width="100%"
+                    ),
+                    bg=Color.ERROR_BG, padding=Spacing.MD, border_radius=Design.RADIUS_LG, width="100%", margin_y=Spacing.MD
+                ),
+
+                rx.hstack(
+                    ui.button("Cancelar", icon="x", variant="secondary", on_click=State.close_delete_qc_record_modal),
+                    ui.button(
+                        "Excluir Permanentemente", icon="trash-2",
+                        variant="danger",
+                        on_click=State.confirm_delete_qc_record
+                    ),
+                    spacing="3", width="100%", justify_content="flex-end", margin_top=Spacing.MD
+                ),
+
+                spacing="3", width="100%", padding_top=Spacing.MD
+            ),
+
+            style={"max_width": "450px"}
+        ),
+        open=State.show_delete_qc_record_modal
+    )
+
+
+def delete_reference_modal() -> rx.Component:
+    """Modal de confirmação para exclusão permanente de referência"""
+    return rx.dialog.root(
+        rx.dialog.content(
+            rx.dialog.title(
+                rx.hstack(
+                    rx.icon(tag="triangle-alert", size=24, color=Color.ERROR),
+                    rx.text("Confirmar Exclusão", font_weight="700", font_size="1.25rem"),
+                    spacing="2", align_items="center"
+                )
+            ),
+            rx.dialog.description(
+                rx.text("Esta ação não pode ser desfeita!", color=Color.ERROR, font_size="0.875rem")
+            ),
+
+            rx.vstack(
+                rx.box(
+                    rx.vstack(
+                        rx.text("Você está prestes a excluir permanentemente a referência:", font_size="0.9rem"),
+                        rx.text(State.delete_reference_name, font_weight="700", font_size="1.1rem", color=Color.PRIMARY),
+                        rx.text("Esta referência será removida do banco de dados e não poderá ser recuperada.", font_size="0.8rem", color=Color.TEXT_SECONDARY),
+                        spacing="2", align_items="center", width="100%"
+                    ),
+                    bg=Color.ERROR_BG, padding=Spacing.MD, border_radius=Design.RADIUS_LG, width="100%", margin_y=Spacing.MD
+                ),
+
+                rx.hstack(
+                    ui.button("Cancelar", icon="x", variant="secondary", on_click=State.close_delete_reference_modal),
+                    ui.button(
+                        "Excluir Permanentemente", icon="trash-2",
+                        variant="danger",
+                        on_click=State.confirm_delete_reference
+                    ),
+                    spacing="3", width="100%", justify_content="flex-end", margin_top=Spacing.MD
+                ),
+
+                spacing="3", width="100%", padding_top=Spacing.MD
+            ),
+
+            style={"max_width": "450px"}
+        ),
+        open=State.show_delete_reference_modal
+    )
+
+
+def reference_card(ref) -> rx.Component:
+    """Card individual de referencia cadastrada"""
+    return rx.box(
+        rx.hstack(
+            rx.vstack(
+                rx.text(ref.name, font_weight="600", font_size="0.95rem"),
+                rx.hstack(
+                    rx.badge(ref.exam_name, color_scheme="blue", size="1"),
+                    rx.badge(ref.level, variant="outline", size="1"),
+                    spacing="1"
+                ),
+                rx.text(
+                    "Alvo: " + ref.target_value.to_string() + " | CV% Max: <=" + format_cv(ref.cv_max_threshold) + "%",
+                    font_size="0.75rem", color=Color.TEXT_SECONDARY
+                ),
+                rx.text(
+                    f"Valido a partir de: {ref.valid_from}",
+                    font_size="0.7rem", color=Color.TEXT_SECONDARY
+                ),
+                spacing="1", align_items="start"
+            ),
+            rx.spacer(),
+            rx.vstack(
+                rx.badge(
+                    rx.cond(ref.is_active, "Ativo", "Inativo"),
+                    color_scheme=rx.cond(ref.is_active, "green", "gray"),
+                    size="1"
+                ),
+                rx.tooltip(
+                    rx.button(
+                        rx.icon(tag="trash_2", size=14),
+                        on_click=lambda: State.open_delete_reference_modal(ref.id, ref.name),
+                        variant="ghost", color_scheme="red", size="1"
+                    ),
+                    content="Excluir permanentemente"
+                ),
+                spacing="2", align_items="end"
+            ),
+            width="100%", align_items="center"
+        ),
+        padding=Spacing.MD, width="100%",
+        bg=Color.SURFACE, border=f"1px solid {Color.BORDER}", border_radius=Design.RADIUS_LG,
+        _hover={"border_color": Color.PRIMARY, "box_shadow": Design.SHADOW_SM},
+        transition="all 0.2s ease"
+    )
+
+
+def referencias_tab() -> rx.Component:
+    """Aba de Cadastro de Valores Referenciais do CQ"""
+    return rx.vstack(
+        rx.vstack(
+            ui.heading("Valores Referenciais do CQ", level=2),
+            ui.text("Configure valores-alvo e tolerancias de CV% por exame e periodo", size="small", color=Color.TEXT_SECONDARY),
+            spacing="1", align_items="start", margin_bottom=Spacing.LG
+        ),
+
+        rx.grid(
+            # Coluna Esquerda: Formulario
+            ui.card(
+                rx.vstack(
+                    ui.text("Nova Referencia", size="label", color=Color.PRIMARY, style={"letter_spacing": "0.05em", "text_transform": "uppercase"}, margin_bottom=Spacing.MD),
+
+                    # Nome do Registro
+                    ui.form_field(
+                        "Nome do Registro",
+                        ui.input(placeholder="Ex: Kit ControlLab Jan/2026", value=State.ref_name, on_change=State.set_ref_name),
+                        required=True
+                    ),
+
+                    # Exame e Nivel
+                    rx.grid(
+                        ui.form_field(
+                            "Exame",
+                            ui.select(
+                                State.ALLOWED_QC_EXAMS,
+                                placeholder="Selecione o Exame",
+                                value=State.ref_exam_name,
+                                on_change=State.set_ref_exam_name
+                            ),
+                            required=True
+                        ),
+                        ui.form_field(
+                            "Nivel",
+                            ui.select(
+                                ["Normal", "N1", "N2", "N3"],
+                                value=State.ref_level,
+                                on_change=State.set_ref_level
+                            )
+                        ),
+                        columns="2", spacing="4", width="100%"
+                    ),
+
+                    # Datas de Validade
+                    rx.grid(
+                        ui.form_field(
+                            "Valido a partir de",
+                            ui.input(type="date", value=State.ref_valid_from, on_change=State.set_ref_valid_from),
+                            required=True
+                        ),
+                        ui.form_field(
+                            "Valido ate (opcional)",
+                            ui.input(type="date", value=State.ref_valid_until, on_change=State.set_ref_valid_until)
+                        ),
+                        columns="2", spacing="4", width="100%"
+                    ),
+
+                    rx.divider(margin_y=Spacing.MD, opacity=0.3),
+
+                    # Valor Alvo
+                    ui.form_field(
+                        "Valor-Alvo (Media de Controle)",
+                        ui.input(placeholder="0.00", value=State.ref_target_value, on_change=State.set_ref_target_value),
+                        required=True
+                    ),
+
+                    # Limite de CV%
+                    ui.form_field(
+                        "CV% Maximo Aceito (acima = calibrar)",
+                        ui.input(placeholder="10.0", value=State.ref_cv_max_threshold, on_change=State.set_ref_cv_max_threshold),
+                        required=True
+                    ),
+
+                    rx.divider(margin_y=Spacing.MD, opacity=0.3),
+
+                    # Informacoes do Material
+                    rx.grid(
+                        ui.form_field(
+                            "Lote do Controle",
+                            ui.input(placeholder="LOT...", value=State.ref_lot_number, on_change=State.set_ref_lot_number)
+                        ),
+                        ui.form_field(
+                            "Fabricante",
+                            ui.input(placeholder="Ex: ControlLab", value=State.ref_manufacturer, on_change=State.set_ref_manufacturer)
+                        ),
+                        columns="2", spacing="4", width="100%"
+                    ),
+
+                    ui.form_field(
+                        "Observacoes",
+                        rx.text_area(
+                            placeholder="Notas adicionais...",
+                            value=State.ref_notes,
+                            on_change=State.set_ref_notes,
+                            width="100%", min_height="80px"
+                        )
+                    ),
+
+                    # Botao Salvar
+                    ui.button(
+                        "Salvar Referencia", icon="save",
+                        is_loading=State.is_saving_reference,
+                        on_click=State.save_qc_reference,
+                        width="100%", margin_top=Spacing.MD
+                    ),
+
+                    # Mensagens
+                    rx.cond(
+                        State.ref_success_message != "",
+                        rx.callout(State.ref_success_message, icon="circle_check", color_scheme="green", width="100%", margin_top=Spacing.MD)
+                    ),
+                    rx.cond(
+                        State.ref_error_message != "",
+                        rx.callout(State.ref_error_message, icon="triangle_alert", color_scheme="red", width="100%", margin_top=Spacing.MD)
+                    ),
+
+                    spacing="3", width="100%"
+                ),
+                padding=Spacing.LG
+            ),
+
+            # Coluna Direita: Lista de Referencias
+            rx.vstack(
+                ui.heading("Referencias Cadastradas", level=3),
+                ui.card(
+                    rx.vstack(
+                        rx.cond(
+                            State.qc_reference_values.length() > 0,
+                            rx.vstack(
+                                rx.foreach(State.qc_reference_values, reference_card),
+                                spacing="2", width="100%"
+                            ),
+                            rx.center(
+                                rx.vstack(
+                                    rx.icon(tag="settings", size=32, color=Color.TEXT_SECONDARY),
+                                    ui.text("Nenhuma referencia cadastrada", size="small", color=Color.TEXT_SECONDARY),
+                                    ui.text("Cadastre valores de referencia para cada exame", size="small", color=Color.TEXT_SECONDARY),
+                                    spacing="2", align_items="center"
+                                ),
+                                padding=Spacing.XL, width="100%"
+                            )
+                        ),
+                        spacing="2", width="100%"
+                    ),
+                    padding=Spacing.MD, max_height="500px", overflow_y="auto"
+                ),
+                # Botao para recarregar
+                ui.button(
+                    "Atualizar Lista", icon="refresh_cw",
+                    on_click=State.load_qc_references,
+                    variant="secondary", width="100%", margin_top=Spacing.SM
+                ),
+                width="100%", spacing="3"
+            ),
+
+            columns={"initial": "1", "lg": "2"},
+            spacing="6", width="100%"
+        ),
+        width="100%"
+    )
+
+
 def proin_page() -> rx.Component:
     """Página principal do ProIn QC (Purificada)"""
     return rx.box(
@@ -844,31 +1356,38 @@ def proin_page() -> rx.Component:
                 ui.animated_heading("ProIn QC - Gestão de Qualidade", level=1),
                 padding_y=Spacing.XL, width="100%", display="flex", justify_content="center"
             ),
-            
+
             # Navegação de Abas
             rx.box(
                 rx.hstack(
                     tab_button("Dashboard", "layout_dashboard", "dashboard"),
                     tab_button("Registro CQ", "clipboard_list", "registro"),
+                    tab_button("Referencias CQ", "settings", "referencias"),
                     tab_button("Reagentes / Manutenção", "beaker", "reagentes"),
                     tab_button("Relatórios", "bar_chart_3", "relatorios"),
                     tab_button("Importar", "upload", "importar"),
-                    spacing="2", justify_content="center", width="100%"
+                    spacing="2", justify_content="center", width="100%", flex_wrap="wrap"
                 ),
                 margin_bottom=Spacing.XL, width="100%"
             ),
-            
+
             # Conteúdo da Aba Ativa
             rx.box(
                 rx.cond(State.proin_current_tab == "dashboard", dashboard_tab()),
                 rx.cond(State.proin_current_tab == "registro", registro_qc_tab()),
+                rx.cond(State.proin_current_tab == "referencias", referencias_tab()),
                 rx.cond(State.proin_current_tab == "reagentes", reagentes_tab()),
                 rx.cond(State.proin_current_tab == "relatorios", relatorios_tab()),
                 rx.cond(State.proin_current_tab == "importar", importar_tab()),
                 width="100%", max_width="6xl", margin_x="auto"
             ),
-            
+
             spacing="0", align_items="center", width="100%", padding_y=Spacing.XL, padding_x=Spacing.MD
         ),
+        # Modal de Pós-Calibração
+        post_calibration_modal(),
+        # Modais de Confirmação de Exclusão
+        delete_qc_record_modal(),
+        delete_reference_modal(),
         width="100%",
     )

@@ -16,6 +16,24 @@ class AnalysisResult(BaseModel):
     total_value: float = 0.0
 
 
+class QCReferenceValue(BaseModel):
+    """Registro de Valores Referenciais do CQ - Define valor-alvo e tolerância por exame"""
+    id: str = ""
+    name: str = ""                      # Nome do registro (ex: "Kit ControlLab Jan/2026")
+    exam_name: str = ""                 # Nome canônico do exame
+    valid_from: str = ""                # Data início validade (ISO date)
+    valid_until: str = ""               # Data fim validade (opcional)
+    target_value: float = 0.0           # Valor-alvo (média de controle)
+    cv_max_threshold: float = 10.0      # CV% máximo aceito (acima = precisa calibrar)
+    lot_number: str = ""                # Lote do controle de referência
+    manufacturer: str = ""              # Fabricante do material de controle
+    level: str = "Normal"               # Nível do controle (Normal, N1, N2, N3)
+    notes: str = ""                     # Observações
+    is_active: bool = True              # Se está ativo
+    created_at: str = ""
+    updated_at: str = ""
+
+
 class QCRecord(BaseModel):
     """Registro de Controle de Qualidade"""
     id: str = ""
@@ -36,6 +54,25 @@ class QCRecord(BaseModel):
     status: str = ""
     westgard_violations: List[Dict[str, Any]] = []
     z_score: float = 0.0
+    reference_id: str = ""              # ID da referência utilizada
+    needs_calibration: bool = False     # Indica se precisa calibrar
+    post_calibration_id: str = ""       # ID do registro de pós-calibração (se houver)
+
+
+class PostCalibrationRecord(BaseModel):
+    """Registro de Medição Pós-Calibração - Histórico separado, não afeta gráficos"""
+    id: str = ""
+    qc_record_id: str = ""              # ID do registro QC original que gerou a calibração
+    date: str = ""                       # Data/hora da medição pós calibração
+    exam_name: str = ""                  # Nome do exame
+    original_value: float = 0.0          # Valor original que estava fora do CV
+    original_cv: float = 0.0             # CV% original
+    post_calibration_value: float = 0.0  # Novo valor após calibração
+    post_calibration_cv: float = 0.0     # CV% após calibração
+    target_value: float = 0.0            # Valor alvo usado
+    analyst: str = ""                    # Analista responsável
+    notes: str = ""                      # Observações
+    created_at: str = ""
 
 
 class ReagentLot(BaseModel):

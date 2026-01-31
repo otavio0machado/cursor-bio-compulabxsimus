@@ -14,7 +14,8 @@ class QCService:
     @staticmethod
     async def create_qc_record(record_data: Dict[str, Any]) -> Dict[str, Any]:
         """Insere novo registro de CQ"""
-        # Prepara os dados para inserção (remove campos que não são colunas ou trata tipos)
+        # Prepara os dados para inserção
+        # NOTA: 'cv' e 'status' são colunas geradas no banco, não devem ser inseridas
         data = {
             "date": record_data.get("date"),
             "exam_name": record_data.get("exam_name"),
@@ -25,9 +26,13 @@ class QCService:
             "target_sd": float(record_data.get("target_sd", 0)),
             "equipment_name": record_data.get("equipment"),
             "analyst_name": record_data.get("analyst"),
-            # status is a generated column
+            "reference_id": record_data.get("reference_id"),
+            "needs_calibration": record_data.get("needs_calibration", False),
         }
-        
+
+        # Remove campos None para evitar erros no Supabase
+        data = {k: v for k, v in data.items() if v is not None}
+
         response = supabase.table("qc_records").insert(data).execute()
         return response.data[0] if response.data else {}
 
@@ -160,26 +165,29 @@ class QCService:
         """Remove registro de CQ"""
         try:
             print(f"DEBUG: Tentando deletar QC record: {record_id}")
-            # Tenta deletar o registro - Por padrão retorna os dados deletados
+
+            # Primeiro verifica se o registro existe
+            check = supabase.table("qc_records").select("id").eq("id", record_id).execute()
+            if not check.data or len(check.data) == 0:
+                print(f"DEBUG: Registro {record_id} não encontrado no banco.")
+                return False
+
+            # Deleta o registro
             response = supabase.table("qc_records")\
                 .delete()\
                 .eq("id", record_id)\
                 .execute()
-            
-            # Verifica se deletou algo (retornou dados)
-            if response.data and len(response.data) > 0:
-                print(f"DEBUG: Registro {record_id} deletado com sucesso.")
+
+            # DELETE no Supabase pode retornar lista vazia mesmo quando bem-sucedido
+            # Verifica novamente se o registro ainda existe
+            verify = supabase.table("qc_records").select("id").eq("id", record_id).execute()
+            if not verify.data or len(verify.data) == 0:
+                print(f"DEBUG: Registro {record_id} deletado com sucesso (verificado).")
                 return True
-            
-            # Se não tem data, verifica count se disponível (fallback)
-            if hasattr(response, 'count') and response.count is not None and response.count > 0:
-                print(f"DEBUG: Registro {record_id} deletado (count > 0).")
-                return True
-                
-            # Se response.data está vazio, significa que o ID não foi encontrado ou não deletado
-            print(f"DEBUG: Delete falhou ou registro não encontrado. Response data: {response.data}")
+
+            print(f"DEBUG: Delete falhou - registro ainda existe.")
             return False
-            
+
         except Exception as e:
             print(f"Erro ao deletar registro QC {record_id}: {e}")
             return False

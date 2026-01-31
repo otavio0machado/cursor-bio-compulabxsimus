@@ -1,6 +1,7 @@
 import reflex as rx
 from typing import List, Dict, Any, Optional
 import asyncio
+import json
 import os
 import tempfile
 import base64
@@ -9,6 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 from ..services.cloudinary_service import CloudinaryService
 from ..services.audit_service import AuditService
 from ..services.saved_analysis_service import saved_analysis_service
+from ..services.mapping_service import mapping_service
 from datetime import datetime, date
 from ..models import AnalysisResult, PatientHistoryEntry, PatientModel, TopOffender
 from ..utils import pdf_processor # Import module to access functions dynamically
@@ -114,6 +116,17 @@ class AnalysisState(QCState):
     selected_saved_analysis_id: str = ""
     is_loading_saved_analyses: bool = False
 
+    # ===== MAPEAMENTO DE EXAMES (SIMUS -> COMPULAB) =====
+    link_simus_exam: str = ""
+    link_compulab_exam: str = ""
+    link_message: str = ""
+    is_linking: bool = False
+    is_link_modal_open: bool = False
+    is_loading_mappings: bool = False
+    mapping_search: str = ""
+    mapping_version: int = 0
+    is_importing_mappings: bool = False
+
     def set_analysis_active_tab(self, val: Any):
         self.analysis_active_tab = val
 
@@ -122,6 +135,138 @@ class AnalysisState(QCState):
         
     def set_patient_history_search(self, val: str):
         self.patient_history_search = val
+
+    def set_link_simus_exam(self, val: str):
+        self.link_simus_exam = val
+
+    def set_link_compulab_exam(self, val: str):
+        self.link_compulab_exam = val
+
+    def set_mapping_search(self, val: str):
+        self.mapping_search = val
+
+    async def open_link_modal(self):
+        """Abre o modal de mapeamento e carrega sinônimos do banco."""
+        self.is_link_modal_open = True
+        self.link_message = ""
+        self.mapping_search = ""
+        self.is_loading_mappings = True
+        yield
+        try:
+            await mapping_service.load_mappings(force=True)
+            self.mapping_version += 1
+        finally:
+            self.is_loading_mappings = False
+            yield
+
+    def close_link_modal(self):
+        """Fecha o modal de mapeamento."""
+        self.is_link_modal_open = False
+        self.link_message = ""
+
+    async def _create_exam_link(self, reprocess: bool = False):
+        """Fluxo interno para criar vínculo e opcionalmente reprocessar."""
+        if not self.link_simus_exam.strip() or not self.link_compulab_exam.strip():
+            self.link_message = "❌ Informe os dois nomes de exame."
+            return
+
+        self.is_linking = True
+        self.link_message = "💾 Salvando vínculo..."
+        yield
+
+        try:
+            simus_name = self.link_simus_exam.strip()
+            compulab_name = pdf_processor.normalize_exam_name(self.link_compulab_exam.strip())
+            await mapping_service.add_mapping(simus_name, compulab_name)
+            await mapping_service.load_mappings(force=True)
+            self.mapping_version += 1
+            self.link_message = "✅ Link salvo."
+            self.link_simus_exam = ""
+            self.link_compulab_exam = ""
+
+            if reprocess:
+                if self.has_files:
+                    async for _ in self.run_analysis():
+                        yield
+                else:
+                    self.link_message = "✅ Link salvo. Envie os arquivos para reprocessar."
+        except Exception as e:
+            self.link_message = f"❌ Erro ao salvar link: {str(e)}"
+        finally:
+            self.is_linking = False
+            yield
+
+    async def create_exam_link(self):
+        """Cria um vínculo SIMUS -> COMPULAB e atualiza cache."""
+        async for _ in self._create_exam_link(reprocess=False):
+            yield
+
+    async def create_exam_link_and_reprocess(self):
+        """Cria vínculo e reprocessa a análise."""
+        async for _ in self._create_exam_link(reprocess=True):
+            yield
+
+    async def export_mappings(self):
+        """Exporta mapeamentos atuais para JSON."""
+        self.link_message = ""
+        await mapping_service.load_mappings(force=True)
+        self.mapping_version += 1
+        mappings = mapping_service.get_all_synonyms() or {}
+        payload = json.dumps(mappings, indent=2, ensure_ascii=False)
+        filename = f"exam_mappings_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        yield rx.download(data=payload.encode("utf-8"), filename=filename)
+        self.link_message = "✅ Exportacao gerada."
+        yield
+
+    async def import_mappings(self, files: List[rx.UploadFile]):
+        """Importa mapeamentos a partir de JSON."""
+        if not files:
+            self.link_message = "❌ Selecione um arquivo JSON."
+            return
+
+        self.is_importing_mappings = True
+        self.link_message = "💾 Importando mapeamentos..."
+        yield
+
+        try:
+            upload = files[0]
+            raw = await upload.read()
+            text = raw.decode("utf-8-sig", errors="ignore")
+            data = json.loads(text)
+
+            pairs = []
+            if isinstance(data, dict):
+                pairs = list(data.items())
+            elif isinstance(data, list):
+                for item in data:
+                    if not isinstance(item, dict):
+                        continue
+                    original = item.get("original_name", "")
+                    canonical = item.get("canonical_name", "")
+                    pairs.append((original, canonical))
+            else:
+                raise ValueError("Formato de JSON invalido.")
+
+            if not pairs:
+                self.link_message = "❌ Nenhum mapeamento valido encontrado."
+                return
+
+            await mapping_service.load_mappings(force=True)
+            imported = 0
+            for original, canonical in pairs:
+                if not original or not canonical:
+                    continue
+                await mapping_service.add_mapping(original, canonical)
+                imported += 1
+
+            await mapping_service.load_mappings(force=True)
+            self.mapping_version += 1
+            self.link_message = f"✅ {imported} mapeamentos importados."
+        except Exception as e:
+            self.link_message = f"❌ Erro ao importar: {str(e)}"
+        finally:
+            self.is_importing_mappings = False
+            yield
 
     # Computed Properties
     # Computed Properties needed for UI
@@ -157,6 +302,59 @@ class AnalysisState(QCState):
     @rx.var
     def simus_count(self) -> int:
         return len(self._simus_patients)
+
+    @rx.var
+    def compulab_exam_names(self) -> List[str]:
+        """Lista única de exames COMPULAB (para dropdown de mapeamento)."""
+        names = set()
+        for patient_data in self._compulab_patients.values():
+            exams = []
+            if isinstance(patient_data, dict):
+                exams = patient_data.get("exams", [])
+            elif isinstance(patient_data, list):
+                exams = patient_data
+            for exam in exams:
+                if isinstance(exam, dict):
+                    name = exam.get("exam_name", "")
+                else:
+                    name = getattr(exam, "exam_name", "")
+                if name:
+                    names.add(str(name).strip())
+        return sorted(list(names))
+
+    @rx.var
+    def simus_exam_names(self) -> List[str]:
+        """Lista única de exames SIMUS (para dropdown de mapeamento)."""
+        names = set()
+        for patient_data in self._simus_patients.values():
+            exams = []
+            if isinstance(patient_data, dict):
+                exams = patient_data.get("exams", [])
+            elif isinstance(patient_data, list):
+                exams = patient_data
+            for exam in exams:
+                if isinstance(exam, dict):
+                    name = exam.get("exam_name", "")
+                else:
+                    name = getattr(exam, "exam_name", "")
+                if name:
+                    names.add(str(name).strip())
+        return sorted(list(names))
+
+    @rx.var
+    def mapping_rows(self) -> List[Dict[str, str]]:
+        """Lista de mapeamentos (filtrada por busca)."""
+        _ = self.mapping_version
+        mappings = mapping_service.get_all_synonyms() or {}
+        rows = [{"original_name": k, "canonical_name": v} for k, v in mappings.items()]
+        search = (self.mapping_search or "").strip().upper()
+        if search:
+            rows = [
+                r for r in rows
+                if search in r.get("original_name", "").upper()
+                or search in r.get("canonical_name", "").upper()
+            ]
+        return sorted(rows, key=lambda r: (r.get("canonical_name", ""), r.get("original_name", "")))
 
     @rx.var
     def formatted_compulab_total(self) -> str:
@@ -367,10 +565,13 @@ class AnalysisState(QCState):
         
         try:
             # Importar funções de processamento
-            from ..utils.pdf_processor import load_from_excel, exam_names_match
+            from ..utils.pdf_processor import load_from_excel, exam_names_match, canonicalize_exam_name
             from decimal import Decimal
             import requests
             import io
+
+            # Garantir mapeamentos carregados para comparaÃ§Ã£o correta
+            await mapping_service.load_mappings()
             
             # Verificar se os arquivos estão disponíveis (via URL ou path)
             compulab_data = None
@@ -462,37 +663,49 @@ class AnalysisState(QCState):
             
             # ANÁLISE 2: Para cada paciente comum, verificar exames faltantes e divergências
             common_patients = compulab_patient_names & simus_patient_names
-            for patient_name in common_patients:
+            for idx, patient_name in enumerate(common_patients):
                 compulab_exams = compulab_patients[patient_name]['exams']
                 simus_exams = simus_patients[patient_name]['exams']
                 
                 # Indexar exames SIMUS por nome normalizado
                 simus_exam_map = {}
                 for exam in simus_exams:
-                    exam_key = exam['exam_name'].upper().strip()
+                    exam_key = canonicalize_exam_name(exam['exam_name'])
                     if exam_key not in simus_exam_map:
                         simus_exam_map[exam_key] = []
                     simus_exam_map[exam_key].append(exam)
                 
                 # Verificar cada exame COMPULAB
                 for comp_exam in compulab_exams:
-                    comp_name = comp_exam['exam_name'].upper().strip()
+                    comp_name = comp_exam['exam_name']
+                    comp_key = canonicalize_exam_name(comp_name)
                     comp_value = float(comp_exam['value'])
                     
                     # Procurar exame correspondente no SIMUS
                     found_match = False
                     matched_simus_exam = None
                     
-                    for simus_key, simus_exam_list in simus_exam_map.items():
-                        if exam_names_match(comp_name, simus_key):
-                            for simus_exam in simus_exam_list:
-                                if not simus_exam.get('_matched'):
-                                    matched_simus_exam = simus_exam
-                                    found_match = True
-                                    simus_exam['_matched'] = True
+                    # 1) Match direto pelo nome canônico
+                    direct_candidates = simus_exam_map.get(comp_key, [])
+                    for simus_exam in direct_candidates:
+                        if not simus_exam.get('_matched'):
+                            matched_simus_exam = simus_exam
+                            found_match = True
+                            simus_exam['_matched'] = True
+                            break
+
+                    # 2) Fallback para match fuzzy (casos não mapeados)
+                    if not found_match:
+                        for simus_key, simus_exam_list in simus_exam_map.items():
+                            if exam_names_match(comp_key, simus_key):
+                                for simus_exam in simus_exam_list:
+                                    if not simus_exam.get('_matched'):
+                                        matched_simus_exam = simus_exam
+                                        found_match = True
+                                        simus_exam['_matched'] = True
+                                        break
+                                if found_match:
                                     break
-                            if found_match:
-                                break
                     
                     if not found_match:
                         # Exame faltante no SIMUS
@@ -514,6 +727,9 @@ class AnalysisState(QCState):
                                 simus_value=simus_value,
                                 difference=comp_value - simus_value
                             ))
+
+                if idx % 20 == 0:
+                    await asyncio.sleep(0)
             
             # ANÁLISE 3: Exames no SIMUS que não estão no COMPULAB (exames "fantasma")
             for patient_name in common_patients:
@@ -920,6 +1136,8 @@ class AnalysisState(QCState):
         
         try:
             from ..utils.pdf_processor import generate_excel_from_pdfs
+            # Garantir mapeamentos carregados para conversÃ£o mais precisa
+            await mapping_service.load_mappings()
             
             # Variável compartilhada para armazenar progresso (thread-safe)
             progress_state = {"percentage": 0, "stage": ""}
