@@ -415,6 +415,621 @@ def export_results_to_csv(results: Dict[str, Any], directory: Optional[str] = No
     return outputs
 
 
+# =============================================================================
+# FUNÇÕES DE ANÁLISE PROFUNDA (DEEP ANALYSIS)
+# =============================================================================
+
+def analyze_patient_count_difference(
+    df_compulab: pd.DataFrame,
+    df_simus: pd.DataFrame
+) -> Dict[str, Any]:
+    """
+    Analisa a diferença de quantidade de pacientes entre COMPULAB e SIMUS.
+    Versão otimizada para grandes datasets.
+    """
+    if df_compulab.empty or df_simus.empty:
+        return {
+            "compulab_count": 0,
+            "simus_count": 0,
+            "difference": 0,
+            "extra_patients_compulab": [],
+            "extra_patients_simus": [],
+            "extra_patients_count": 0,
+            "extra_patients_value": 0.0,
+            "breakdown": "Dados insuficientes.",
+            "has_extra_in_compulab": False,
+            "has_extra_in_simus": False,
+        }
+    
+    # Normalizar nomes de pacientes
+    comp_df = df_compulab.copy()
+    sim_df = df_simus.copy()
+    
+    if "Paciente_Normalizado" not in comp_df.columns:
+        comp_df["Paciente_Normalizado"] = comp_df["Paciente"].apply(normalize_patient_name)
+    if "Paciente_Normalizado" not in sim_df.columns:
+        sim_df["Paciente_Normalizado"] = sim_df["Paciente"].apply(normalize_patient_name)
+    
+    # Pacientes únicos em cada sistema
+    comp_patients = set(comp_df["Paciente_Normalizado"].unique())
+    sim_patients = set(sim_df["Paciente_Normalizado"].unique())
+    
+    comp_count = len(comp_patients)
+    sim_count = len(sim_patients)
+    difference = comp_count - sim_count
+    
+    # Pacientes extras no COMPULAB
+    extra_in_compulab = comp_patients - sim_patients
+    extra_in_simus_list = sim_patients - comp_patients
+    
+    # Calcular valor dos extras no COMPULAB
+    extra_value = Decimal("0")
+    extra_patients_details = []
+    
+    for patient_key in list(extra_in_compulab)[:100]:  # Limitar a 100 para performance
+        patient_rows = comp_df[comp_df["Paciente_Normalizado"] == patient_key]
+        patient_total = patient_rows["Valor"].apply(lambda x: safe_decimal(x)).sum()
+        
+        extra_patients_details.append({
+            "patient_key": patient_key,
+            "patient_name": patient_rows.iloc[0]["Paciente"] if not patient_rows.empty else patient_key,
+            "exams_count": len(patient_rows),
+            "total_value": float(quantize_decimal(patient_total)),
+        })
+        extra_value += patient_total
+    
+    # Gerar explicação
+    if difference > 0:
+        breakdown = f"COMPULAB possui {difference} paciente(s) a mais que o SIMUS, " \
+                   f"totalizando R$ {float(quantize_decimal(extra_value)):,.2f} em exames."
+    elif difference < 0:
+        breakdown = f"SIMUS possui {abs(difference)} paciente(s) a mais que o COMPULAB."
+    else:
+        breakdown = "Ambos os sistemas possuem a mesma quantidade de pacientes."
+    
+    return {
+        "compulab_count": comp_count,
+        "simus_count": sim_count,
+        "difference": difference,
+        "extra_patients_compulab": extra_patients_details,
+        "extra_patients_simus": list(extra_in_simus_list)[:50],
+        "extra_patients_count": len(extra_in_compulab),
+        "extra_patients_value": float(quantize_decimal(extra_value)),
+        "breakdown": breakdown,
+        "has_extra_in_compulab": len(extra_in_compulab) > 0,
+        "has_extra_in_simus": len(extra_in_simus_list) > 0,
+    }
+
+
+def detect_repeated_exams(
+    df_compulab: pd.DataFrame,
+    df_simus: pd.DataFrame,
+    tolerance: float = 0.01
+) -> Dict[str, Any]:
+    """
+    Detecta exames repetidos nos dados (mesmo paciente + mesmo exame + mesmo valor).
+    Versão otimizada para grandes datasets.
+    """
+    if df_compulab.empty or df_simus.empty:
+        return {
+            "compulab_repeated": [],
+            "simus_repeated": [],
+            "all_repeated": [],
+            "total_types": 0,
+            "total_repeated_count": 0,
+            "total_repeated_value": 0.0,
+            "breakdown_by_patient": {},
+            "summary": "Nenhum exame repetido detectado.",
+            "has_repeated": False,
+        }
+    
+    def find_repeated_exams(df: pd.DataFrame, source_name: str) -> List[Dict[str, Any]]:
+        """Encontra exames repetidos em um DataFrame."""
+        if df.empty or len(df) < 2:
+            return []
+        
+        # Garantir colunas necessárias
+        if "Paciente_Normalizado" not in df.columns:
+            df = df.copy()
+            df["Paciente_Normalizado"] = df["Paciente"].apply(normalize_patient_name)
+        if "Nome_Canonico" not in df.columns:
+            df = df.copy()
+            df["Nome_Canonico"] = df["Nome_Exame"].apply(normalize_exam_name)
+        
+        # Criar chave de comparação de forma vetorizada
+        df_copy = df.copy()
+        df_copy["_valor_str"] = df_copy["Valor"].apply(
+            lambda x: f"{float(quantize_decimal(safe_decimal(x))):.2f}"
+        )
+        df_copy["_match_key"] = (
+            df_copy["Paciente_Normalizado"].astype(str) + "|" +
+            df_copy["Nome_Canonico"].astype(str) + "|" +
+            df_copy["_valor_str"]
+        )
+        
+        # Contar ocorrências
+        counts = df_copy["_match_key"].value_counts()
+        repeated_keys = counts[counts > 1].index.tolist()
+        
+        if not repeated_keys:
+            return []
+        
+        repeated = []
+        for key in repeated_keys[:100]:  # Limitar a 100 tipos de repetidos para performance
+            matches = df_copy[df_copy["_match_key"] == key]
+            if len(matches) < 2:
+                continue
+            
+            first = matches.iloc[0]
+            value = safe_decimal(first["Valor"])
+            count = len(matches)
+            total_value = value * (count - 1)
+            
+            repeated.append({
+                "source": source_name,
+                "patient": str(first["Paciente"]),
+                "patient_normalized": str(first["Paciente_Normalizado"]),
+                "exam_name": str(first["Nome_Exame"]),
+                "canonical_name": str(first["Nome_Canonico"]),
+                "code": str(first.get("Codigo_Exame", "")),
+                "unit_value": float(quantize_decimal(value)),
+                "occurrences": count,
+                "duplicate_count": count - 1,
+                "total_duplicate_value": float(quantize_decimal(total_value)),
+            })
+        
+        return repeated
+    
+    # Encontrar repetidos em cada sistema (sem prepare_dataframe pesado)
+    comp_repeated = find_repeated_exams(df_compulab, "COMPULAB")
+    sim_repeated = find_repeated_exams(df_simus, "SIMUS")
+    
+    all_repeated = comp_repeated + sim_repeated
+    
+    # Calcular totais
+    total_repeated_count = sum(r["duplicate_count"] for r in all_repeated)
+    total_repeated_value = sum(
+        Decimal(str(r["total_duplicate_value"])) for r in all_repeated
+    )
+    
+    # Agrupar por paciente
+    by_patient = {}
+    for r in all_repeated:
+        patient = r["patient"]
+        if patient not in by_patient:
+            by_patient[patient] = []
+        by_patient[patient].append(r)
+    
+    # Gerar resumo
+    if all_repeated:
+        summary = f"Detectados {len(all_repeated)} tipos de exames repetidos, " \
+                 f"totalizando {total_repeated_count} ocorrências duplicadas " \
+                 f"(R$ {float(quantize_decimal(total_repeated_value)):,.2f})."
+    else:
+        summary = "Nenhum exame repetido detectado."
+    
+    return {
+        "compulab_repeated": comp_repeated,
+        "simus_repeated": sim_repeated,
+        "all_repeated": all_repeated,
+        "total_types": len(all_repeated),
+        "total_repeated_count": total_repeated_count,
+        "total_repeated_value": float(quantize_decimal(total_repeated_value)),
+        "breakdown_by_patient": by_patient,
+        "summary": summary,
+        "has_repeated": len(all_repeated) > 0,
+    }
+
+
+def calculate_difference_breakdown(
+    compulab_total: float,
+    simus_total: float,
+    analysis_results: Dict[str, Any],
+    repeated_exams_analysis: Optional[Dict[str, Any]] = None,
+    patient_analysis: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    """
+    Calcula a explicação detalhada da diferença entre COMPULAB e SIMUS.
+    
+    A conta explica:
+    - Diferença bruta: COMPULAB - SIMUS
+    - Pacientes apenas COMPULAB (+)
+    - Pacientes apenas SIMUS (-)
+    - Exames apenas COMPULAB (+)
+    - Exames apenas SIMUS (-)
+    - Divergências de valor (±)
+    - Exames repetidos (devem ser considerados)
+    - Residual (não explicado)
+    
+    Args:
+        compulab_total: Valor total do COMPULAB
+        simus_total: Valor total do SIMUS
+        analysis_results: Resultados da análise comparativa (missing, divergences, etc)
+        repeated_exams_analysis: Resultado de detect_repeated_exams (opcional)
+        patient_analysis: Resultado de analyze_patient_count_difference (opcional)
+        
+    Returns:
+        Dict com explicação detalhada da diferença
+    """
+    comp_total = Decimal(str(compulab_total))
+    sim_total = Decimal(str(simus_total))
+    gross_difference = comp_total - sim_total
+    
+    # Extrair valores dos componentes
+    summary = analysis_results.get("summary", {})
+    
+    # Componentes da análise
+    patients_only_compulab = Decimal(str(summary.get("missing_in_simus_total", 0)))
+    patients_only_simus = Decimal(str(summary.get("missing_in_compulab_total", 0)))
+    exams_only_compulab = Decimal(str(summary.get("missing_in_simus_total", 0)))
+    exams_only_simus = Decimal(str(summary.get("missing_in_compulab_total", 0)))
+    
+    # Se temos análise detalhada de pacientes, usar valores mais precisos
+    if patient_analysis:
+        patients_only_compulab = Decimal(str(patient_analysis.get("extra_patients_value", 0)))
+    
+    # Divergências de valor
+    divergences_total = Decimal(str(summary.get("divergences_total", 0)))
+    
+    # Exames repetidos (impacto negativo - duplicidade)
+    repeated_value = Decimal("0")
+    if repeated_exams_analysis:
+        repeated_value = Decimal(str(repeated_exams_analysis.get("total_repeated_value", 0)))
+    
+    # Calcular total explicado
+    # Nota: A lógica depende de como os valores são contabilizados
+    # Pacientes extras no COMPULAB aumentam a diferença (COMPULAB > SIMUS)
+    # Pacientes extras no SIMUS diminuem a diferença
+    explained = (
+        patients_only_compulab      # Pacientes só no COMPULAB → aumenta diferença
+        - patients_only_simus       # Pacientes só no SIMUS → diminui diferença
+        + divergences_total         # Divergências de valor
+        - repeated_value            # Repetidos → duplicidade a ser descontada
+    )
+    
+    # Calcular residual
+    residual = gross_difference - explained
+    
+    # Percentual explicado
+    if gross_difference != 0:
+        percent_explained = min(100, max(0, float(abs(explained) / abs(gross_difference) * 100)))
+    else:
+        percent_explained = 100 if explained == 0 else 0
+    
+    # Gerar passos da fórmula
+    formula_steps = [
+        f"1. Diferença Bruta: COMPULAB (R$ {float(comp_total):,.2f}) - SIMUS (R$ {float(sim_total):,.2f}) = R$ {float(gross_difference):,.2f}",
+        f"2. Pacientes apenas COMPULAB: + R$ {float(patients_only_compulab):,.2f}",
+        f"3. Pacientes apenas SIMUS: - R$ {float(patients_only_simus):,.2f}",
+        f"4. Divergências de valor: ± R$ {float(divergences_total):,.2f}",
+    ]
+    
+    if repeated_value > 0:
+        formula_steps.append(f"5. Exames repetidos (duplicidade): - R$ {float(repeated_value):,.2f}")
+        formula_steps.append(f"6. Total Explicado: R$ {float(explained):,.2f}")
+        formula_steps.append(f"7. Residual (não explicado): R$ {float(residual):,.2f} ({100 - percent_explained:.1f}%)")
+    else:
+        formula_steps.append(f"5. Total Explicado: R$ {float(explained):,.2f}")
+        formula_steps.append(f"6. Residual (não explicado): R$ {float(residual):,.2f} ({100 - percent_explained:.1f}%)")
+    
+    # Explicação em texto
+    explanation_parts = []
+    if patients_only_compulab > 0:
+        explanation_parts.append(f"pacientes extras no COMPULAB (R$ {float(patients_only_compulab):,.2f})")
+    if patients_only_simus > 0:
+        explanation_parts.append(f"pacientes extras no SIMUS (R$ {float(patients_only_simus):,.2f})")
+    if divergences_total > 0:
+        explanation_parts.append(f"divergências de valor (R$ {float(divergences_total):,.2f})")
+    if repeated_value > 0:
+        explanation_parts.append(f"exames repetidos (R$ {float(repeated_value):,.2f})")
+    
+    if explanation_parts:
+        explanation_text = "A diferença de R$ {:.2f} é explicada principalmente por: ".format(float(gross_difference))
+        explanation_text += ", ".join(explanation_parts)
+        explanation_text += f". Valor residual não explicado: R$ {float(residual):,.2f}."
+    else:
+        explanation_text = f"Não foram identificadas divergências significativas. Residual: R$ {float(residual):,.2f}."
+    
+    return {
+        "compulab_total": float(comp_total),
+        "simus_total": float(sim_total),
+        "gross_difference": float(gross_difference),
+        "explained_components": {
+            "patients_only_compulab": {
+                "value": float(patients_only_compulab),
+                "impact": "+",
+                "description": "Pacientes apenas no COMPULAB"
+            },
+            "patients_only_simus": {
+                "value": float(patients_only_simus),
+                "impact": "-",
+                "description": "Pacientes apenas no SIMUS"
+            },
+            "exams_only_compulab": {
+                "value": float(exams_only_compulab),
+                "impact": "+",
+                "description": "Exames apenas no COMPULAB"
+            },
+            "exams_only_simus": {
+                "value": float(exams_only_simus),
+                "impact": "-",
+                "description": "Exames apenas no SIMUS"
+            },
+            "value_divergences": {
+                "value": float(divergences_total),
+                "impact": "±",
+                "description": "Divergências de valor"
+            },
+            "repeated_exams": {
+                "value": float(repeated_value),
+                "impact": "-",
+                "description": "Exames repetidos (duplicidade)"
+            },
+        },
+        "total_explained": float(explained),
+        "percent_explained": percent_explained,
+        "residual": float(residual),
+        "residual_percent": 100 - percent_explained,
+        "explanation_text": explanation_text,
+        "formula_steps": formula_steps,
+        "is_fully_explained": abs(residual) < Decimal("1.00"),  # Residual < R$ 1,00
+    }
+
+
+def generate_executive_summary(
+    compulab_total: float,
+    simus_total: float,
+    patient_analysis: Dict[str, Any],
+    repeated_exams_analysis: Dict[str, Any],
+    difference_breakdown: Dict[str, Any],
+    top_offenders: Optional[List[Dict[str, Any]]] = None,
+    analysis_date: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Gera um resumo executivo completo da análise.
+    
+    Args:
+        compulab_total: Valor total do COMPULAB
+        simus_total: Valor total do SIMUS
+        patient_analysis: Resultado de analyze_patient_count_difference
+        repeated_exams_analysis: Resultado de detect_repeated_exams
+        difference_breakdown: Resultado de calculate_difference_breakdown
+        top_offenders: Lista dos principais exames com problemas
+        analysis_date: Data da análise (opcional)
+        
+    Returns:
+        Dict com resumo executivo completo
+    """
+    from datetime import datetime
+    
+    # Métricas principais
+    difference = compulab_total - simus_total
+    percent_diff = (difference / simus_total * 100) if simus_total > 0 else 0
+    
+    # Extrair dados das análises
+    extra_patients_count = patient_analysis.get("extra_patients_count", 0)
+    extra_patients_value = patient_analysis.get("extra_patients_value", 0)
+    
+    repeated_count = repeated_exams_analysis.get("total_repeated_count", 0)
+    repeated_value = repeated_exams_analysis.get("total_repeated_value", 0)
+    
+    residual = difference_breakdown.get("residual", 0)
+    percent_explained = difference_breakdown.get("percent_explained", 0)
+    
+    # Achados críticos
+    critical_findings = []
+    
+    if extra_patients_count > 0:
+        critical_findings.append(
+            f"{extra_patients_count} paciente(s) presente(s) apenas no COMPULAB, "
+            f"representando R$ {extra_patients_value:,.2f} em exames não lançados no SIMUS"
+        )
+    
+    if repeated_count > 0:
+        critical_findings.append(
+            f"{repeated_count} exame(s) repetido(s) detectado(s), totalizando R$ {repeated_value:,.2f} "
+            f"em possíveis duplicidades de lançamento"
+        )
+    
+    if abs(residual) > 10:
+        critical_findings.append(
+            f"R$ {abs(residual):,.2f} de diferença não explicada ({100 - percent_explained:.1f}%), "
+            f"sugerindo necessidade de revisão manual"
+        )
+    elif abs(residual) > 1:
+        critical_findings.append(
+            f"Diferença residual de R$ {abs(residual):,.2f} ({100 - percent_explained:.1f}%) - "
+            f"dentro da margem de arredondamento aceitável"
+        )
+    else:
+        critical_findings.append(
+            "Diferença totalmente explicada pelos componentes identificados"
+        )
+    
+    if abs(percent_diff) > 5:
+        critical_findings.append(
+            f"Diferença percentual significativa ({percent_diff:+.1f}%) entre os sistemas"
+        )
+    
+    # Recomendações
+    recommendations = []
+    
+    if extra_patients_count > 0:
+        recommendations.append(
+            "Verificar processo de cadastro: pacientes no COMPULAB sem correspondência no SIMUS "
+            "indicam possível falha na integração ou lançamento manual"
+        )
+    
+    if repeated_count > 0:
+        recommendations.append(
+            "Revisar lançamentos duplicados: exames repetidos podem indicar erro operacional "
+            "ou falha no controle de concorrência"
+        )
+    
+    if abs(residual) > 10:
+        recommendations.append(
+            "Auditoria manual recomendada: parte significativa da diferença não foi explicada "
+            "pelos critérios automáticos"
+        )
+    
+    if not recommendations:
+        recommendations.append(
+            "Manter rotina de conciliação: análise atual indica consistência entre sistemas"
+        )
+    
+    # Itens de ação priorizados
+    action_items = []
+    
+    if extra_patients_count > 0:
+        action_items.append({
+            "priority": "Alta",
+            "action": f"Lançar {extra_patients_count} paciente(s) no SIMUS",
+            "impact": f"R$ {extra_patients_value:,.2f}",
+            "owner": "Recepção/Cadastro"
+        })
+    
+    if repeated_count > 0:
+        action_items.append({
+            "priority": "Alta",
+            "action": f"Remover {repeated_count} exame(s) duplicado(s)",
+            "impact": f"R$ {repeated_value:,.2f}",
+            "owner": "Auditoria"
+        })
+    
+    if abs(residual) > 10:
+        action_items.append({
+            "priority": "Média",
+            "action": "Investigar diferença residual não explicada",
+            "impact": f"R$ {abs(residual):,.2f}",
+            "owner": "Financeiro"
+        })
+    
+    # Resumo executivo em linguagem natural
+    exec_summary = f"""Análise comparativa entre COMPULAB e SIMUS realizada em {analysis_date or datetime.now().strftime('%d/%m/%Y')}. 
+O COMPULAB registrou R$ {compulab_total:,.2f} contra R$ {simus_total:,.2f} do SIMUS, 
+"""
+    
+    if difference > 0:
+        exec_summary += f"resultando em uma diferença positiva de R$ {difference:,.2f} ({percent_diff:+.1f}%) a favor do COMPULAB. "
+    else:
+        exec_summary += f"resultando em uma diferença negativa de R$ {abs(difference):,.2f} ({percent_diff:+.1f}%) a favor do SIMUS. "
+    
+    if percent_explained >= 95:
+        exec_summary += f"A análise automática conseguiu explicar {percent_explained:.0f}% da diferença, " \
+                       f"indicando boa confiabilidade nos resultados."
+    elif percent_explained >= 70:
+        exec_summary += f"A análise automática explicou {percent_explained:.0f}% da diferença, " \
+                       f"sendo recomendada revisão dos itens residuais."
+    else:
+        exec_summary += f"Apenas {percent_explained:.0f}% da diferença foi explicada automaticamente, " \
+                       f"indicando necessidade de investigação detalhada."
+    
+    return {
+        "title": "Resumo Executivo - Análise COMPULAB x SIMUS",
+        "period": analysis_date or datetime.now().strftime('%d/%m/%Y'),
+        "generated_at": datetime.now().isoformat(),
+        "executive_summary": exec_summary,
+        
+        "key_metrics": {
+            "faturamento_compulab": compulab_total,
+            "faturamento_simus": simus_total,
+            "diferenca_liquida": difference,
+            "diferenca_percentual": round(percent_diff, 2),
+            "percentual_explicado": round(percent_explained, 1),
+        },
+        
+        "critical_findings": critical_findings,
+        
+        "financial_impact": {
+            "pacientes_extras_compulab": {
+                "count": extra_patients_count,
+                "value": extra_patients_value,
+                "description": "Pacientes apenas no COMPULAB"
+            },
+            "exames_repetidos": {
+                "count": repeated_count,
+                "value": repeated_value,
+                "description": "Exames duplicados nos sistemas"
+            },
+            "divergencias_explicadas": {
+                "value": difference_breakdown.get("total_explained", 0),
+                "description": "Valor explicado pela análise"
+            },
+            "valor_nao_explicado": {
+                "value": abs(residual),
+                "description": "Diferença residual"
+            },
+        },
+        
+        "recommendations": recommendations,
+        "action_items": action_items,
+        
+        "top_offenders": top_offenders or [],
+        
+        "status": "critical" if abs(residual) > 50 or extra_patients_count > 5 else 
+                  "warning" if abs(residual) > 10 or extra_patients_count > 0 else 
+                  "ok"
+    }
+
+
+def run_deep_analysis(
+    df_compulab: pd.DataFrame,
+    df_simus: pd.DataFrame,
+    compulab_total: float,
+    simus_total: float,
+    analysis_results: Dict[str, Any],
+    top_offenders: Optional[List[Dict[str, Any]]] = None,
+    analysis_date: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Executa análise profunda completa combinando todas as análises.
+    
+    Esta é uma função convenience que executa todas as análises em sequência.
+    
+    Args:
+        df_compulab: DataFrame do COMPULAB
+        df_simus: DataFrame do SIMUS
+        compulab_total: Valor total do COMPULAB
+        simus_total: Valor total do SIMUS
+        analysis_results: Resultados da análise comparativa básica
+        top_offenders: Lista dos principais exames com problemas
+        analysis_date: Data da análise
+        
+    Returns:
+        Dict com todos os resultados da análise profunda
+    """
+    # Executar análises individuais
+    patient_analysis = analyze_patient_count_difference(df_compulab, df_simus)
+    repeated_analysis = detect_repeated_exams(df_compulab, df_simus)
+    
+    # Calcular explicação da diferença
+    difference_breakdown = calculate_difference_breakdown(
+        compulab_total,
+        simus_total,
+        analysis_results,
+        repeated_analysis,
+        patient_analysis
+    )
+    
+    # Gerar resumo executivo
+    executive_summary = generate_executive_summary(
+        compulab_total,
+        simus_total,
+        patient_analysis,
+        repeated_analysis,
+        difference_breakdown,
+        top_offenders,
+        analysis_date
+    )
+    
+    return {
+        "patient_analysis": patient_analysis,
+        "repeated_exams": repeated_analysis,
+        "difference_breakdown": difference_breakdown,
+        "executive_summary": executive_summary,
+    }
+
+
 def prepare_dataframe(df: pd.DataFrame, synonyms: Dict[str, str]) -> pd.DataFrame:
     """
     Padroniza colunas e cria campos auxiliares para comparacao.
@@ -811,11 +1426,13 @@ def build_result_row(
     }
 
 
-def quantize_decimal(value: Decimal) -> Decimal:
+def quantize_decimal(value: Any) -> Decimal:
     """
     Arredonda valor para 2 casas decimais.
     """
-    return value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    if isinstance(value, Decimal):
+        return value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    return Decimal(str(value)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
 def decimal_to_float(value: Decimal) -> float:

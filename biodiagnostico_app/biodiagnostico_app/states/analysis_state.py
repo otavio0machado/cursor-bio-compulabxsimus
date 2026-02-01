@@ -1,11 +1,13 @@
 import reflex as rx
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Set
+from difflib import SequenceMatcher
 import asyncio
 import json
 import os
 import tempfile
 import base64
 import gc
+import time
 from concurrent.futures import ThreadPoolExecutor
 from ..services.cloudinary_service import CloudinaryService
 from ..services.audit_service import AuditService
@@ -14,6 +16,7 @@ from ..services.mapping_service import mapping_service
 from datetime import datetime, date
 from ..models import AnalysisResult, PatientHistoryEntry, PatientModel, TopOffender
 from ..utils import pdf_processor # Import module to access functions dynamically
+from ..utils.timing import TimingCollector
 from ..utils.analysis_pdf_report import generate_analysis_pdf
 from .qc_state import QCState
 from ..styles import Color
@@ -68,19 +71,22 @@ class AnalysisState(QCState):
     success_message: str = ""
     
     # Analysis Results (Objects)
-    missing_patients: List[AnalysisResult] = []
-    missing_exams: List[AnalysisResult] = []
+    patients_only_compulab: List[AnalysisResult] = []
+    patients_only_simus: List[AnalysisResult] = []
+    exams_only_compulab: List[AnalysisResult] = []
     value_divergences: List[AnalysisResult] = []
-    extra_simus_exams: List[AnalysisResult] = []
+    exams_only_simus: List[AnalysisResult] = []
     
     # Analysis Stats - Attributes with Defaults
-    missing_patients_count: int = 0
-    missing_patients_total: float = 0.0
-    missing_exams_count: int = 0
-    missing_exams_total: float = 0.0
+    patients_only_compulab_count: int = 0
+    patients_only_compulab_total: float = 0.0
+    patients_only_simus_count: int = 0
+    patients_only_simus_total: float = 0.0
+    exams_only_compulab_count: int = 0
+    exams_only_compulab_total: float = 0.0
     divergences_count: int = 0
     divergences_total: float = 0.0
-    extra_simus_exams_count: int = 0
+    exams_only_simus_count: int = 0
     compulab_total: float = 0.0
     simus_total: float = 0.0
     
@@ -95,12 +101,46 @@ class AnalysisState(QCState):
     
     # Divergence Resolution & Patient History
     resolutions: Dict[str, str] = {} # Key: "patient_name|exam_name"
+    annotations: Dict[str, str] = {} # Key: "patient_name|exam_name" or "patient_name|"
+    ERROR_TYPES: List[str] = [
+        "erro_de_grafia",
+        "paciente_sem_sobrenome",
+        "nao_consta_no_simus",
+        "nao_consta_no_compulab",
+        "outro",
+    ]
+    ERROR_TYPES_PATIENTS_COMPULAB: List[str] = [
+        "paciente_sem_sobrenome",
+        "nao_consta_no_simus",
+        "outro",
+    ]
+    ERROR_TYPES_PATIENTS_SIMUS: List[str] = [
+        "paciente_sem_sobrenome",
+        "nao_consta_no_compulab",
+        "outro",
+    ]
+    ERROR_TYPES_EXAMS_COMPULAB: List[str] = [
+        "erro_de_grafia",
+        "nao_consta_no_simus",
+        "outro",
+    ]
+    ERROR_TYPES_EXAMS_SIMUS: List[str] = [
+        "erro_de_grafia",
+        "nao_consta_no_compulab",
+        "outro",
+    ]
+    ERROR_TYPES_VALUE_DIFFS: List[str] = [
+        "erro_de_grafia",
+        "nao_consta_no_simus",
+        "nao_consta_no_compulab",
+        "outro",
+    ]
     patient_history_data: List[PatientHistoryEntry] = []
     patient_history_search: str = ""
     selected_patient_name: str = ""
     is_showing_patient_history: bool = False
     resolution_notes: str = ""
-    analysis_active_tab: str = "patients_missing"
+    analysis_active_tab: str = "patients_only_compulab"
     
     # ===== SALVAMENTO DE ANÁLISES =====
     # Campos para o modal de salvar
@@ -116,6 +156,24 @@ class AnalysisState(QCState):
     selected_saved_analysis_id: str = ""
     is_loading_saved_analyses: bool = False
 
+    # ===== ANÁLISE PROFUNDA (DEEP ANALYSIS) =====
+    # Análise de pacientes extras
+    extra_patients_analysis: Dict[str, Any] = {}
+    extra_patients_count: int = 0
+    extra_patients_value: float = 0.0
+    
+    # Análise de exames repetidos
+    repeated_exams_analysis: Dict[str, Any] = {}
+    repeated_exams_count: int = 0
+    repeated_exams_value: float = 0.0
+    
+    # Explicação da diferença
+    difference_breakdown: Dict[str, Any] = {}
+    residual_unexplained: float = 0.0
+    
+    # Resumo executivo
+    executive_summary: Dict[str, Any] = {}
+
     # ===== MAPEAMENTO DE EXAMES (SIMUS -> COMPULAB) =====
     link_simus_exam: str = ""
     link_compulab_exam: str = ""
@@ -128,7 +186,14 @@ class AnalysisState(QCState):
     is_importing_mappings: bool = False
 
     def set_analysis_active_tab(self, val: Any):
-        self.analysis_active_tab = val
+        mapping = {
+            "patients_missing": "patients_only_compulab",
+            "missing": "exams_only_compulab",
+            "extras": "exams_only_simus",
+            "divergences": "value_diffs",
+            "ai": "patients_only_compulab",
+        }
+        self.analysis_active_tab = mapping.get(val, val)
 
     def set_is_showing_patient_history(self, val: bool):
         self.is_showing_patient_history = val
@@ -144,6 +209,12 @@ class AnalysisState(QCState):
 
     def set_mapping_search(self, val: str):
         self.mapping_search = val
+
+    def prefill_mapping(self, simus_name: str, compulab_name: str):
+        """Preenche os campos do link com valores sugeridos/selecionados."""
+        self.link_simus_exam = simus_name or ""
+        self.link_compulab_exam = compulab_name or ""
+        self.link_message = "Mapeamento pre-preenchido."
 
     async def open_link_modal(self):
         """Abre o modal de mapeamento e carrega sinônimos do banco."""
@@ -356,6 +427,85 @@ class AnalysisState(QCState):
             ]
         return sorted(rows, key=lambda r: (r.get("canonical_name", ""), r.get("original_name", "")))
 
+    def _tokenize_exam_name(self, name: str) -> Set[str]:
+        normalized = pdf_processor.normalize_exam_name_for_comparison(name)
+        return {word for word in normalized.split() if len(word) >= 3}
+
+    @rx.var
+    def link_conflict_message(self) -> str:
+        """Mensagem de conflito quando o SIMUS ja possui mapeamento."""
+        _ = self.mapping_version
+        simus_name = (self.link_simus_exam or "").strip()
+        if not simus_name:
+            return ""
+        mappings = mapping_service.get_all_synonyms() or {}
+        existing = mappings.get(simus_name.upper().strip())
+        if not existing:
+            return ""
+        desired = (self.link_compulab_exam or "").strip()
+        if desired and existing.strip().upper() == desired.upper():
+            return "Este link ja existe."
+        return f"Ja existe um link para '{simus_name}' -> '{existing}'. Salvar vai substituir."
+
+    @rx.var
+    def unmapped_simus_exam_names(self) -> List[str]:
+        """Exames do SIMUS sem mapeamento cadastrado."""
+        _ = self.mapping_version
+        mappings = mapping_service.get_all_synonyms() or {}
+        mapped_keys = {k.upper().strip() for k in mappings.keys()}
+        return [
+            name for name in self.simus_exam_names
+            if name and name.upper().strip() not in mapped_keys
+        ]
+
+    @rx.var
+    def suggested_mappings(self) -> List[Dict[str, Any]]:
+        """Sugestoes de link baseadas em similaridade de nomes."""
+        _ = self.mapping_version
+        if not self.is_link_modal_open:
+            return []
+        simus_candidates = self.unmapped_simus_exam_names[:60]
+        compulab_candidates = self.compulab_exam_names[:200]
+        if not simus_candidates or not compulab_candidates:
+            return []
+
+        comp_entries = []
+        for comp_name in compulab_candidates:
+            comp_norm = pdf_processor.normalize_exam_name_for_comparison(comp_name)
+            if not comp_norm:
+                continue
+            comp_entries.append((comp_name, comp_norm, self._tokenize_exam_name(comp_name)))
+
+        suggestions: List[Dict[str, Any]] = []
+        for simus_name in simus_candidates:
+            simus_norm = pdf_processor.normalize_exam_name_for_comparison(simus_name)
+            if not simus_norm:
+                continue
+            simus_tokens = self._tokenize_exam_name(simus_name)
+            best_score = 0.0
+            best_comp = None
+            best_overlap = 0
+            for comp_name, comp_norm, comp_tokens in comp_entries:
+                ratio = SequenceMatcher(None, simus_norm, comp_norm).ratio()
+                overlap = len(simus_tokens & comp_tokens)
+                score = ratio + (0.02 * overlap)
+                if score > best_score or (score == best_score and overlap > best_overlap):
+                    best_score = score
+                    best_comp = comp_name
+                    best_overlap = overlap
+            if best_comp and best_score >= 0.86:
+                score_pct = int(best_score * 100)
+                suggestions.append({
+                    "simus_name": simus_name,
+                    "compulab_name": best_comp,
+                    "score": round(best_score, 2),
+                    "score_pct": score_pct,
+                    "score_label": f"{score_pct}%",
+                })
+
+        suggestions.sort(key=lambda s: (-s.get("score", 0), s.get("simus_name", "")))
+        return suggestions[:12]
+
     @rx.var
     def formatted_compulab_total(self) -> str:
         return f"R$ {self.compulab_total:,.2f}"
@@ -377,25 +527,142 @@ class AnalysisState(QCState):
         return f"R$ {diff:,.2f}"
 
     @rx.var
-    def formatted_missing_patients_total(self) -> str:
-        return f"R$ {self.missing_patients_total:,.2f}"
+    def formatted_patients_only_compulab_total(self) -> str:
+        return f"R$ {self.patients_only_compulab_total:,.2f}"
 
     @rx.var
-    def formatted_missing_exams_total(self) -> str:
-        return f"R$ {self.missing_exams_total:,.2f}"
+    def formatted_patients_only_simus_total(self) -> str:
+        return f"R$ {self.patients_only_simus_total:,.2f}"
+
+    @rx.var
+    def formatted_exams_only_compulab_total(self) -> str:
+        return f"R$ {self.exams_only_compulab_total:,.2f}"
 
     @rx.var
     def formatted_divergences_total(self) -> str:
         return f"R$ {self.divergences_total:,.2f}"
+
+    @rx.var
+    def exams_only_simus_total(self) -> float:
+        """Total de valores de exames somente no SIMUS."""
+        if not isinstance(self.exams_only_simus, list):
+            return 0.0
+        return sum(
+            float(getattr(item, 'simus_value', 0) or getattr(item, 'value', 0))
+            for item in self.exams_only_simus
+        )
     
+    # ===== NOVAS PROPRIEDADES COMPUTADAS - ANÁLISE PROFUNDA =====
+    
+    @rx.var
+    def extra_patients_formatted(self) -> str:
+        """Retorna a quantidade e valor dos pacientes extras formatado"""
+        if self.extra_patients_count == 0:
+            return "Nenhum paciente extra"
+        return f"{self.extra_patients_count} paciente(s) - R$ {self.extra_patients_value:,.2f}"
+    
+    @rx.var
+    def repeated_exams_formatted(self) -> str:
+        """Retorna a quantidade e valor dos exames repetidos formatado"""
+        if self.repeated_exams_count == 0:
+            return "Nenhum exame repetido"
+        return f"{self.repeated_exams_count} exame(s) - R$ {self.repeated_exams_value:,.2f}"
+    
+    @rx.var
+    def residual_formatted(self) -> str:
+        """Retorna o valor residual não explicado formatado"""
+        return f"R$ {self.residual_unexplained:,.2f}"
+    
+    @rx.var
+    def difference_explained_percent(self) -> float:
+        """Percentual da diferença que foi explicado"""
+        if not self.difference_breakdown:
+            return 0.0
+        return self.difference_breakdown.get("percent_explained", 0)
+    
+    @rx.var
+    def difference_formula_steps(self) -> List[str]:
+        """Retorna os passos da explicação da diferença para exibição na UI"""
+        if not self.difference_breakdown:
+            return []
+        return self.difference_breakdown.get("formula_steps", [])
+    
+    @rx.var
+    def has_repeated_exams(self) -> bool:
+        """Indica se há exames repetidos detectados"""
+        return self.repeated_exams_count > 0
+    
+    @rx.var
+    def has_unexplained_difference(self) -> bool:
+        """Indica se há diferença não explicada significativa (> R$ 1,00)"""
+        return abs(self.residual_unexplained) > 1.0
+    
+    @rx.var
+    def is_difference_fully_explained(self) -> bool:
+        """Indica se a diferença foi totalmente explicada"""
+        if not self.difference_breakdown:
+            return False
+        return self.difference_breakdown.get("is_fully_explained", False)
+    
+    @rx.var
+    def analysis_status(self) -> str:
+        """Status geral da análise (critical, warning, ok)"""
+        if not self.executive_summary:
+            return "pending"
+        return self.executive_summary.get("status", "pending")
+    
+    # Aliases de compatibilidade para nomes antigos
+    @rx.var
+    def missing_patients(self) -> List[AnalysisResult]:
+        return self.patients_only_compulab
+
+    @rx.var
+    def missing_exams(self) -> List[AnalysisResult]:
+        return self.exams_only_compulab
+
+    @rx.var
+    def extra_simus_exams(self) -> List[AnalysisResult]:
+        return self.exams_only_simus
+
+    @rx.var
+    def missing_patients_count(self) -> int:
+        return self.patients_only_compulab_count
+
+    @rx.var
+    def missing_patients_total(self) -> float:
+        return self.patients_only_compulab_total
+
+    @rx.var
+    def missing_exams_count(self) -> int:
+        return self.exams_only_compulab_count
+
+    @rx.var
+    def missing_exams_total(self) -> float:
+        return self.exams_only_compulab_total
+
+    @rx.var
+    def extra_simus_exams_count(self) -> int:
+        return self.exams_only_simus_count
+
+    @rx.var
+    def formatted_missing_patients_total(self) -> str:
+        return self.formatted_patients_only_compulab_total
+
+    @rx.var
+    def formatted_missing_exams_total(self) -> str:
+        return self.formatted_exams_only_compulab_total
+
     @rx.var
     def explained_total(self) -> float:
         """Total explicado pelas divergências encontradas"""
-        extras = sum(
-            float(getattr(item, 'simus_value', 0) or getattr(item, 'value', 0)) 
-            for item in self.extra_simus_exams
-        ) if isinstance(self.extra_simus_exams, list) else 0
-        return self.missing_patients_total + self.missing_exams_total + self.divergences_total + extras
+        extras = self.exams_only_simus_total
+        return (
+            self.patients_only_compulab_total
+            + self.patients_only_simus_total
+            + self.exams_only_compulab_total
+            + self.divergences_total
+            + extras
+        )
 
     @rx.var
     def residual(self) -> float:
@@ -407,8 +674,8 @@ class AnalysisState(QCState):
     def top_offenders(self) -> List[TopOffender]:
         """Retorna os top 5 exames com mais problemas (usado no Dashboard)"""
         counts = {}
-        # Contar ocorrências em missing_exams e value_divergences
-        for item in self.missing_exams:
+        # Contar ocorrências em exams_only_compulab e value_divergences
+        for item in self.exams_only_compulab:
             name = item.get("exam_name", "") if isinstance(item, dict) else getattr(item, "exam_name", "")
             if name:
                 counts[name] = counts.get(name, 0) + 1
@@ -426,16 +693,27 @@ class AnalysisState(QCState):
     @rx.var
     def formatted_total_leakage(self) -> str:
         """Total de perda financeira identificada"""
-        total = self.missing_patients_total + self.missing_exams_total + self.divergences_total
+        total = self.patients_only_compulab_total + self.exams_only_compulab_total + self.divergences_total
         return f"R$ {total:,.2f}"
+
+    @rx.var
+    def pending_items_count(self) -> int:
+        """Total de itens pendentes para auditoria."""
+        return (
+            self.patients_only_compulab_count
+            + self.patients_only_simus_count
+            + self.exams_only_compulab_count
+            + self.exams_only_simus_count
+            + self.divergences_count
+        )
 
     @rx.var
     def revenue_distribution_data(self) -> List[Dict[str, Any]]:
         """Dados para o gráfico de pizza de distribuição de receita/perda"""
         return [
-            {"name": "Pacientes Faltantes", "value": float(self.missing_patients_total), "fill": Color.WARNING},
-            {"name": "Exames Faltantes", "value": float(self.missing_exams_total), "fill": Color.ERROR},
-            {"name": "Divergência Valores", "value": float(self.divergences_total), "fill": Color.PRIMARY},
+            {"name": "Pacientes somente COMPULAB", "value": float(self.patients_only_compulab_total), "fill": Color.WARNING},
+            {"name": "Exames somente COMPULAB", "value": float(self.exams_only_compulab_total), "fill": Color.ERROR},
+            {"name": "Diferença de Valores", "value": float(self.divergences_total), "fill": Color.PRIMARY},
         ]
         
     @rx.var
@@ -453,15 +731,15 @@ class AnalysisState(QCState):
         insights = []
         
         # Insight 1: Maior ofensor
-        if self.missing_patients_total > self.missing_exams_total and self.missing_patients_total > self.divergences_total:
+        if self.patients_only_compulab_total > self.exams_only_compulab_total and self.patients_only_compulab_total > self.divergences_total:
             insights.append({
                 "icon": "users", "title": "Foco em Recepção", 
-                "description": f"Pacientes não lançados representam a maior perda (R$ {self.missing_patients_total:,.2f}). Verifique processos de cadastro."
+                "description": f"Pacientes não lançados representam a maior perda (R$ {self.patients_only_compulab_total:,.2f}). Verifique processos de cadastro."
             })
-        elif self.missing_exams_total > 0:
+        elif self.exams_only_compulab_total > 0:
             insights.append({
                  "icon": "file-warning", "title": "Auditoria de Lançamento",
-                 "description": f"Exames esquecidos somam R$ {self.missing_exams_total:,.2f}. Treinamento de equipe sugerido."
+                 "description": f"Exames esquecidos somam R$ {self.exams_only_compulab_total:,.2f}. Treinamento de equipe sugerido."
             })
             
         # Insight 2: Divergencias
@@ -498,10 +776,10 @@ class AnalysisState(QCState):
     @rx.var
     def resolution_progress(self) -> int:
         """Percentual de divergências resolvidas na análise atual"""
-        total = len(self.missing_exams) + len(self.value_divergences) + len(self.extra_simus_exams)
+        total = len(self.exams_only_compulab) + len(self.value_divergences) + len(self.exams_only_simus)
         if total == 0: return 100
         resolved_count = 0
-        all_items = self.missing_exams + self.value_divergences + self.extra_simus_exams
+        all_items = self.exams_only_compulab + self.value_divergences + self.exams_only_simus
         for item in all_items:
             # Handle both dict and object (pydantic)
             patient = item.get('patient', '') if isinstance(item, dict) else getattr(item, 'patient', '')
@@ -555,6 +833,19 @@ class AnalysisState(QCState):
         # Regenerar PDF para refletir mudanças
         await self.generate_pdf_report()
     
+    async def set_annotation(self, patient: str, exam: str, error_type: str):
+        """Atualiza anotação de um item e reflete na UI/PDF."""
+        key = f"{patient}|{exam}"
+        if error_type and error_type not in self.ERROR_TYPES:
+            return
+        if error_type:
+            self.annotations[key] = error_type
+        else:
+            self.annotations.pop(key, None)
+        yield
+        # Regenerar PDF para refletir mudançãs de anotação
+        await self.generate_pdf_report()
+
     async def run_analysis(self):
         """Executa a análise comparativa REAL baseada nos arquivos carregados"""
         print("DEBUG: run_analysis STARTED - REAL ANALYSIS")
@@ -634,175 +925,183 @@ class AnalysisState(QCState):
             self._compulab_patients = dict(compulab_patients)
             self._simus_patients = dict(simus_patients)
             
-            # Listas de resultados
-            missing_patients_list = []
-            missing_exams_list = []
-            value_divergences_list = []
-            extra_simus_list = []
-            
-            # ANÁLISE 1: Pacientes no COMPULAB que não estão no SIMUS
-            compulab_patient_names = set(compulab_patients.keys())
-            simus_patient_names = set(simus_patients.keys())
-            
-            patients_only_in_compulab = compulab_patient_names - simus_patient_names
-            for patient_name in patients_only_in_compulab:
-                patient_data = compulab_patients[patient_name]
-                total_val = float(patient_data['total'])
-                exams_count = len(patient_data['exams'])
-                missing_patients_list.append(AnalysisResult(
+            def build_patient_summary(patient_name: str, exams: list[dict]) -> AnalysisResult:
+                exams_count = len(exams)
+                total_value = sum(float(exam.get('value', 0) or 0) for exam in exams)
+                return AnalysisResult(
                     patient=patient_name,
                     exam_name=f"{exams_count} exame(s)",
-                    value=total_val,
+                    value=total_value,
                     exams_count=exams_count,
-                    total_value=total_val
-                ))
-            
+                    total_value=total_value,
+                )
+
+            def compute_results(comp_data: dict, sim_data: dict) -> dict:
+                """Executa a comparação pesada em thread para não bloquear o loop."""
+                patients_only_compulab_list: list[AnalysisResult] = []
+                patients_only_simus_list: list[AnalysisResult] = []
+                exams_only_compulab_list: list[AnalysisResult] = []
+                value_divergences_list: list[AnalysisResult] = []
+                exams_only_simus_list: list[AnalysisResult] = []
+
+                compulab_patient_names = set(comp_data.keys())
+                simus_patient_names = set(sim_data.keys())
+
+                # Pacientes somente COMPULAB
+                for patient_name in compulab_patient_names - simus_patient_names:
+                    patient_data = comp_data[patient_name]
+                    patients_only_compulab_list.append(
+                        build_patient_summary(patient_name, patient_data.get('exams', []))
+                    )
+
+                # Pacientes somente SIMUS
+                for patient_name in simus_patient_names - compulab_patient_names:
+                    patient_data = sim_data[patient_name]
+                    patients_only_simus_list.append(
+                        build_patient_summary(patient_name, patient_data.get('exams', []))
+                    )
+
+                # Exames somente COMPULAB, diferenças e extras no SIMUS
+                common_patients = list(compulab_patient_names & simus_patient_names)
+                for patient_name in common_patients:
+                    compulab_exams = comp_data[patient_name]['exams']
+                    simus_exams = sim_data[patient_name]['exams']
+
+                    simus_exam_map = {}
+                    simus_code_map = {}
+                    for exam in simus_exams:
+                        exam.pop('_matched', None)
+                        exam_key = canonicalize_exam_name(exam['exam_name'])
+                        simus_exam_map.setdefault(exam_key, []).append(exam)
+                        exam_code = str(exam.get('code', '')).strip()
+                        if exam_code:
+                            simus_code_map.setdefault(exam_code, []).append(exam)
+
+                    for comp_exam in compulab_exams:
+                        comp_name = comp_exam['exam_name']
+                        comp_key = canonicalize_exam_name(comp_name)
+                        comp_value = float(comp_exam['value'])
+                        comp_code = str(comp_exam.get('code', '')).strip()
+
+                        found_match = False
+                        matched_simus_exam = None
+
+                        if comp_code and comp_code in simus_code_map:
+                            for simus_exam in simus_code_map[comp_code]:
+                                if not simus_exam.get('_matched'):
+                                    matched_simus_exam = simus_exam
+                                    found_match = True
+                                    simus_exam['_matched'] = True
+                                    break
+
+                        direct_candidates = simus_exam_map.get(comp_key, [])
+                        if not found_match:
+                            for simus_exam in direct_candidates:
+                                if not simus_exam.get('_matched'):
+                                    matched_simus_exam = simus_exam
+                                    found_match = True
+                                    simus_exam['_matched'] = True
+                                    break
+
+                        if not found_match:
+                            for simus_key, simus_exam_list in simus_exam_map.items():
+                                if exam_names_match(comp_key, simus_key):
+                                    for simus_exam in simus_exam_list:
+                                        if not simus_exam.get('_matched'):
+                                            matched_simus_exam = simus_exam
+                                            found_match = True
+                                            simus_exam['_matched'] = True
+                                            break
+                                    if found_match:
+                                        break
+
+                        if not found_match:
+                            exams_only_compulab_list.append(
+                                AnalysisResult(
+                                    patient=patient_name,
+                                    exam_name=comp_exam['exam_name'],
+                                    value=comp_value,
+                                    compulab_value=comp_value,
+                                )
+                            )
+                        elif matched_simus_exam:
+                            simus_value = float(matched_simus_exam['value'])
+                            diff = abs(comp_value - simus_value)
+                            if diff > 0.01:
+                                value_divergences_list.append(
+                                    AnalysisResult(
+                                        patient=patient_name,
+                                        exam_name=comp_exam['exam_name'],
+                                        compulab_value=comp_value,
+                                        simus_value=simus_value,
+                                        difference=comp_value - simus_value,
+                                    )
+                                )
+
+                for patient_name in common_patients:
+                    simus_exams = sim_data[patient_name]['exams']
+                    for simus_exam in simus_exams:
+                        if not simus_exam.get('_matched'):
+                            exams_only_simus_list.append(
+                                AnalysisResult(
+                                    patient=patient_name,
+                                    exam_name=simus_exam['exam_name'],
+                                    simus_value=float(simus_exam['value']),
+                                )
+                            )
+
+                return {
+                    "patients_only_compulab": patients_only_compulab_list,
+                    "patients_only_simus": patients_only_simus_list,
+                    "exams_only_compulab": exams_only_compulab_list,
+                    "value_divergences": value_divergences_list,
+                    "exams_only_simus": exams_only_simus_list,
+                }
+
             self.analysis_stage = "Analisando exames..."
             self.analysis_progress_percentage = 70
             yield
-            
-            # ANÁLISE 2: Para cada paciente comum, verificar exames faltantes e divergências
-            common_patients = list(compulab_patient_names & simus_patient_names)
-            total_common = len(common_patients) if common_patients else 1
-            for idx, patient_name in enumerate(common_patients):
-                compulab_exams = compulab_patients[patient_name]['exams']
-                simus_exams = simus_patients[patient_name]['exams']
-                
-                # Indexar exames SIMUS por nome normalizado
-                simus_exam_map = {}
-                simus_code_map = {}
-                for exam in simus_exams:
-                    exam.pop('_matched', None)
-                    exam_key = canonicalize_exam_name(exam['exam_name'])
-                    if exam_key not in simus_exam_map:
-                        simus_exam_map[exam_key] = []
-                    simus_exam_map[exam_key].append(exam)
-                    exam_code = str(exam.get('code', '')).strip()
-                    if exam_code:
-                        if exam_code not in simus_code_map:
-                            simus_code_map[exam_code] = []
-                        simus_code_map[exam_code].append(exam)
-                
-                # Verificar cada exame COMPULAB
-                for comp_exam in compulab_exams:
-                    comp_name = comp_exam['exam_name']
-                    comp_key = canonicalize_exam_name(comp_name)
-                    comp_value = float(comp_exam['value'])
-                    comp_code = str(comp_exam.get('code', '')).strip()
-                    
-                    # Procurar exame correspondente no SIMUS
-                    found_match = False
-                    matched_simus_exam = None
-                    
-                    # 1) Match direto pelo código
-                    if comp_code and comp_code in simus_code_map:
-                        for simus_exam in simus_code_map[comp_code]:
-                            if not simus_exam.get('_matched'):
-                                matched_simus_exam = simus_exam
-                                found_match = True
-                                simus_exam['_matched'] = True
-                                break
 
-                    # 2) Match direto pelo nome canônico
-                    direct_candidates = simus_exam_map.get(comp_key, [])
-                    if not found_match:
-                        for simus_exam in direct_candidates:
-                            if not simus_exam.get('_matched'):
-                                matched_simus_exam = simus_exam
-                                found_match = True
-                                simus_exam['_matched'] = True
-                                break
+            results = await asyncio.to_thread(compute_results, compulab_patients, simus_patients)
 
-                    # 3) Fallback para match fuzzy (casos não mapeados)
-                    if not found_match:
-                        for simus_key, simus_exam_list in simus_exam_map.items():
-                            if exam_names_match(comp_key, simus_key):
-                                for simus_exam in simus_exam_list:
-                                    if not simus_exam.get('_matched'):
-                                        matched_simus_exam = simus_exam
-                                        found_match = True
-                                        simus_exam['_matched'] = True
-                                        break
-                                if found_match:
-                                    break
-                    
-                    if not found_match:
-                        # Exame faltante no SIMUS
-                        missing_exams_list.append(AnalysisResult(
-                            patient=patient_name,
-                            exam_name=comp_exam['exam_name'],
-                            value=comp_value,
-                            compulab_value=comp_value
-                        ))
-                    elif matched_simus_exam:
-                        # Verificar divergência de valor
-                        simus_value = float(matched_simus_exam['value'])
-                        diff = abs(comp_value - simus_value)
-                        if diff > 0.01:  # Tolerância de 1 centavo
-                            value_divergences_list.append(AnalysisResult(
-                                patient=patient_name,
-                                exam_name=comp_exam['exam_name'],
-                                compulab_value=comp_value,
-                                simus_value=simus_value,
-                                difference=comp_value - simus_value
-                            ))
-
-                if idx % 10 == 0:
-                    progress = 70 + int((idx / total_common) * 25)
-                    self.analysis_progress_percentage = min(95, max(70, progress))
-                    self.analysis_stage = f"Analisando exames... ({idx + 1}/{total_common})"
-                    yield
-                    await asyncio.sleep(0)
-            
-            # ANÁLISE 3: Exames no SIMUS que não estão no COMPULAB (exames "fantasma")
-            for patient_name in common_patients:
-                simus_exams = simus_patients[patient_name]['exams']
-                for simus_exam in simus_exams:
-                    if not simus_exam.get('_matched'):
-                        extra_simus_list.append(AnalysisResult(
-                            patient=patient_name,
-                            exam_name=simus_exam['exam_name'],
-                            simus_value=float(simus_exam['value'])
-                        ))
-            
-            # Também verificar pacientes somente no SIMUS
-            patients_only_in_simus = simus_patient_names - compulab_patient_names
-            for patient_name in patients_only_in_simus:
-                patient_data = simus_patients[patient_name]
-                for exam in patient_data['exams']:
-                    extra_simus_list.append(AnalysisResult(
-                        patient=patient_name,
-                        exam_name=exam['exam_name'],
-                        simus_value=float(exam['value'])
-                    ))
-            
+            patients_only_compulab_list = results["patients_only_compulab"]
+            patients_only_simus_list = results["patients_only_simus"]
+            exams_only_compulab_list = results["exams_only_compulab"]
+            value_divergences_list = results["value_divergences"]
+            exams_only_simus_list = results["exams_only_simus"]
             # Atualizar estados com resultados
-            self.missing_patients = missing_patients_list
-            self.missing_exams = missing_exams_list
+            self.patients_only_compulab = patients_only_compulab_list
+            self.patients_only_simus = patients_only_simus_list
+            self.exams_only_compulab = exams_only_compulab_list
             self.value_divergences = value_divergences_list
-            self.extra_simus_exams = extra_simus_list
+            self.exams_only_simus = exams_only_simus_list
             
             # Calcular totais
-            self.missing_patients_count = len(missing_patients_list)
-            self.missing_patients_total = sum(r.value for r in missing_patients_list)
-            self.missing_exams_count = len(missing_exams_list)
-            self.missing_exams_total = sum(r.compulab_value for r in missing_exams_list)
+            self.patients_only_compulab_count = len(patients_only_compulab_list)
+            self.patients_only_compulab_total = sum(r.total_value for r in patients_only_compulab_list)
+            self.patients_only_simus_count = len(patients_only_simus_list)
+            self.patients_only_simus_total = sum(r.total_value for r in patients_only_simus_list)
+            self.exams_only_compulab_count = len(exams_only_compulab_list)
+            self.exams_only_compulab_total = sum(r.compulab_value for r in exams_only_compulab_list)
             self.divergences_count = len(value_divergences_list)
             self.divergences_total = sum(abs(r.difference) for r in value_divergences_list)
-            self.extra_simus_exams_count = len(extra_simus_list)
+            self.exams_only_simus_count = len(exams_only_simus_list)
             
             self.analysis_progress_percentage = 100
             self.analysis_stage = "Concluído"
             
             print(f"DEBUG: Análise concluída!")
-            print(f"  - Pacientes faltantes: {self.missing_patients_count}")
-            print(f"  - Exames faltantes: {self.missing_exams_count}")
-            print(f"  - Divergências: {self.divergences_count}")
-            print(f"  - Exames fantasma: {self.extra_simus_exams_count}")
+            print(f"  - Pacientes somente COMPULAB: {self.patients_only_compulab_count}")
+            print(f"  - Pacientes somente SIMUS: {self.patients_only_simus_count}")
+            print(f"  - Exames somente COMPULAB: {self.exams_only_compulab_count}")
+            print(f"  - Diferença de Valores: {self.divergences_count}")
+            print(f"  - Exames somente SIMUS: {self.exams_only_simus_count}")
             
             yield  # Propagate state to frontend
             
-            yield  # Propagate state to frontend
+            # Executar análise profunda
+            yield
+            await self.run_deep_analysis()
             
         except Exception as e:
             print(f"DEBUG: run_analysis EXCEPTION: {e}")
@@ -820,6 +1119,128 @@ class AnalysisState(QCState):
                 await self.generate_pdf_report()
             
     # generate_ai_analysis foi movido para AIState
+    
+    async def run_deep_analysis(self):
+        """
+        Executa análise profunda após a análise comparativa básica.
+        """
+        print("DEBUG: run_deep_analysis STARTED")
+        
+        try:
+            from ..utils.analysis_module import (
+                analyze_patient_count_difference,
+                detect_repeated_exams,
+                calculate_difference_breakdown,
+                generate_executive_summary,
+            )
+            import pandas as pd
+            from datetime import datetime
+            
+            self.analysis_stage = "Análise profunda: processando..."
+            yield
+            
+            # Construir DataFrames
+            compulab_rows = []
+            for patient_name, data in self._compulab_patients.items():
+                exams = data.get('exams', []) if isinstance(data, dict) else (data if isinstance(data, list) else [])
+                for exam in exams:
+                    if isinstance(exam, dict):
+                        compulab_rows.append({
+                            'Paciente': patient_name,
+                            'Nome_Exame': exam.get('exam_name', ''),
+                            'Codigo_Exame': exam.get('code', ''),
+                            'Valor': exam.get('value', 0) or 0,
+                        })
+            
+            simus_rows = []
+            for patient_name, data in self._simus_patients.items():
+                exams = data.get('exams', []) if isinstance(data, dict) else (data if isinstance(data, list) else [])
+                for exam in exams:
+                    if isinstance(exam, dict):
+                        simus_rows.append({
+                            'Paciente': patient_name,
+                            'Nome_Exame': exam.get('exam_name', ''),
+                            'Codigo_Exame': exam.get('code', ''),
+                            'Valor': exam.get('value', 0) or 0,
+                        })
+            
+            if not compulab_rows or not simus_rows:
+                print("DEBUG: Dados vazios, pulando análise profunda")
+                return
+                
+            df_compulab = pd.DataFrame(compulab_rows)
+            df_simus = pd.DataFrame(simus_rows)
+            
+            self.analysis_stage = "Análise profunda: pacientes extras..."
+            yield
+            
+            # 1. Pacientes extras
+            patient_analysis = analyze_patient_count_difference(df_compulab, df_simus)
+            self.extra_patients_analysis = patient_analysis
+            self.extra_patients_count = patient_analysis.get("extra_patients_count", 0)
+            self.extra_patients_value = patient_analysis.get("extra_patients_value", 0.0)
+            print(f"DEBUG: Extras: {self.extra_patients_count} pacientes, R$ {self.extra_patients_value}")
+            yield
+            
+            self.analysis_stage = "Análise profunda: exames repetidos..."
+            yield
+            
+            # 2. Exames repetidos
+            repeated_analysis = detect_repeated_exams(df_compulab, df_simus)
+            self.repeated_exams_analysis = repeated_analysis
+            self.repeated_exams_count = repeated_analysis.get("total_repeated_count", 0)
+            self.repeated_exams_value = repeated_analysis.get("total_repeated_value", 0.0)
+            print(f"DEBUG: Repetidos: {self.repeated_exams_count} exames, R$ {self.repeated_exams_value}")
+            yield
+            
+            self.analysis_stage = "Análise profunda: calculando..."
+            yield
+            
+            # 3. Breakdown
+            analysis_results = {
+                "summary": {
+                    "missing_in_simus_total": self.patients_only_compulab_total,
+                    "missing_in_compulab_total": self.patients_only_simus_total,
+                    "divergences_total": self.divergences_total,
+                }
+            }
+            
+            difference_breakdown = calculate_difference_breakdown(
+                self.compulab_total,
+                self.simus_total,
+                analysis_results,
+                repeated_analysis,
+                patient_analysis
+            )
+            self.difference_breakdown = difference_breakdown
+            self.residual_unexplained = difference_breakdown.get("residual", 0.0)
+            print(f"DEBUG: Explicado: {difference_breakdown.get('percent_explained', 0):.1f}%")
+            yield
+            
+            self.analysis_stage = "Análise profunda: finalizando..."
+            yield
+            
+            # 4. Resumo executivo
+            top_offenders_list = [{"name": o.name, "count": o.count} for o in self.top_offenders] if self.top_offenders else []
+            
+            executive_summary = generate_executive_summary(
+                self.compulab_total,
+                self.simus_total,
+                patient_analysis,
+                repeated_analysis,
+                difference_breakdown,
+                top_offenders_list,
+                datetime.now().strftime("%d/%m/%Y")
+            )
+            self.executive_summary = executive_summary
+            print(f"DEBUG: Status: {executive_summary.get('status', 'unknown')}")
+            
+            print("DEBUG: run_deep_analysis COMPLETED")
+            
+        except Exception as e:
+            print(f"DEBUG: run_deep_analysis ERRO: {e}")
+            import traceback
+            traceback.print_exc()
             
     async def generate_pdf_report(self):
         """Gera relatório PDF da análise para preview e download"""
@@ -833,9 +1254,9 @@ class AnalysisState(QCState):
                 e = getattr(item, 'exam_name', '') or item.get('exam_name', '')
                 return self.resolutions.get(f"{p}|{e}") == "resolvido"
 
-            filtered_missing = [x for x in self.missing_exams if not is_resolved(x)]
+            filtered_missing = [x for x in self.exams_only_compulab if not is_resolved(x)]
             filtered_divergences = [x for x in self.value_divergences if not is_resolved(x)]
-            filtered_extras = [x for x in self.extra_simus_exams if not is_resolved(x)]
+            filtered_extras = [x for x in self.exams_only_simus if not is_resolved(x)]
             
              # Executar em thread pool para não bloquear
             loop = asyncio.get_event_loop()
@@ -844,11 +1265,13 @@ class AnalysisState(QCState):
                 lambda: generate_analysis_pdf(
                     self.compulab_total,
                     self.simus_total,
-                    self.missing_patients, # Pacientes faltantes não têm resolução individual por exame aqui
+                    self.patients_only_compulab,
+                    self.patients_only_simus,
                     filtered_missing,
                     filtered_divergences,
                     filtered_extras,
-                    self.top_offenders
+                    self.top_offenders,
+                    self.annotations,
                 )
             )
             
@@ -1133,17 +1556,38 @@ class AnalysisState(QCState):
 
     def clear_analysis(self):
         """Limpa resultados da análise"""
-        self.missing_patients = []
-        self.missing_exams = []
+        self.patients_only_compulab = []
+        self.patients_only_simus = []
+        self.exams_only_compulab = []
         self.value_divergences = []
-        self.extra_simus_exams = []
-        self.missing_patients_count = 0
-        self.missing_exams_count = 0
+        self.exams_only_simus = []
+        self.patients_only_compulab_count = 0
+        self.patients_only_compulab_total = 0.0
+        self.patients_only_simus_count = 0
+        self.patients_only_simus_total = 0.0
+        self.exams_only_compulab_count = 0
+        self.exams_only_compulab_total = 0.0
         self.divergences_count = 0
-        self.extra_simus_exams_count = 0
+        self.divergences_total = 0.0
+        self.exams_only_simus_count = 0
         self.analysis_progress_percentage = 0
         self.analysis_stage = ""
         self.is_analyzing = False
+        self.resolutions = {}
+        self.annotations = {}
+        self.clear_deep_analysis()
+    
+    def clear_deep_analysis(self):
+        """Limpa os resultados da análise profunda"""
+        self.extra_patients_analysis = {}
+        self.extra_patients_count = 0
+        self.extra_patients_value = 0.0
+        self.repeated_exams_analysis = {}
+        self.repeated_exams_count = 0
+        self.repeated_exams_value = 0.0
+        self.difference_breakdown = {}
+        self.residual_unexplained = 0.0
+        self.executive_summary = {}
 
     async def generate_csvs(self):
         """Gera CSVs a partir dos PDFs"""
@@ -1330,18 +1774,18 @@ class AnalysisState(QCState):
                 # Resultados
                 compulab_total=self.compulab_total,
                 simus_total=self.simus_total,
-                missing_patients_count=self.missing_patients_count,
-                missing_patients_total=self.missing_patients_total,
-                missing_exams_count=self.missing_exams_count,
-                missing_exams_total=self.missing_exams_total,
+                missing_patients_count=self.patients_only_compulab_count,
+                missing_patients_total=self.patients_only_compulab_total,
+                missing_exams_count=self.exams_only_compulab_count,
+                missing_exams_total=self.exams_only_compulab_total,
                 divergences_count=self.divergences_count,
                 divergences_total=self.divergences_total,
-                extra_simus_count=self.extra_simus_exams_count,
+                extra_simus_count=self.exams_only_simus_count,
                 # Listas de itens
-                missing_patients=self.missing_patients,
-                missing_exams=self.missing_exams,
+                missing_patients=self.patients_only_compulab,
+                missing_exams=self.exams_only_compulab,
                 value_divergences=self.value_divergences,
-                extra_simus_exams=self.extra_simus_exams,
+                extra_simus_exams=self.exams_only_simus,
                 # Tags automáticas
                 tags=[
                     f"compulab:{self.compulab_file_name}" if self.compulab_file_name else None,
@@ -1421,16 +1865,18 @@ class AnalysisState(QCState):
             # Restaurar totais
             self.compulab_total = float(analysis.get('compulab_total', 0))
             self.simus_total = float(analysis.get('simus_total', 0))
-            self.missing_patients_count = analysis.get('missing_patients_count', 0)
-            self.missing_patients_total = float(analysis.get('missing_patients_total', 0))
-            self.missing_exams_count = analysis.get('missing_exams_count', 0)
-            self.missing_exams_total = float(analysis.get('missing_exams_total', 0))
+            self.patients_only_compulab_count = analysis.get('missing_patients_count', 0)
+            self.patients_only_compulab_total = float(analysis.get('missing_patients_total', 0))
+            self.exams_only_compulab_count = analysis.get('missing_exams_count', 0)
+            self.exams_only_compulab_total = float(analysis.get('missing_exams_total', 0))
             self.divergences_count = analysis.get('divergences_count', 0)
             self.divergences_total = float(analysis.get('divergences_total', 0))
-            self.extra_simus_exams_count = analysis.get('extra_simus_count', 0)
+            self.exams_only_simus_count = analysis.get('extra_simus_count', 0)
+            self.patients_only_simus_count = 0
+            self.patients_only_simus_total = 0.0
             
             # Restaurar listas de itens
-            self.missing_patients = [
+            self.patients_only_compulab = [
                 AnalysisResult(
                     patient=item.get('patient_name', ''),
                     exam_name=item.get('exam_name', ''),
@@ -1440,8 +1886,9 @@ class AnalysisState(QCState):
                 )
                 for item in analysis.get('missing_patients', [])
             ]
+            self.patients_only_simus = []
             
-            self.missing_exams = [
+            self.exams_only_compulab = [
                 AnalysisResult(
                     patient=item.get('patient_name', ''),
                     exam_name=item.get('exam_name', ''),
@@ -1461,7 +1908,7 @@ class AnalysisState(QCState):
                 for item in analysis.get('divergences', [])
             ]
             
-            self.extra_simus_exams = [
+            self.exams_only_simus = [
                 AnalysisResult(
                     patient=item.get('patient_name', ''),
                     exam_name=item.get('exam_name', ''),

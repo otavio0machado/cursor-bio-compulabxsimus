@@ -247,9 +247,16 @@ def patient_history_modal() -> rx.Component:
         on_open_change=State.set_is_showing_patient_history,
     )
 
-def action_table(headers: list[str], data: list, columns_keys: list[str], patient_key: str = "patient", is_divergence: bool = False) -> rx.Component:
+def action_table(
+    headers: list[str],
+    data: list,
+    columns_keys: list[str],
+    patient_key: str = "patient",
+    is_divergence: bool = False,
+    error_options: list[str] = None,
+) -> rx.Component:
     """Tabela de dados REMASTERED"""
-    
+
     def render_row(item: Any, i: rx.Var[int]):
         # Row styling
         cells = [
@@ -258,33 +265,47 @@ def action_table(headers: list[str], data: list, columns_keys: list[str], patien
                 padding="16px 20px"
             ) for key in columns_keys
         ]
-        
+
+        patient_value = getattr(item, patient_key)
+        exam_value = getattr(item, "exam_name") if "exam_name" in columns_keys else ""
+        res_key = patient_value + "|" + exam_value
+
         # Actions
         actions = [
-            ui.button("", icon="history", on_click=lambda: State.view_patient_history(getattr(item, patient_key)), variant="ghost", size="2", padding="6px", color="gray")
+            ui.button("", icon="history", on_click=lambda: State.view_patient_history(patient_value), variant="ghost", size="2", padding="6px", color="gray")
         ]
-        
+
         if "exam_name" in columns_keys:
-            res_key = getattr(item, patient_key) + "|" + getattr(item, "exam_name")
-            is_resolved = State.resolutions[res_key] == "resolvido"
+            is_resolved = State.resolutions.get(res_key, "") == "resolvido"
             actions.append(
                 ui.button(
                     "",
                     icon=rx.cond(is_resolved, "check-circle", "circle"),
-                    on_click=lambda: State.toggle_resolution(getattr(item, patient_key), getattr(item, "exam_name")),
-                    variant="ghost", 
+                    on_click=lambda: State.toggle_resolution(patient_value, exam_value),
+                    variant="ghost",
                     color=rx.cond(is_resolved, Color.SUCCESS, "gray"),
                     size="2", padding="6px"
                 )
             )
 
+        options = error_options if error_options is not None else State.ERROR_TYPES
+        actions.append(
+            ui.select(
+                options,
+                value=State.annotations.get(res_key, ""),
+                placeholder="—",
+                on_change=lambda value: State.set_annotation(patient_value, exam_value, value),
+                width="170px",
+            )
+        )
+
         cells.append(
             rx.table.cell(
-                rx.hstack(*actions, spacing="2", justify="end"),
+                rx.hstack(*actions, spacing="2", justify="end", align_items="center"),
                 padding="12px 16px"
             )
         )
-        
+
         return rx.table.row(
             *cells,
             bg=rx.cond(i % 2 == 0, "rgba(255,255,255,0.4)", "rgba(255,255,255,0.1)"),
@@ -292,7 +313,7 @@ def action_table(headers: list[str], data: list, columns_keys: list[str], patien
             _hover={"bg": "white", "box_shadow": Design.SHADOW_SM, "transform": "scale(1.002)"},
             transition="all 0.2s ease"
         )
-    
+
     return rx.box(
         rx.table.root(
             rx.table.header(

@@ -8,6 +8,13 @@ from ..state import State
 from ..components.file_upload import compact_upload_card, upload_progress_indicator
 from ..components.save_analysis_modal import save_analysis_modal, saved_analyses_list
 from ..components.analysis.widgets import metric_card_premium, insight_card, patient_history_modal, action_table
+from ..components.analysis.deep_analysis import (
+    executive_summary_card,
+    difference_breakdown_panel,
+    repeated_exams_alert,
+    extra_patients_badge,
+    analysis_status_banner
+)
 from ..components.analysis.exam_link_modal import exam_link_modal
 from ..components import ui
 from ..styles import Color, Design, Spacing
@@ -172,14 +179,36 @@ def analise_page() -> rx.Component:
                     rx.flex(
                         # === LEFT PANEL ===
                         rx.vstack(
+                            # Status Banner
+                            analysis_status_banner(State.analysis_status, State.executive_summary),
+                            
                             # KPI Grid
                             rx.grid(
                                 metric_card_premium("Faturamento Compulab", State.formatted_compulab_total, "building-2", color_scheme="blue", delay="0.1s"),
                                 metric_card_premium("Faturamento Simus", State.formatted_simus_total, "database", color_scheme="green", delay="0.2s"),
-                                metric_card_premium("Divergência Total", State.formatted_difference, "git-compare", "Alerta", "orange", delay="0.3s"),
-                                metric_card_premium("Itens Pendentes", State.missing_exams_count.to_string(), "list-x", "Ação Necessária", "red", delay="0.4s"),
+                                metric_card_premium("Diferença Total", State.formatted_difference, "git-compare", "Alerta", "orange", delay="0.3s"),
+                                metric_card_premium("Itens Pendentes", State.pending_items_count, "list-x", "Ação Necessária", "red", delay="0.4s"),
                                 columns={"initial": "1", "md": "2", "xl": "2"},
-                                spacing="5", width="100%", margin_bottom="48px"
+                                spacing="5", width="100%", margin_bottom="32px"
+                            ),
+                            
+                            # Deep Analysis Alerts Row
+                            rx.grid(
+                                extra_patients_badge(State.extra_patients_count, State.extra_patients_value),
+                                repeated_exams_alert(State.repeated_exams_count, State.repeated_exams_value),
+                                columns={"initial": "1", "md": "2"},
+                                spacing="4", width="100%", margin_bottom="32px"
+                            ),
+                            
+                            # Executive Summary Card
+                            executive_summary_card(State.executive_summary),
+                            
+                            # Difference Breakdown Panel
+                            difference_breakdown_panel(
+                                State.difference_breakdown,
+                                State.extra_patients_formatted,
+                                State.repeated_exams_formatted,
+                                State.residual_formatted
                             ),
                             
                             # Charts & Insights
@@ -223,96 +252,43 @@ def analise_page() -> rx.Component:
                             rx.box(
                                 ui.segmented_control(
                                     [
-                                        {"label": "Pacientes Faltantes", "value": "patients_missing"},
-                                        {"label": "Exames Faltantes", "value": "missing"},
-                                        {"label": "Divergência Valores", "value": "divergences"},
-                                        {"label": "Extras Simus", "value": "extras"},
-                                        {"label": "Análise IA", "value": "ai"},
+                                        {"label": "Pacientes somente COMPULAB", "value": "patients_only_compulab"},
+                                        {"label": "Pacientes somente SIMUS", "value": "patients_only_simus"},
+                                        {"label": "Exames somente COMPULAB", "value": "exams_only_compulab"},
+                                        {"label": "Exames somente SIMUS", "value": "exams_only_simus"},
+                                        {"label": "Diferença de Valores", "value": "value_diffs"},
                                     ],
                                     State.analysis_active_tab,
                                     State.set_analysis_active_tab
                                 ),
                                 margin_bottom="32px", width="100%"
                             ),
-                            
+
                             # Tab Content
                             rx.box(
                                 rx.cond(
-                                    State.analysis_active_tab == "patients_missing",
-                                    action_table(["Paciente", "Qtd Exames", "Valor Total"], State.missing_patients, ["patient", "exams_count", "total_value"], "patient")
+                                    State.analysis_active_tab == "patients_only_compulab",
+                                    action_table(["Paciente", "Qtd Exames", "Valor Total"], State.patients_only_compulab, ["patient", "exams_count", "total_value"], patient_key="patient", error_options=State.ERROR_TYPES_PATIENTS_COMPULAB)
                                 ),
                                 rx.cond(
-                                    State.analysis_active_tab == "missing",
-                                    action_table(["Paciente", "Exame", "Valor"], State.missing_exams, ["patient", "exam_name", "value"])
+                                    State.analysis_active_tab == "patients_only_simus",
+                                    action_table(["Paciente", "Qtd Exames", "Valor Total"], State.patients_only_simus, ["patient", "exams_count", "total_value"], patient_key="patient", error_options=State.ERROR_TYPES_PATIENTS_SIMUS)
                                 ),
                                 rx.cond(
-                                    State.analysis_active_tab == "divergences",
-                                    action_table(["Paciente", "Exame", "Compulab", "Simus", "Diferença"], State.value_divergences, ["patient", "exam_name", "compulab_value", "simus_value", "difference"], is_divergence=True)
+                                    State.analysis_active_tab == "exams_only_compulab",
+                                    action_table(["Paciente", "Exame", "Valor Compulab"], State.exams_only_compulab, ["patient", "exam_name", "compulab_value"], error_options=State.ERROR_TYPES_EXAMS_COMPULAB)
                                 ),
                                 rx.cond(
-                                    State.analysis_active_tab == "extras",
-                                    action_table(["Paciente", "Exame", "Valor Simus"], State.extra_simus_exams, ["patient", "exam_name", "simus_value"])
+                                    State.analysis_active_tab == "exams_only_simus",
+                                    action_table(["Paciente", "Exame", "Valor Simus"], State.exams_only_simus, ["patient", "exam_name", "simus_value"], error_options=State.ERROR_TYPES_EXAMS_SIMUS)
                                 ),
                                 rx.cond(
-                                    State.analysis_active_tab == "ai",
-                                    # ... AI Content (Already Premium enough, keeping logic) ...
-                                    rx.box(
-                                        rx.hstack(
-                                            rx.icon("bot", size=32, color="white"),
-                                            rx.vstack(
-                                                rx.text("Auditor Virtual IA", size="5", weight="bold", color="white"),
-                                                rx.text("Análise semântica e financeira avançada", color="white", opacity=0.8, size="2"),
-                                            ),
-                                            spacing="4", align_items="center", margin_bottom="24px"
-                                        ),
-                                        # Provider and Model Selection
-                                        rx.hstack(
-                                            rx.vstack(
-                                                rx.text("Provedor", size="2", color="white", opacity=0.7),
-                                                rx.select(
-                                                    State.available_providers,
-                                                    value=State.ai_provider,
-                                                    on_change=State.set_ai_provider,
-                                                    width="150px", color="white"
-                                                ),
-                                                spacing="1"
-                                            ),
-                                            rx.vstack(
-                                                rx.text("Modelo", size="2", color="white", opacity=0.7),
-                                                rx.select(
-                                                    State.available_model_ids,
-                                                    value=State.ai_model,
-                                                    on_change=State.set_ai_model,
-                                                    width="200px", color="white"
-                                                ),
-                                                spacing="1"
-                                            ),
-                                            spacing="4",
-                                            margin_bottom="16px",
-                                            flex_wrap="wrap"
-                                        ),
-                                        rx.cond(
-                                            State.ai_loading_text != "",
-                                            rx.hstack(
-                                                rx.spinner(size="1", color="white"),
-                                                rx.text(State.ai_loading_text, color="white", opacity=0.9, size="2"),
-                                                spacing="2", margin_bottom="12px"
-                                            )
-                                        ),
-                                        ui.button("Gerar Relatório Inteligente", icon="sparkles", on_click=State.generate_ai_analysis, is_loading=State.is_generating_ai, variant="secondary", width="100%"),
-                                        rx.cond(
-                                            State.ai_analysis != "",
-                                            rx.box(
-                                                rx.markdown(State.ai_analysis, color="white"),
-                                                margin_top="24px", padding="20px", bg="rgba(0,0,0,0.2)", border_radius="12px"
-                                            )
-                                        ),
-                                        bg=Color.GRADIENT_PRIMARY, padding="32px", border_radius="24px", width="100%", box_shadow=Design.SHADOW_MD
-                                    )
+                                    State.analysis_active_tab == "value_diffs",
+                                    action_table(["Paciente", "Exame", "Compulab", "Simus", "Diferença"], State.value_divergences, ["patient", "exam_name", "compulab_value", "simus_value", "difference"], is_divergence=True, error_options=State.ERROR_TYPES_VALUE_DIFFS)
                                 ),
                                 width="100%"
                             ),
-                            
+
                             flex="1", min_width="0",
                             animation="fadeInUp 0.8s ease-out 0.2s both",
                             padding_right={"initial": "0", "lg": Spacing.LG},

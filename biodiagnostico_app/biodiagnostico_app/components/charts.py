@@ -67,12 +67,12 @@ def summary_pie_chart() -> rx.Component:
                     # Pacientes faltantes
                     rx.box(
                         rx.hstack(
-                            rx.text("Pacientes Faltantes", class_name="text-sm text-gray-600 w-40"),
+                            rx.text("Pacientes somente COMPULAB", class_name="text-sm text-gray-600 w-40"),
                             rx.box(
                                 class_name="h-6 bg-green-500 rounded-r-full transition-all w-1/3",
                             ),
                             rx.text(
-                                State.formatted_missing_patients_total,
+                                State.formatted_patients_only_compulab_total,
                                 class_name="text-sm text-gray-700 ml-2 w-32"
                             ),
                             align="center",
@@ -82,12 +82,12 @@ def summary_pie_chart() -> rx.Component:
                     # Exames faltantes
                     rx.box(
                         rx.hstack(
-                            rx.text("Exames Faltantes", class_name="text-sm text-gray-600 w-40"),
+                            rx.text("Exames somente COMPULAB", class_name="text-sm text-gray-600 w-40"),
                             rx.box(
                                 class_name="h-6 bg-lime-500 rounded-r-full transition-all w-1/3",
                             ),
                             rx.text(
-                                State.formatted_missing_exams_total,
+                                State.formatted_exams_only_compulab_total,
                                 class_name="text-sm text-gray-700 ml-2 w-32"
                             ),
                             align="center",

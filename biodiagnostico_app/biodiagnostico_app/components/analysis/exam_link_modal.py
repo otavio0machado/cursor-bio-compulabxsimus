@@ -14,7 +14,44 @@ def exam_link_modal() -> rx.Component:
             rx.text(item.get("original_name", ""), size="1", color=Color.TEXT_PRIMARY, flex="1"),
             rx.icon("arrow-right", size=14, color=Color.TEXT_SECONDARY),
             rx.text(item.get("canonical_name", ""), size="1", weight="medium", color=Color.DEEP, flex="1"),
+            rx.button(
+                "Usar",
+                size="1",
+                variant="soft",
+                color_scheme="gray",
+                on_click=State.prefill_mapping(
+                    item.get("original_name", ""),
+                    item.get("canonical_name", ""),
+                ),
+            ),
             spacing="2",
+            align_items="center",
+            width="100%",
+        )
+
+    def render_suggestion_row(item: dict) -> rx.Component:
+        return rx.hstack(
+            rx.text(item.get("simus_name", ""), size="1", color=Color.TEXT_PRIMARY, flex="1"),
+            rx.icon("arrow-right", size=14, color=Color.TEXT_SECONDARY),
+            rx.text(item.get("compulab_name", ""), size="1", weight="medium", color=Color.DEEP, flex="1"),
+            rx.badge(
+                item.get("score_label", ""),
+                color_scheme="gray",
+                variant="soft",
+                size="1",
+            ),
+            rx.button(
+                "Usar",
+                size="1",
+                variant="soft",
+                color_scheme="blue",
+                on_click=State.prefill_mapping(
+                    item.get("simus_name", ""),
+                    item.get("compulab_name", ""),
+                ),
+            ),
+            spacing="2",
+            align_items="center",
             width="100%",
         )
 
@@ -104,6 +141,52 @@ def exam_link_modal() -> rx.Component:
                         width="100%",
                     ),
                     rx.fragment(),
+                ),
+                rx.cond(
+                    State.link_conflict_message != "",
+                    rx.callout(
+                        State.link_conflict_message,
+                        icon="info",
+                        size="1",
+                        width="100%",
+                    ),
+                    rx.fragment(),
+                ),
+                rx.box(
+                    rx.hstack(
+                        rx.text("Sugestoes de Link", weight="bold", color=Color.DEEP, size="2"),
+                        rx.spacer(),
+                        rx.text(
+                            State.suggested_mappings.length().to_string() + " sugestoes",
+                            size="1",
+                            color=Color.TEXT_SECONDARY,
+                        ),
+                        align_items="center",
+                        width="100%",
+                    ),
+                    rx.cond(
+                        State.suggested_mappings.length() > 0,
+                        rx.scroll_area(
+                            rx.vstack(
+                                rx.foreach(State.suggested_mappings, render_suggestion_row),
+                                spacing="2",
+                                width="100%",
+                            ),
+                            type="auto",
+                            scrollbars="vertical",
+                            style={"max_height": "180px"},
+                        ),
+                        rx.box(
+                            rx.text("Nenhuma sugestao gerada no momento.", size="1", color=Color.TEXT_SECONDARY),
+                            padding="12px",
+                        ),
+                    ),
+                    margin_top="4px",
+                    padding="12px",
+                    bg="rgba(255,255,255,0.6)",
+                    border=f"1px solid {Color.BORDER}",
+                    border_radius=Design.RADIUS_LG,
+                    width="100%",
                 ),
                 rx.box(
                     rx.hstack(

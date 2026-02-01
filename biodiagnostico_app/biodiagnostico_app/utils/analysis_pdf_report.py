@@ -1,5 +1,5 @@
 """
-Gerador de Relatório PDF para Análise de Divergências
+Gerador de Relatório PDF para Análise de Diferenças
 Laboratório Biodiagnóstico
 """
 from reportlab.lib.pagesizes import A4
@@ -15,15 +15,18 @@ from ..styles import Color
 def generate_analysis_pdf(
     compulab_total: float,
     simus_total: float,
-    missing_patients: list,
-    missing_exams: list,
+    patients_only_compulab: list,
+    patients_only_simus: list,
+    exams_only_compulab: list,
     divergences: list,
-    extra_simus: list,
-    top_offenders: list
+    exams_only_simus: list,
+    top_offenders: list,
+    annotations: dict = None,
 ) -> bytes:
     """
     Gera PDF com o relatório completo da análise de auditoria.
     """
+    annotations = annotations or {}
     buffer = BytesIO()
     doc = SimpleDocTemplate(
         buffer,
@@ -90,7 +93,7 @@ def generate_analysis_pdf(
         [
             Paragraph("Faturamento COMPULAB", metric_label_style),
             Paragraph("Faturamento SIMUS", metric_label_style),
-            Paragraph("Divergência Total", metric_label_style)
+            Paragraph("Diferença Total", metric_label_style)
         ],
         [
             Paragraph(f"R$ {compulab_total:,.2f}", metric_value_style),
@@ -112,8 +115,8 @@ def generate_analysis_pdf(
     story.append(summary_table)
     story.append(Spacer(1, 1*cm))
     
-    # === SEÇÃO 1: DETALHAMENTO DE PERDAS ===
-    story.append(Paragraph("Detalhamento de Perdas Identificadas", h2_style))
+    # === SEÇÃO 1: DETALHAMENTO DE DIFERENÇAS ===
+    story.append(Paragraph("Detalhamento de Diferenças Identificadas", h2_style))
     
     loss_data = [['Categoria', 'Qtd. Ocorrências', 'Impacto Financeiro']]
     
@@ -121,25 +124,35 @@ def generate_analysis_pdf(
     def get_val(item, attr):
         return getattr(item, attr, 0) if not isinstance(item, dict) else item.get(attr, 0)
 
-    # Missing Patients
-    mp_total = sum(get_val(x, 'total_value') or get_val(x, 'value') for x in missing_patients)
-    loss_data.append(['Pacientes Faltantes (Compulab > Simus)', str(len(missing_patients)), f"R$ {mp_total:,.2f}"])
+    def annotation_label(patient: str, exam: str = "") -> str:
+        value = annotations.get(f"{patient}|{exam}", "") if annotations else ""
+        if not value:
+            return "-"
+        return value.replace("_", " ")
+
+    # Pacientes somente COMPULAB
+    poc_total = sum(get_val(x, 'total_value') or get_val(x, 'value') for x in patients_only_compulab)
+    loss_data.append(['Pacientes somente COMPULAB', str(len(patients_only_compulab)), f"R$ {poc_total:,.2f}"])
+
+    # Pacientes somente SIMUS
+    pos_total = sum(get_val(x, 'total_value') or get_val(x, 'value') for x in patients_only_simus)
+    loss_data.append(['Pacientes somente SIMUS', str(len(patients_only_simus)), f"R$ {pos_total:,.2f}"])
     
-    # Missing Exams
-    me_total = sum(get_val(x, 'compulab_value') or get_val(x, 'value') for x in missing_exams)
-    loss_data.append(['Exames Não Lançados', str(len(missing_exams)), f"R$ {me_total:,.2f}"])
+    # Exames somente COMPULAB
+    eoc_total = sum(get_val(x, 'compulab_value') or get_val(x, 'value') for x in exams_only_compulab)
+    loss_data.append(['Exames somente COMPULAB', str(len(exams_only_compulab)), f"R$ {eoc_total:,.2f}"])
     
     # Divergences
     div_total = sum(abs(get_val(x, 'difference')) for x in divergences)
-    loss_data.append(['Divergência de Valores', str(len(divergences)), f"R$ {div_total:,.2f}"])
+    loss_data.append(['Diferença de Valores', str(len(divergences)), f"R$ {div_total:,.2f}"])
     
-    # Extra Simus
-    extra_total = sum(get_val(x, 'simus_value') for x in extra_simus)
-    loss_data.append(['Extras no Simus (Não Faturados?)', str(len(extra_simus)), f"R$ {extra_total:,.2f}"])
+    # Exames somente SIMUS
+    eos_total = sum(get_val(x, 'simus_value') for x in exams_only_simus)
+    loss_data.append(['Exames somente SIMUS', str(len(exams_only_simus)), f"R$ {eos_total:,.2f}"])
     
-    # Total Leakage
-    total_leakage = mp_total + me_total + div_total
-    loss_data.append(['TOTAL DE PERDAS MENSURÁVEIS', '', f"R$ {total_leakage:,.2f}"])
+    # Total Leakage (COMPULAB)
+    total_leakage = poc_total + eoc_total + div_total
+    loss_data.append(['TOTAL DE PERDAS MENSURÁVEIS (COMPULAB)', '', f"R$ {total_leakage:,.2f}"])
 
     loss_table = Table(loss_data, colWidths=[9*cm, 4*cm, 5*cm])
     loss_table.setStyle(TableStyle([
@@ -176,41 +189,70 @@ def generate_analysis_pdf(
 
     # === SEÇÃO 3: LISTAS DETALHADAS (Limitado a 50 itens para não quebrar preview) ===
     
-    # Pacientes Faltantes
-    if missing_patients:
+    # Pacientes somente COMPULAB
+    if patients_only_compulab:
         story.append(PageBreak())
-        story.append(Paragraph("Detalhamento: Pacientes Faltantes", h2_style))
-        p_data = [['Paciente', 'Qtd Exames', 'Valor Total']]
-        for p in missing_patients[:50]: # Limit
+        story.append(Paragraph("Detalhamento: Pacientes somente COMPULAB", h2_style))
+        p_data = [['Paciente', 'Qtd Exames', 'Valor Total', 'Anotação']]
+        for p in patients_only_compulab[:50]: # Limit
+            patient_name = get_val(p, 'patient')
             p_data.append([
-                get_val(p, 'patient'),
+                patient_name,
                 str(get_val(p, 'exams_count')),
-                f"R$ {get_val(p, 'total_value'):,.2f}"
+                f"R$ {get_val(p, 'total_value'):,.2f}",
+                annotation_label(patient_name),
             ])
         
-        p_table = Table(p_data, colWidths=[10*cm, 3*cm, 5*cm])
+        p_table = Table(p_data, colWidths=[7*cm, 3*cm, 4*cm, 4*cm])
         p_table.setStyle(TableStyle([
              ('BACKGROUND', (0,0), (-1,0), colors.lightgrey),
              ('GRID', (0,0), (-1,-1), 0.2, colors.grey),
-             ('FONTSIZE', (0,0), (-1,-1), 9),
+             ('FONTSIZE', (0,0), (-1,-1), 8),
         ]))
         story.append(p_table)
-        if len(missing_patients) > 50:
-             story.append(Paragraph(f"... e mais {len(missing_patients)-50} pacientes.", styles['Italic']))
+        if len(patients_only_compulab) > 50:
+             story.append(Paragraph(f"... e mais {len(patients_only_compulab)-50} pacientes.", styles['Italic']))
 
-    # Exames Faltantes
-    if missing_exams:
+    # Pacientes somente SIMUS
+    if patients_only_simus:
         story.append(PageBreak())
-        story.append(Paragraph("Detalhamento: Exames Faltantes", h2_style))
-        e_data = [['Paciente', 'Exame', 'Valor Compulab']]
-        for e in missing_exams[:50]:
+        story.append(Paragraph("Detalhamento: Pacientes somente SIMUS", h2_style))
+        p_data = [['Paciente', 'Qtd Exames', 'Valor Total', 'Anotação']]
+        for p in patients_only_simus[:50]:
+            patient_name = get_val(p, 'patient')
+            p_data.append([
+                patient_name,
+                str(get_val(p, 'exams_count')),
+                f"R$ {get_val(p, 'total_value'):,.2f}",
+                annotation_label(patient_name),
+            ])
+        
+        p_table = Table(p_data, colWidths=[7*cm, 3*cm, 4*cm, 4*cm])
+        p_table.setStyle(TableStyle([
+             ('BACKGROUND', (0,0), (-1,0), colors.lightgrey),
+             ('GRID', (0,0), (-1,-1), 0.2, colors.grey),
+             ('FONTSIZE', (0,0), (-1,-1), 8),
+        ]))
+        story.append(p_table)
+        if len(patients_only_simus) > 50:
+             story.append(Paragraph(f"... e mais {len(patients_only_simus)-50} pacientes.", styles['Italic']))
+
+    # Exames somente COMPULAB
+    if exams_only_compulab:
+        story.append(PageBreak())
+        story.append(Paragraph("Detalhamento: Exames somente COMPULAB", h2_style))
+        e_data = [['Paciente', 'Exame', 'Valor Compulab', 'Anotação']]
+        for e in exams_only_compulab[:50]:
+            patient_name = get_val(e, 'patient')
+            exam_name = get_val(e, 'exam_name')
             e_data.append([
-                get_val(e, 'patient')[:20], # Truncate patient name
-                get_val(e, 'exam_name')[:35], # Truncate exam name
-                f"R$ {get_val(e, 'compulab_value'):,.2f}"
+                patient_name[:20],
+                exam_name[:35],
+                f"R$ {get_val(e, 'compulab_value'):,.2f}",
+                annotation_label(patient_name, exam_name),
             ])
             
-        e_table = Table(e_data, colWidths=[6*cm, 8*cm, 4*cm])
+        e_table = Table(e_data, colWidths=[5*cm, 7*cm, 3*cm, 3*cm])
         e_table.setStyle(TableStyle([
              ('BACKGROUND', (0,0), (-1,0), colors.lightgrey),
              ('GRID', (0,0), (-1,-1), 0.2, colors.grey),
@@ -218,21 +260,24 @@ def generate_analysis_pdf(
         ]))
         story.append(e_table)
 
-    # Divergências
+    # Diferença de Valores
     if divergences:
         story.append(PageBreak())
-        story.append(Paragraph("Detalhamento: Divergências de Valores", h2_style))
-        d_data = [['Paciente', 'Exame', 'Compulab', 'Simus', 'Dif.']]
+        story.append(Paragraph("Detalhamento: Diferença de Valores", h2_style))
+        d_data = [['Paciente', 'Exame', 'Compulab', 'Simus', 'Dif.', 'Anotação']]
         for d in divergences[:50]:
+            patient_name = get_val(d, 'patient')
+            exam_name = get_val(d, 'exam_name')
             d_data.append([
-                get_val(d, 'patient')[:15],
-                get_val(d, 'exam_name')[:25],
+                patient_name[:15],
+                exam_name[:22],
                 f"{get_val(d, 'compulab_value'):,.2f}",
                 f"{get_val(d, 'simus_value'):,.2f}",
-                f"{get_val(d, 'difference'):,.2f}"
+                f"{get_val(d, 'difference'):,.2f}",
+                annotation_label(patient_name, exam_name),
             ])
             
-        d_table = Table(d_data, colWidths=[4*cm, 6*cm, 2.5*cm, 2.5*cm, 2.5*cm])
+        d_table = Table(d_data, colWidths=[3.5*cm, 5.5*cm, 2.2*cm, 2.2*cm, 2.1*cm, 2.5*cm])
         d_table.setStyle(TableStyle([
              ('BACKGROUND', (0,0), (-1,0), colors.lightgrey),
              ('GRID', (0,0), (-1,-1), 0.2, colors.grey),
@@ -240,6 +285,29 @@ def generate_analysis_pdf(
              ('TEXTCOLOR', (4,1), (4,-1), colors.red),
         ]))
         story.append(d_table)
+
+    # Exames somente SIMUS
+    if exams_only_simus:
+        story.append(PageBreak())
+        story.append(Paragraph("Detalhamento: Exames somente SIMUS", h2_style))
+        e_data = [['Paciente', 'Exame', 'Valor Simus', 'Anotação']]
+        for e in exams_only_simus[:50]:
+            patient_name = get_val(e, 'patient')
+            exam_name = get_val(e, 'exam_name')
+            e_data.append([
+                patient_name[:20],
+                exam_name[:35],
+                f"R$ {get_val(e, 'simus_value'):,.2f}",
+                annotation_label(patient_name, exam_name),
+            ])
+            
+        e_table = Table(e_data, colWidths=[5*cm, 7*cm, 3*cm, 3*cm])
+        e_table.setStyle(TableStyle([
+             ('BACKGROUND', (0,0), (-1,0), colors.lightgrey),
+             ('GRID', (0,0), (-1,-1), 0.2, colors.grey),
+             ('FONTSIZE', (0,0), (-1,-1), 8),
+        ]))
+        story.append(e_table)
 
     doc.build(story)
     buffer.seek(0)
