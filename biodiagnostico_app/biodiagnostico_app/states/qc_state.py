@@ -347,27 +347,46 @@ class QCState(DashboardState):
             db_records = await QCService.get_qc_records(limit=10000)
 
             if db_records:
-                self.qc_records = [
-                    QCRecord(
-                        id=str(r.get("id", "")),
-                        date=r.get("date", ""),
-                        exam_name=r.get("exam_name", ""),
-                        level=r.get("level", "Normal"),
-                        lot_number=r.get("lot_number", ""),
-                        value=float(r.get("value", 0)),
-                        target_value=float(r.get("target_value", 0)),
-                        target_sd=float(r.get("target_sd", 0)),
-                        cv=float(r.get("cv", 0)) if r.get("cv") else 0.0,
-                        status=r.get("status", "OK"),
-                        equipment=r.get("equipment_name", ""),
-                        analyst=r.get("analyst_name", ""),
-                        westgard_violations=[],
-                        reference_id=r.get("reference_id", "") or "",
-                        needs_calibration=r.get("needs_calibration", False) or False,
-                        post_calibration_id=r.get("post_calibration_id", "") or ""
+                refs_by_id = {}
+                ref_ids = [r.get("reference_id") for r in db_records if r.get("reference_id")]
+                if ref_ids:
+                    try:
+                        refs_by_id = await QCReferenceService.get_references_by_ids(ref_ids)
+                    except Exception as e:
+                        print(f"Erro ao buscar referências por ID: {e}")
+                records: List[QCRecord] = []
+                for r in db_records:
+                    reference_id = r.get("reference_id", "") or ""
+                    ref = refs_by_id.get(reference_id, {}) or {}
+                    cv = float(r.get("cv", 0)) if r.get("cv") else 0.0
+                    cv_max_threshold = float(ref.get("cv_max_threshold") or 10.0)
+                    status = r.get("status", "OK") or "OK"
+                    cv_out = cv > cv_max_threshold
+                    needs_calibration = bool(r.get("needs_calibration", False)) or cv_out
+
+                    records.append(
+                        QCRecord(
+                            id=str(r.get("id", "")),
+                            date=r.get("date", ""),
+                            exam_name=r.get("exam_name", ""),
+                            level=r.get("level", "Normal"),
+                            lot_number=r.get("lot_number", ""),
+                            value=float(r.get("value", 0)),
+                            target_value=float(r.get("target_value", 0)),
+                            target_sd=float(r.get("target_sd", 0)),
+                            cv=cv,
+                            cv_max_threshold=cv_max_threshold,
+                            status=status,
+                            equipment=r.get("equipment_name", ""),
+                            analyst=r.get("analyst_name", ""),
+                            westgard_violations=[],
+                            reference_id=reference_id,
+                            needs_calibration=needs_calibration,
+                            post_calibration_id=r.get("post_calibration_id", "") or ""
+                        )
                     )
-                    for r in db_records
-                ]
+
+                self.qc_records = records
                 # Ordenar por data decrescente (mais recente primeiro)
                 self.qc_records = sorted(self.qc_records, key=lambda x: x.date, reverse=True)
                 print(f"Carregados {len(self.qc_records)} registros de QC do banco")
@@ -561,6 +580,9 @@ class QCState(DashboardState):
              reference_id = ""
              if self.current_exam_reference:
                  reference_id = self.current_exam_reference.get("id", "")
+                 cv_max_threshold = float(self.current_exam_reference.get("cv_max_threshold", 10.0))
+             else:
+                 cv_max_threshold = 10.0
 
              new_record = QCRecord(
                  id=str(len(self.qc_records) + 1),
@@ -572,6 +594,7 @@ class QCState(DashboardState):
                  target_value=target,
                  target_sd=sd_target,
                  cv=cv,
+                 cv_max_threshold=cv_max_threshold,
                  status="OK",
                  westgard_violations=[],
                  reference_id=reference_id,
@@ -606,6 +629,14 @@ class QCState(DashboardState):
                  self.qc_error_message = ""
                  self.qc_warning_message = ""
 
+             # Aplicar regra de CV% para calibração (sem sobrescrever status)
+             cv_out = cv > cv_max_threshold
+             if cv_out:
+                 new_record.needs_calibration = True
+                 if not self.qc_error_message and not self.qc_warning_message:
+                     self.qc_warning_message = "CV acima do limite. Calibração necessária."
+                     self.qc_success_message = ""
+
              # Persistir no banco de dados
              try:
                  db_record = await QCService.create_qc_record({
@@ -635,6 +666,7 @@ class QCState(DashboardState):
                          target_value=new_record.target_value,
                          target_sd=new_record.target_sd,
                          cv=new_record.cv,
+                         cv_max_threshold=new_record.cv_max_threshold,
                          status=new_record.status,
                          westgard_violations=new_record.westgard_violations,
                          reference_id=new_record.reference_id,
@@ -1031,6 +1063,7 @@ class QCState(DashboardState):
                         mean=r.mean,
                         sd=r.sd,
                         cv=r.cv,
+                        cv_max_threshold=r.cv_max_threshold,
                         target_value=r.target_value,
                         target_sd=r.target_sd,
                         equipment=r.equipment,

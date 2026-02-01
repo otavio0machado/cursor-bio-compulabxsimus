@@ -91,7 +91,7 @@ O projeto utiliza uma arquitetura moderna e escalável:
    pip install -r requirements.txt
    ```
 3. **Configure as variáveis de ambiente:**
-   Crie um arquivo `.env` na raiz com sua `GEMINI_API_KEY` e URLs do Supabase.
+   Crie um arquivo `.env` na raiz seguindo `.env.example` e defina AUTH_EMAIL/AUTH_PASSWORD e as chaves necessarias (Supabase, Gemini, Cloudinary, etc).
 
 4. **Execute a aplicação:**
    ```bash

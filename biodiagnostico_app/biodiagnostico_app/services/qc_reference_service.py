@@ -58,6 +58,23 @@ class QCReferenceService:
         return response.data if response.data else []
 
     @staticmethod
+    async def get_references_by_ids(ids: List[str]) -> Dict[str, Dict[str, Any]]:
+        """Busca referencias por uma lista de IDs"""
+        unique_ids = list({i for i in ids if i})
+        if not unique_ids:
+            return {}
+
+        response = get_supabase().table("qc_reference_values")\
+            .select("*")\
+            .in_("id", unique_ids)\
+            .execute()
+
+        if not response.data:
+            return {}
+
+        return {r.get("id"): r for r in response.data if r.get("id")}
+
+    @staticmethod
     async def get_active_reference_for_exam(
         exam_name: str,
         level: str = "Normal",

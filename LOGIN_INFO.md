@@ -6,19 +6,11 @@ O sistema agora possui uma landing page com autenticação. Ao iniciar o aplicat
 
 ### 🔑 Credenciais de Acesso
 
-**Usuários Disponíveis:**
+As credenciais sao definidas via variaveis de ambiente:
+- AUTH_EMAIL
+- AUTH_PASSWORD
 
-1. **Administrador**
-   - Usuário: `admin`
-   - Senha: `biodiagnostico2024`
-
-2. **Usuário Padrão**
-   - Usuário: `usuario`
-   - Senha: `lab2024`
-
-3. **Demo/Teste**
-   - Usuário: `demo`
-   - Senha: `demo123`
+Veja `.env.example` para o formato.
 
 ## 🎯 Como Funciona
 
@@ -36,7 +28,7 @@ O sistema agora possui uma landing page com autenticação. Ao iniciar o aplicat
 
 ## 🔒 Segurança
 
-⚠️ **IMPORTANTE**: As credenciais estão hardcoded no código para desenvolvimento. 
+As credenciais devem ficar fora do codigo e apenas em variaveis de ambiente.
 
 **Para produção, recomenda-se:**
 - Usar variáveis de ambiente
@@ -46,15 +38,8 @@ O sistema agora possui uma landing page com autenticação. Ao iniciar o aplicat
 
 ## 📝 Personalização
 
-Para alterar as credenciais, edite o dicionário `LOGIN_CREDENTIALS` no arquivo `app.py`:
-
-```python
-LOGIN_CREDENTIALS = {
-    "admin": "sua_senha_aqui",
-    "usuario": "outra_senha",
-    "demo": "senha_demo"
-}
-```
+Para alterar as credenciais, ajuste AUTH_EMAIL e AUTH_PASSWORD no `.env`
+(ou nas variaveis do provedor de deploy).
 
 ## 🎨 Landing Page
 
@@ -63,9 +48,8 @@ A landing page inclui:
 - ✅ Cards explicativos das funcionalidades
 - ✅ Formulário de login estilizado
 - ✅ Mensagens de erro amigáveis
-- ✅ Dicas de credenciais de teste
+- ✅ Dicas de acesso seguro
 
 ---
 
 **Desenvolvido para o Laboratório Biodiagnóstico** 🧬
-

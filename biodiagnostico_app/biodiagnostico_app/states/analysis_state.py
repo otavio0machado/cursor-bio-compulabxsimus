@@ -662,39 +662,58 @@ class AnalysisState(QCState):
             yield
             
             # ANÁLISE 2: Para cada paciente comum, verificar exames faltantes e divergências
-            common_patients = compulab_patient_names & simus_patient_names
+            common_patients = list(compulab_patient_names & simus_patient_names)
+            total_common = len(common_patients) if common_patients else 1
             for idx, patient_name in enumerate(common_patients):
                 compulab_exams = compulab_patients[patient_name]['exams']
                 simus_exams = simus_patients[patient_name]['exams']
                 
                 # Indexar exames SIMUS por nome normalizado
                 simus_exam_map = {}
+                simus_code_map = {}
                 for exam in simus_exams:
+                    exam.pop('_matched', None)
                     exam_key = canonicalize_exam_name(exam['exam_name'])
                     if exam_key not in simus_exam_map:
                         simus_exam_map[exam_key] = []
                     simus_exam_map[exam_key].append(exam)
+                    exam_code = str(exam.get('code', '')).strip()
+                    if exam_code:
+                        if exam_code not in simus_code_map:
+                            simus_code_map[exam_code] = []
+                        simus_code_map[exam_code].append(exam)
                 
                 # Verificar cada exame COMPULAB
                 for comp_exam in compulab_exams:
                     comp_name = comp_exam['exam_name']
                     comp_key = canonicalize_exam_name(comp_name)
                     comp_value = float(comp_exam['value'])
+                    comp_code = str(comp_exam.get('code', '')).strip()
                     
                     # Procurar exame correspondente no SIMUS
                     found_match = False
                     matched_simus_exam = None
                     
-                    # 1) Match direto pelo nome canônico
-                    direct_candidates = simus_exam_map.get(comp_key, [])
-                    for simus_exam in direct_candidates:
-                        if not simus_exam.get('_matched'):
-                            matched_simus_exam = simus_exam
-                            found_match = True
-                            simus_exam['_matched'] = True
-                            break
+                    # 1) Match direto pelo código
+                    if comp_code and comp_code in simus_code_map:
+                        for simus_exam in simus_code_map[comp_code]:
+                            if not simus_exam.get('_matched'):
+                                matched_simus_exam = simus_exam
+                                found_match = True
+                                simus_exam['_matched'] = True
+                                break
 
-                    # 2) Fallback para match fuzzy (casos não mapeados)
+                    # 2) Match direto pelo nome canônico
+                    direct_candidates = simus_exam_map.get(comp_key, [])
+                    if not found_match:
+                        for simus_exam in direct_candidates:
+                            if not simus_exam.get('_matched'):
+                                matched_simus_exam = simus_exam
+                                found_match = True
+                                simus_exam['_matched'] = True
+                                break
+
+                    # 3) Fallback para match fuzzy (casos não mapeados)
                     if not found_match:
                         for simus_key, simus_exam_list in simus_exam_map.items():
                             if exam_names_match(comp_key, simus_key):
@@ -728,7 +747,11 @@ class AnalysisState(QCState):
                                 difference=comp_value - simus_value
                             ))
 
-                if idx % 20 == 0:
+                if idx % 10 == 0:
+                    progress = 70 + int((idx / total_common) * 25)
+                    self.analysis_progress_percentage = min(95, max(70, progress))
+                    self.analysis_stage = f"Analisando exames... ({idx + 1}/{total_common})"
+                    yield
                     await asyncio.sleep(0)
             
             # ANÁLISE 3: Exames no SIMUS que não estão no COMPULAB (exames "fantasma")

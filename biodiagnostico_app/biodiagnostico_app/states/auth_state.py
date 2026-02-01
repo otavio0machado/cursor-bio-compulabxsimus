@@ -1,5 +1,6 @@
 import reflex as rx
 from typing import Optional
+from ..config import Config
 
 class AuthState(rx.State):
     """Estado responsável pela autenticação e controle de acesso"""
@@ -9,10 +10,10 @@ class AuthState(rx.State):
     login_email: str = ""
     login_password: str = ""
     login_error: str = ""
-    
-    # Credenciais válidas (login único)
-    _valid_email: str = "evandrotorresmachado@gmail.com"
-    _valid_password: str = "eva123"
+
+    # Credenciais validas (definidas via variaveis de ambiente)
+    def _credentials_configured(self) -> bool:
+        return bool(Config.AUTH_EMAIL and Config.AUTH_PASSWORD)
     
     def set_login_email(self, email: str):
         self.login_email = email
@@ -22,7 +23,11 @@ class AuthState(rx.State):
         
     def attempt_login(self):
         """Tenta realizar login com as credenciais fornecidas"""
-        if self.login_email == self._valid_email and self.login_password == self._valid_password:
+        if not self._credentials_configured():
+            self.login_error = "Login indisponivel. Configure AUTH_EMAIL e AUTH_PASSWORD."
+            self.is_authenticated = False
+            return
+        if self.login_email == Config.AUTH_EMAIL and self.login_password == Config.AUTH_PASSWORD:
             self.is_authenticated = True
             self.login_error = ""
             return rx.redirect("/")

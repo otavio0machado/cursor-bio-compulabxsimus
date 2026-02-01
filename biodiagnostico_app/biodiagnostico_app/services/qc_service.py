@@ -159,6 +159,32 @@ class QCService:
             .execute()
         
         return response.data
+
+    @staticmethod
+    async def update_qc_record(record_id: str, data: Dict[str, Any]) -> bool:
+        """Atualiza campos de um registro de CQ"""
+        try:
+            if not record_id:
+                return False
+            update_data = {k: v for k, v in data.items() if v is not None}
+            if not update_data:
+                return False
+            response = supabase.table("qc_records").update(update_data).eq("id", record_id).execute()
+            return bool(response.data)
+        except Exception as e:
+            print(f"Erro ao atualizar QC record {record_id}: {e}")
+            return False
+
+    @staticmethod
+    async def update_qc_records(records: List[Dict[str, Any]]) -> int:
+        """Atualiza múltiplos registros de CQ (lote simples em loop)"""
+        updated = 0
+        for record in records:
+            record_id = record.get("id")
+            data = {k: v for k, v in record.items() if k != "id"}
+            if await QCService.update_qc_record(record_id, data):
+                updated += 1
+        return updated
     
     @staticmethod
     async def delete_qc_record(record_id: str) -> bool:

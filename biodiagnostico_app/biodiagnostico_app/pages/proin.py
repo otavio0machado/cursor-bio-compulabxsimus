@@ -19,6 +19,30 @@ def format_cv(value) -> rx.Var:
     return rx.Var.create(f"{value_var:.2f}").replace(".", ",")
 
 
+def qc_status_label(status, cv, cv_max) -> rx.Var:
+    """Status exibido baseado no status original + CV%."""
+    status_var = rx.Var.create(status)
+    cv_var = rx.Var.create(cv).to(float)
+    cv_max_var = rx.Var.create(cv_max).to(float)
+    return rx.cond(
+        status_var == "OK",
+        rx.cond(cv_var > cv_max_var, "ALERTA (CV)", "OK"),
+        status_var
+    )
+
+
+def qc_status_kind(status, cv, cv_max) -> rx.Var:
+    """Tipo visual do status (success/warning/error)."""
+    status_var = rx.Var.create(status)
+    cv_var = rx.Var.create(cv).to(float)
+    cv_max_var = rx.Var.create(cv_max).to(float)
+    return rx.cond(
+        status_var == "OK",
+        rx.cond(cv_var > cv_max_var, "warning", "success"),
+        rx.cond(status_var.contains("ALERTA"), "warning", "error")
+    )
+
+
 def tab_button(label: str, icon: str, tab_id: str) -> rx.Component:
     """Botão de aba do ProIn - Purificado"""
     is_active = State.proin_current_tab == tab_id
@@ -230,10 +254,16 @@ def dashboard_tab() -> rx.Component:
                                         rx.text(
                                             format_cv(r["cv"]) + "%",
                                             font_weight="700",
-                                            color=rx.cond(r["status"] == "OK", Color.SUCCESS, Color.ERROR)
+                                            color=rx.cond(r["cv"] <= r["cv_max_threshold"], Color.SUCCESS, Color.ERROR)
                                         )
                                     ),
-                                    rx.table.cell(ui.status_badge(r["status"], status=rx.cond(r["status"] == "OK", "success", rx.cond(r["status"].contains("ALERTA"), "warning", "error"))), text_align="right"),
+                                    rx.table.cell(
+                                        ui.status_badge(
+                                            qc_status_label(r["status"], r["cv"], r["cv_max_threshold"]),
+                                            status=qc_status_kind(r["status"], r["cv"], r["cv_max_threshold"])
+                                        ),
+                                        text_align="right"
+                                    ),
                                 )
                             )
                         ),
@@ -415,8 +445,13 @@ def registro_qc_tab() -> rx.Component:
                                         rx.table.cell(rx.text(r.date[:16], color=Color.TEXT_SECONDARY, font_size="0.875rem")),
                                         rx.table.cell(rx.text(r.exam_name, font_weight="600")),
                                         rx.table.cell(r.value.to_string()),
-                                        rx.table.cell(rx.text(format_cv(r.cv) + "%", font_weight="600", color=rx.cond(r.status == "OK", Color.SUCCESS, Color.ERROR))),
-                                        rx.table.cell(ui.status_badge(r.status, status=rx.cond(r.status == "OK", "success", rx.cond(r.status.contains("ALERTA"), "warning", "error")))),
+                                        rx.table.cell(rx.text(format_cv(r.cv) + "%", font_weight="600", color=rx.cond(r.cv <= r.cv_max_threshold, Color.SUCCESS, Color.ERROR))),
+                                        rx.table.cell(
+                                            ui.status_badge(
+                                                qc_status_label(r.status, r.cv, r.cv_max_threshold),
+                                                status=qc_status_kind(r.status, r.cv, r.cv_max_threshold)
+                                            )
+                                        ),
                                         rx.table.cell(
                                             rx.cond(
                                                 r.needs_calibration,

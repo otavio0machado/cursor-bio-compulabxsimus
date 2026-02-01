@@ -71,7 +71,7 @@ class DashboardState(AuthState):
         """Retorna registros com alerta para o dashboard"""
         if not hasattr(self, 'qc_records'): return []
         # Retorna dict representation para frontend
-        return [r.dict() for r in self.qc_records if r.status != "OK"] 
+        return [r.dict() for r in self.qc_records if (r.status != "OK" or r.cv > r.cv_max_threshold)] 
 
     @rx.var
     def dashboard_pending_maintenances(self) -> str:

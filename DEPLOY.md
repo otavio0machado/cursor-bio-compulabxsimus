@@ -29,6 +29,9 @@ Para que os uploads funcionem em produção, precisamos de uma conta no Cloudina
 | Variável | Valor |
 |----------|-------|
 | `API_URL` | `https://[SEU-DOMINIO-RAILWAY].up.railway.app` (sem barra no final) |
+| `CORS_ALLOWED_ORIGINS` | Origem(ens) permitidas do frontend (ex: https://app.seudominio.com) |
+| `AUTH_EMAIL` | Email de login (ambiente) |
+| `AUTH_PASSWORD` | Senha de login (ambiente) |
 | `SUPABASE_URL` | URL do projeto Supabase (Settings > API) |
 | `SUPABASE_KEY` | Chave `anon public` do Supabase |
 | `GEMINI_API_KEY` | (Opcional) Chave API do Google Gemini para IA |
@@ -42,7 +45,7 @@ Para que os uploads funcionem em produção, precisamos de uma conta no Cloudina
 
 1.  Aguarde o deploy finalizar (aba **Deployments**).
 2.  Acesse a URL pública (ex: `https://biodiagnostico-prod.up.railway.app`).
-3.  Faça login (`evandrotorresmachado@gmail.com` / `eva123`).
+3.  Faca login com as credenciais definidas em AUTH_EMAIL/AUTH_PASSWORD.
 4.  Vá em **Conversor** e tente fazer upload do **SIMUS.pdf**.
 5.  Se funcionar, você verá a mensagem "✅ SIMUS carregado... (Salvo na nuvem)".
 

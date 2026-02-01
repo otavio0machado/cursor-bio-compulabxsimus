@@ -47,6 +47,7 @@ class QCRecord(BaseModel):
     mean: float = 0.0
     sd: float = 0.0
     cv: float = 0.0
+    cv_max_threshold: float = 10.0
     target_value: float = 0.0
     target_sd: float = 0.0
     equipment: str = ""

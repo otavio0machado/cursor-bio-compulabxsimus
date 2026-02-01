@@ -14,4 +14,16 @@ from .pdf_processor import (
     load_from_excel
 )
 from .comparison import compare_patients, compute_difference_breakdown, format_divergences_to_json
+from .analysis_module import (
+    load_data,
+    normalize_exam_name as normalize_exam_name_v2,
+    map_to_canonical,
+    compare_exams,
+    load_synonyms,
+    normalize_synonyms,
+    update_synonyms,
+    results_to_dataframes,
+    export_results_to_excel,
+    export_results_to_csv,
+)
 
