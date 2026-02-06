@@ -66,7 +66,7 @@ def route_proin() -> rx.Component:
 # Configurar aplicação
 app = rx.App(
     theme=rx.theme(
-        accent_color="teal",
+        accent_color="green",
         gray_color="slate",
         radius="large",
     ),

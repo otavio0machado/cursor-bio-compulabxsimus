@@ -10,25 +10,25 @@ import reflex as rx
 # =============================================================================
 
 class Color:
-    # --- Primary Brand (Modern Emerald) ---
-    PRIMARY = "#0F766E"          # Teal core
-    PRIMARY_HOVER = "#0B4D45"
-    PRIMARY_LIGHT = "#D9F4EF"
-    SECONDARY = "#1FB6A6"
-    ACCENT = "#F97316"
-    ACCENT_LIGHT = "#FFF3E6"
-    
+    # --- Primary Brand (Verde Floresta - Logo Biodiagnóstico) ---
+    PRIMARY = "#166534"          # Verde escuro (logo)
+    PRIMARY_HOVER = "#14532D"
+    PRIMARY_LIGHT = "#DCFCE7"
+    SECONDARY = "#22C55E"        # Verde vibrante (frasco da logo)
+    ACCENT = "#15803D"           # Verde médio
+    ACCENT_LIGHT = "#F0FDF4"
+
     # --- Deep & Contrast (Text & Headers) ---
-    DEEP = "#0B1F1A"
-    
+    DEEP = "#052E16"
+
     # --- Neutrals (Clean Slate) ---
     BACKGROUND = "#F7F4EE"
     SURFACE = "#FFFFFF"
     SURFACE_ALT = "#F2EFE9"
-    TEXT_PRIMARY = "#132B25"
+    TEXT_PRIMARY = "#14532D"
     TEXT_SECONDARY = "#5F6F68"
-    BORDER = "#E1E5DF"
-    
+    BORDER = "#D1E5D8"
+
     # --- Status (Semantic) ---
     ERROR = "#EF4444"
     ERROR_BG = "#FEF2F2"
@@ -38,7 +38,7 @@ class Color:
     WARNING_BG = "#FFF7ED"
 
     # --- Vibe Gradients ---
-    GRADIENT_PRIMARY = "linear-gradient(135deg, #0F766E 0%, #0B4D45 100%)"
+    GRADIENT_PRIMARY = "linear-gradient(135deg, #166534 0%, #14532D 100%)"
     GRADIENT_SURFACE = "linear-gradient(160deg, rgba(255,255,255,0.96) 0%, rgba(242,239,233,0.9) 100%)"
     GRADIENT_GLASS = "linear-gradient(180deg, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.65) 100%)"
 
@@ -133,7 +133,7 @@ INPUT_STYLE = {
     "transition": "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
     "_focus": {
         "border_color": Color.PRIMARY,
-        "box_shadow": "0 0 0 4px rgba(15, 118, 110, 0.18)",
+        "box_shadow": "0 0 0 4px rgba(22, 101, 52, 0.18)",
         "outline": "none"
     },
     "_hover": {"border_color": Color.PRIMARY}
@@ -153,7 +153,7 @@ INPUT_XL_STYLE = {
     "transition": "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
     "_focus": {
         "border_color": Color.PRIMARY,
-        "box_shadow": "0 0 0 4px rgba(15, 118, 110, 0.18)",
+        "box_shadow": "0 0 0 4px rgba(22, 101, 52, 0.18)",
         "outline": "none"
     },
     "_hover": {"border_color": Color.PRIMARY}
@@ -172,7 +172,7 @@ BUTTON_PRIMARY_STYLE = {
     "transition": "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
     "box_shadow": Design.SHADOW_DEFAULT,
     "_hover": {
-        "bg": "linear-gradient(135deg, rgba(15, 118, 110, 0.95) 0%, rgba(11, 77, 69, 0.95) 100%)",
+        "bg": "linear-gradient(135deg, rgba(22, 101, 52, 0.95) 0%, rgba(20, 83, 45, 0.95) 100%)",
         "transform": "translateY(-2px)",
         "box_shadow": Design.SHADOW_MD,
     },
@@ -196,7 +196,7 @@ BUTTON_XL_STYLE = {
     "transition": "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
     "box_shadow": Design.SHADOW_MD,
     "_hover": {
-        "bg": "linear-gradient(135deg, rgba(15, 118, 110, 0.95) 0%, rgba(11, 77, 69, 0.95) 100%)",
+        "bg": "linear-gradient(135deg, rgba(22, 101, 52, 0.95) 0%, rgba(20, 83, 45, 0.95) 100%)",
         "transform": "translateY(-2px)",
         "box_shadow": Design.SHADOW_LG,
     },

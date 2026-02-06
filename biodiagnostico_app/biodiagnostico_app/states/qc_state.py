@@ -14,6 +14,9 @@ from ..utils.qc_pdf_report import generate_qc_pdf
 from ..services.qc_service import QCService
 from ..services.qc_reference_service import QCReferenceService
 from ..services.westgard_service import WestgardService
+from ..services.reagent_service import ReagentService
+from ..services.maintenance_service import MaintenanceService
+from ..services.post_calibration_service import PostCalibrationService
 from .dashboard_state import DashboardState
 
 class QCState(DashboardState):
@@ -340,9 +343,9 @@ class QCState(DashboardState):
             await self.load_data_from_db()
 
     async def load_data_from_db(self, force: bool = False):
-        """Carrega registros de QC do banco de dados"""
+        """Carrega registros de QC, reagentes, manutenções e pós-calibrações do banco"""
         try:
-            # Carregar registros de QC (sem limite prático para exibir todo histórico)
+            # Carregar registros de QC
             db_records = await QCService.get_qc_records(limit=10000)
 
             if db_records:
@@ -386,9 +389,75 @@ class QCState(DashboardState):
                     )
 
                 self.qc_records = records
-                # Ordenar por data decrescente (mais recente primeiro)
                 self.qc_records = sorted(self.qc_records, key=lambda x: x.date, reverse=True)
                 print(f"Carregados {len(self.qc_records)} registros de QC do banco")
+
+            # Carregar lotes de reagentes
+            try:
+                db_lots = await ReagentService.get_lots()
+                self.reagent_lots = [
+                    ReagentLot(
+                        id=str(r.get("id", "")),
+                        name=r.get("name", ""),
+                        lot_number=r.get("lot_number", ""),
+                        expiry_date=r.get("expiry_date", ""),
+                        quantity=r.get("quantity", ""),
+                        manufacturer=r.get("manufacturer", ""),
+                        storage_temp=r.get("storage_temp", ""),
+                        current_stock=float(r.get("current_stock", 0)),
+                        estimated_consumption=float(r.get("estimated_consumption", 0)),
+                        created_at=str(r.get("created_at", ""))
+                    )
+                    for r in db_lots
+                ]
+                print(f"Carregados {len(self.reagent_lots)} lotes de reagentes")
+            except Exception as e:
+                print(f"Erro ao carregar reagentes: {e}")
+
+            # Carregar registros de manutenção
+            try:
+                db_maint = await MaintenanceService.get_records()
+                self.maintenance_records = [
+                    MaintenanceRecord(
+                        id=str(r.get("id", "")),
+                        equipment=r.get("equipment", ""),
+                        type=r.get("type", ""),
+                        date=r.get("date", ""),
+                        next_date=r.get("next_date", ""),
+                        technician=r.get("technician", ""),
+                        notes=r.get("notes", ""),
+                        created_at=str(r.get("created_at", ""))
+                    )
+                    for r in db_maint
+                ]
+                print(f"Carregados {len(self.maintenance_records)} registros de manutenção")
+            except Exception as e:
+                print(f"Erro ao carregar manutenções: {e}")
+
+            # Carregar registros de pós-calibração
+            try:
+                db_postcal = await PostCalibrationService.get_records()
+                self.post_calibration_records = [
+                    PostCalibrationRecord(
+                        id=str(r.get("id", "")),
+                        qc_record_id=str(r.get("qc_record_id", "")),
+                        date=r.get("date", ""),
+                        exam_name=r.get("exam_name", ""),
+                        original_value=float(r.get("original_value", 0)),
+                        original_cv=float(r.get("original_cv", 0)),
+                        post_calibration_value=float(r.get("post_calibration_value", 0)),
+                        post_calibration_cv=float(r.get("post_calibration_cv", 0)),
+                        target_value=float(r.get("target_value", 0)),
+                        analyst=r.get("analyst", ""),
+                        notes=r.get("notes", ""),
+                        created_at=str(r.get("created_at", ""))
+                    )
+                    for r in db_postcal
+                ]
+                print(f"Carregados {len(self.post_calibration_records)} registros de pós-calibração")
+            except Exception as e:
+                print(f"Erro ao carregar pós-calibrações: {e}")
+
         except Exception as e:
             print(f"Erro ao carregar dados do banco: {e}")
 
@@ -427,11 +496,21 @@ class QCState(DashboardState):
         self.upload_progress = 0
 
     async def save_reagent_lot(self):
-        """Salva um novo lote de reagente"""
+        """Salva um novo lote de reagente no Supabase"""
         self.is_saving_reagent = True
         try:
+             db_result = await ReagentService.create_lot({
+                 "name": self.reagent_name,
+                 "lot_number": self.reagent_lot_number,
+                 "expiry_date": self.reagent_expiry_date,
+                 "quantity": self.reagent_quantity,
+                 "manufacturer": self.reagent_manufacturer,
+                 "storage_temp": self.reagent_storage_temp,
+                 "current_stock": float(self.reagent_initial_stock or 0),
+                 "estimated_consumption": float(self.reagent_daily_consumption or 0),
+             })
              new_lot = ReagentLot(
-                 id=str(len(self.reagent_lots) + 1),
+                 id=str(db_result.get("id", "")),
                  name=self.reagent_name,
                  lot_number=self.reagent_lot_number,
                  expiry_date=self.reagent_expiry_date,
@@ -442,7 +521,7 @@ class QCState(DashboardState):
                  estimated_consumption=float(self.reagent_daily_consumption or 0),
                  created_at=datetime.now().isoformat()
              )
-             self.reagent_lots.append(new_lot)
+             self.reagent_lots.insert(0, new_lot)
              self.reagent_success_message = "Lote salvo com sucesso!"
              self.reagent_name = ""
              self.reagent_lot_number = ""
@@ -452,15 +531,27 @@ class QCState(DashboardState):
             self.is_saving_reagent = False
 
     async def delete_reagent_lot(self, id: str):
-        """Deleta lote de reagente"""
+        """Deleta lote de reagente do Supabase"""
+        try:
+            await ReagentService.delete_lot(id)
+        except Exception as e:
+            print(f"Erro ao deletar lote: {e}")
         self.reagent_lots = [lot for lot in self.reagent_lots if lot.id != id]
 
     async def save_maintenance_record(self):
-        """Registra manutenção"""
+        """Registra manutenção no Supabase"""
         self.is_saving_maintenance = True
         try:
+            db_result = await MaintenanceService.create_record({
+                "equipment": self.maintenance_equipment,
+                "type": self.maintenance_type,
+                "date": self.maintenance_date,
+                "next_date": self.maintenance_next_date,
+                "technician": self.maintenance_technician,
+                "notes": self.maintenance_notes,
+            })
             new_record = MaintenanceRecord(
-                id=str(len(self.maintenance_records) + 1),
+                id=str(db_result.get("id", "")),
                 equipment=self.maintenance_equipment,
                 type=self.maintenance_type,
                 date=self.maintenance_date,
@@ -469,10 +560,12 @@ class QCState(DashboardState):
                 notes=self.maintenance_notes,
                 created_at=datetime.now().isoformat()
             )
-            self.maintenance_records.append(new_record)
+            self.maintenance_records.insert(0, new_record)
             self.maintenance_success_message = "Manutenção registrada!"
             self.maintenance_equipment = ""
             self.maintenance_notes = ""
+        except Exception as e:
+            self.maintenance_error_message = f"Erro ao salvar: {str(e)}"
         finally:
             self.is_saving_maintenance = False
 
@@ -1003,7 +1096,7 @@ class QCState(DashboardState):
             return 0.0
 
     async def save_post_calibration(self):
-        """Salva o registro de medição pós-calibração"""
+        """Salva o registro de medição pós-calibração no Supabase"""
         self.is_saving_post_calibration = True
         self.post_cal_success_message = ""
         self.post_cal_error_message = ""
@@ -1026,10 +1119,25 @@ class QCState(DashboardState):
                 diff = abs(val - target)
                 post_cv = round((diff / target) * 100, 2)
 
-            # Criar registro de pós-calibração
+            qc_record_id = self.selected_qc_record_for_calibration.get("id", "")
+
+            # Persistir no Supabase
+            db_result = await PostCalibrationService.create_record({
+                "qc_record_id": qc_record_id,
+                "date": datetime.now().isoformat(),
+                "exam_name": self.selected_qc_record_for_calibration.get("exam_name", ""),
+                "original_value": float(self.selected_qc_record_for_calibration.get("value", 0)),
+                "original_cv": float(self.selected_qc_record_for_calibration.get("cv", 0)),
+                "post_calibration_value": val,
+                "post_calibration_cv": post_cv,
+                "target_value": target,
+                "analyst": self.post_cal_analyst,
+                "notes": self.post_cal_notes,
+            })
+
             new_record = PostCalibrationRecord(
-                id=str(len(self.post_calibration_records) + 1),
-                qc_record_id=self.selected_qc_record_for_calibration.get("id", ""),
+                id=str(db_result.get("id", "")),
+                qc_record_id=qc_record_id,
                 date=datetime.now().isoformat(),
                 exam_name=self.selected_qc_record_for_calibration.get("exam_name", ""),
                 original_value=float(self.selected_qc_record_for_calibration.get("value", 0)),
@@ -1042,14 +1150,12 @@ class QCState(DashboardState):
                 created_at=datetime.now().isoformat()
             )
 
-            # Adicionar ao histórico
+            # Adicionar ao histórico local
             self.post_calibration_records.insert(0, new_record)
 
             # Atualizar o registro QC original para indicar que tem pós-calibração
-            qc_record_id = self.selected_qc_record_for_calibration.get("id", "")
             for i, r in enumerate(self.qc_records):
                 if r.id == qc_record_id:
-                    # Criar novo registro com post_calibration_id atualizado
                     updated_record = QCRecord(
                         id=r.id,
                         date=r.date,
