@@ -21,4 +21,7 @@ class Config:
         if not cls.SUPABASE_KEY:
             missing.append("SUPABASE_KEY")
         if missing:
-            raise ValueError(f"Variáveis de ambiente faltando: {', '.join(missing)}")
+            import logging
+            logging.getLogger(__name__).warning(
+                f"Variáveis de ambiente faltando: {', '.join(missing)}"
+            )
