@@ -89,7 +89,8 @@ def dashboard_tab() -> rx.Component:
                 on_click=State.load_data_from_db(True),
                 variant="ghost", size="2", color=Color.TEXT_SECONDARY,
                 _hover={"bg": Color.PRIMARY_LIGHT, "color": Color.DEEP},
-                border_radius=Design.RADIUS_LG
+                border_radius=Design.RADIUS_LG,
+                aria_label="Atualizar dados"
             ),
             width="100%", align_items="center", margin_bottom=Spacing.LG, max_width="6xl", margin_x="auto"
         ),
@@ -357,17 +358,17 @@ def registro_qc_tab() -> rx.Component:
                                 rx.text(
                                     format_cv(State.qc_calculated_cv) + "%",
                                     font_size=Typography.H3["font_size"], font_weight="bold",
-                                    color=rx.cond(State.qc_cv_status == "ok", Color.SUCCESS, rx.cond(State.qc_cv_status == "warning", Color.WARNING, Color.ERROR))
+                                    color=rx.cond(State.qc_cv_status == "OK", Color.SUCCESS, Color.ERROR)
                                 ),
                                 rx.icon(
-                                    tag=rx.cond(State.qc_cv_status == "ok", "circle_check", rx.cond(State.qc_cv_status == "warning", "triangle_alert", "circle_x")),
+                                    tag=rx.cond(State.qc_cv_status == "OK", "circle_check", "circle_x"),
                                     size=18,
-                                    color=rx.cond(State.qc_cv_status == "ok", Color.SUCCESS, rx.cond(State.qc_cv_status == "warning", Color.WARNING, Color.ERROR))
+                                    color=rx.cond(State.qc_cv_status == "OK", Color.SUCCESS, Color.ERROR)
                                 ),
                                 align_items="center", style={"gap": Spacing.SM}, height="100%",
                             ),
                             width="100%", height="44px", display="flex", align_items="center", padding_x=Spacing.MD, bg=Color.SURFACE, border_radius=Design.RADIUS_LG,
-                            border=rx.cond(State.qc_cv_status == "ok", f"1px solid {Color.SUCCESS}40", rx.cond(State.qc_cv_status == "warning", f"1px solid {Color.WARNING}40", f"1px solid {Color.ERROR}40"))
+                            border=rx.cond(State.qc_cv_status == "OK", f"1px solid {Color.SUCCESS}40", f"1px solid {Color.ERROR}40")
                         ),
                     ),
                     columns={"initial": "1", "sm": "2", "md": "4"},
@@ -418,7 +419,7 @@ def registro_qc_tab() -> rx.Component:
                         State.qc_records.length() > 0,
                         rx.button(
                             "Limpar Histórico", rx.icon(tag="trash_2", size=14),
-                            on_click=State.clear_all_qc_records, variant="ghost", color_scheme="red", size="1", opacity="0.7", _hover={"opacity": "1"}
+                            on_click=State.open_clear_all_modal, variant="ghost", color_scheme="red", size="1", opacity="0.7", _hover={"opacity": "1"}
                         ),
                     ),
                     width="100%", align_items="center", margin_bottom=Spacing.MD
@@ -441,7 +442,7 @@ def registro_qc_tab() -> rx.Component:
                             ),
                             rx.table.body(
                                 rx.foreach(
-                                    State.qc_records,
+                                    State.paginated_qc_records,
                                     lambda r: rx.table.row(
                                         rx.table.cell(rx.text(r.date[:16], color=Color.TEXT_SECONDARY, font_size=Typography.H5["font_size"])),
                                         rx.table.cell(rx.text(r.exam_name, font_weight="600")),
@@ -494,7 +495,8 @@ def registro_qc_tab() -> rx.Component:
                                                 rx.button(
                                                     rx.icon(tag="trash_2", size=14, color=Color.ERROR),
                                                     on_click=lambda: State.open_delete_qc_record_modal(r.id, r.exam_name),
-                                                    variant="ghost", color_scheme="red", size="1"
+                                                    variant="ghost", color_scheme="red", size="1",
+                                                    aria_label="Excluir registro"
                                                 ),
                                                 content="Excluir permanentemente"
                                             ),
@@ -516,6 +518,32 @@ def registro_qc_tab() -> rx.Component:
                         ),
                         bg=Color.SURFACE, border=f"1px solid {Color.BORDER}", border_radius=Design.RADIUS_XL, padding=Spacing.XL, width="100%"
                     )
+                ),
+                # Pagination Controls
+                rx.cond(
+                    State.total_qc_pages > 1,
+                    rx.hstack(
+                        rx.button(
+                            rx.icon(tag="chevron_left", size=16),
+                            on_click=State.prev_qc_page,
+                            variant="outline", size="1",
+                            disabled=State.qc_page == 0,
+                            aria_label="Página anterior",
+                        ),
+                        rx.text(
+                            (State.qc_page + 1).to_string() + " / " + State.total_qc_pages.to_string(),
+                            font_size=Typography.SIZE_SM, color=Color.TEXT_SECONDARY
+                        ),
+                        rx.button(
+                            rx.icon(tag="chevron_right", size=16),
+                            on_click=State.next_qc_page,
+                            variant="outline", size="1",
+                            disabled=State.qc_page >= State.total_qc_pages - 1,
+                            aria_label="Próxima página",
+                        ),
+                        justify_content="center", align_items="center",
+                        style={"gap": Spacing.MD}, width="100%", margin_top=Spacing.MD
+                    ),
                 ),
                 width="100%"
             ),
@@ -555,7 +583,11 @@ def reagentes_tab() -> rx.Component:
                     # Mensagens Feedback
                     rx.cond(
                         State.reagent_success_message != "",
-                        ui.text(State.reagent_success_message, color=Color.SUCCESS, size="small")
+                        rx.callout(State.reagent_success_message, icon="circle_check", color_scheme="green", width="100%")
+                    ),
+                    rx.cond(
+                        State.reagent_error_message != "",
+                        rx.callout(State.reagent_error_message, icon="triangle_alert", color_scheme="red", width="100%")
                     ),
                 ),
             ),
@@ -617,7 +649,8 @@ def reagentes_tab() -> rx.Component:
                                         rx.button(
                                             rx.icon(tag="trash_2", size=14),
                                             on_click=lambda: State.delete_reagent_lot(lot["id"]),
-                                            size="1", variant="ghost", color_scheme="red"
+                                            size="1", variant="ghost", color_scheme="red",
+                                            aria_label="Excluir lote"
                                         ),
                                         width="100%", align_items="center", style={"gap": Spacing.MD},
                                         padding=Spacing.MD, border_radius=Design.RADIUS_LG,
@@ -658,9 +691,70 @@ def reagentes_tab() -> rx.Component:
                         ui.text_area(placeholder="Observações...", value=State.maintenance_notes, on_change=State.set_maintenance_notes),
                         ui.button("Registrar Manutenção", icon="wrench", on_click=State.save_maintenance_record, width="100%", variant="secondary"),
                         
-                        rx.cond(State.maintenance_success_message != "", ui.text(State.maintenance_success_message, color=Color.SUCCESS, size="small")),
+                        rx.cond(State.maintenance_success_message != "", rx.callout(State.maintenance_success_message, icon="circle_check", color_scheme="green", width="100%")),
+                        rx.cond(State.maintenance_error_message != "", rx.callout(State.maintenance_error_message, icon="triangle_alert", color_scheme="red", width="100%")),
                     ),
                     width="100%"
+                ),
+
+                # Histórico de Manutenções
+                ui.card(
+                    rx.vstack(
+                        rx.hstack(
+                            ui.heading("Histórico de Manutenções", level=3),
+                            rx.spacer(),
+                            rx.badge(State.maintenance_records.length().to_string() + " registros", color_scheme="blue", variant="soft"),
+                            width="100%", align_items="center", margin_bottom=Spacing.MD
+                        ),
+                        rx.cond(
+                            State.maintenance_records.length() > 0,
+                            rx.vstack(
+                                rx.foreach(
+                                    State.maintenance_records,
+                                    lambda m: rx.hstack(
+                                        rx.box(
+                                            rx.icon(tag="wrench", size=20, color=Color.TEXT_SECONDARY),
+                                            bg=Color.PRIMARY_LIGHT, p="2", border_radius=Design.RADIUS_SM
+                                        ),
+                                        rx.vstack(
+                                            ui.text(m.equipment, font_weight="500"),
+                                            rx.hstack(
+                                                rx.badge(m.type, color_scheme="blue", size="1"),
+                                                ui.text(m.date, size="small", color=Color.TEXT_SECONDARY),
+                                                spacing="1",
+                                            ),
+                                            spacing="0"
+                                        ),
+                                        rx.spacer(),
+                                        rx.cond(
+                                            m.next_date != "",
+                                            rx.badge("Próx: " + m.next_date, color_scheme="amber", variant="outline", size="1"),
+                                        ),
+                                        rx.button(
+                                            rx.icon(tag="trash_2", size=14),
+                                            on_click=lambda: State.delete_maintenance_record(m.id),
+                                            size="1", variant="ghost", color_scheme="red",
+                                            aria_label="Excluir manutenção"
+                                        ),
+                                        width="100%", align_items="center", style={"gap": Spacing.MD},
+                                        padding=Spacing.SM, border_radius=Design.RADIUS_LG,
+                                        border=f"1px solid {Color.BORDER}",
+                                        _hover={"bg": Color.BACKGROUND}, transition="all 0.2s ease"
+                                    )
+                                ),
+                                spacing="2"
+                            ),
+                            rx.center(
+                                rx.vstack(
+                                    rx.icon(tag="wrench", size=32, color=Color.TEXT_SECONDARY),
+                                    ui.text("Nenhuma manutenção registrada.", size="small", color=Color.TEXT_SECONDARY),
+                                    spacing="2", align_items="center"
+                                ),
+                                padding_y=Spacing.XL, width="100%"
+                            )
+                        ),
+                    ),
+                    width="100%", max_height="400px", overflow_y="auto"
                 ),
                 spacing="6", width="100%"
             ),
@@ -717,7 +811,12 @@ def relatorios_tab() -> rx.Component:
                             columns={"initial": "1", "sm": "2"}, style={"gap": Spacing.MD}, width="100%"
                         ),
                         rx.box(
-                             ui.button("Baixar PDF", icon="download", on_click=State.generate_qc_report_pdf, is_loading=State.is_generating_qc_report, variant="primary", width="100%", margin_top=Spacing.LG),
+                             rx.grid(
+                                 ui.button("Baixar PDF", icon="download", on_click=State.generate_qc_report_pdf, is_loading=State.is_generating_qc_report, variant="primary", width="100%"),
+                                 ui.button("Exportar CSV", icon="file-spreadsheet", on_click=State.export_qc_csv, variant="secondary", width="100%"),
+                                 columns="2", spacing="3", width="100%",
+                             ),
+                             margin_top=Spacing.LG,
                         ),
                         rx.cond(
                             State.qc_error_message != "",
@@ -836,8 +935,8 @@ def relatorios_tab() -> rx.Component:
                                             rx.table.cell(rx.text(d.value.to_string(), font_weight="600")),
                                             rx.table.cell(d.target.to_string()),
                                             rx.table.cell(d.sd.to_string()),
-                                            rx.table.cell(rx.text(format_cv(d.cv) + "%", font_weight="700", color=rx.cond(d.cv <= 5.0, Color.SUCCESS, rx.cond(d.cv <= 10.0, Color.WARNING, Color.ERROR)))),
-                                            rx.table.cell(ui.status_badge(rx.cond(d.cv <= 5.0, "OK", "ALERTA"), status=rx.cond(d.cv <= 5.0, "success", "error"))),
+                                            rx.table.cell(rx.text(format_cv(d.cv) + "%", font_weight="700", color=rx.cond(d.cv <= State.current_cv_max_threshold, Color.SUCCESS, rx.cond(d.cv <= State.current_cv_max_threshold * 1.5, Color.WARNING, Color.ERROR)))),
+                                            rx.table.cell(ui.status_badge(rx.cond(d.cv <= State.current_cv_max_threshold, "OK", "ALERTA"), status=rx.cond(d.cv <= State.current_cv_max_threshold, "success", "error"))),
                                         )
                                     )
                                 ), width="100%"
@@ -1129,6 +1228,50 @@ def delete_qc_record_modal() -> rx.Component:
     )
 
 
+def clear_all_qc_modal() -> rx.Component:
+    """Modal de confirmação para limpar todo o histórico de CQ"""
+    return rx.dialog.root(
+        rx.dialog.content(
+            rx.dialog.title(
+                rx.hstack(
+                    rx.icon(tag="triangle-alert", size=24, color=Color.ERROR),
+                    rx.text("Limpar Todo o Histórico", font_weight="700", font_size=Typography.SIZE_XL),
+                    spacing="2", align_items="center"
+                )
+            ),
+            rx.dialog.description(
+                rx.text("Esta ação não pode ser desfeita!", color=Color.ERROR, font_size=Typography.H5["font_size"])
+            ),
+
+            rx.vstack(
+                rx.box(
+                    rx.vstack(
+                        rx.text("Todos os registros de controle de qualidade serão excluídos permanentemente.", font_size=Typography.SIZE_MD_SM),
+                        rx.text("Esta operação removerá todos os dados do banco e não poderá ser revertida.", font_size=Typography.SIZE_SM, color=Color.TEXT_SECONDARY),
+                        spacing="2", align_items="center", width="100%"
+                    ),
+                    bg=Color.ERROR_BG, padding=Spacing.MD, border_radius=Design.RADIUS_LG, width="100%", margin_y=Spacing.MD
+                ),
+
+                rx.hstack(
+                    ui.button("Cancelar", icon="x", variant="secondary", on_click=State.close_clear_all_modal),
+                    ui.button(
+                        "Excluir Tudo", icon="trash-2",
+                        variant="danger",
+                        on_click=State.confirm_clear_all_qc_records
+                    ),
+                    spacing="3", width="100%", justify_content="flex-end", margin_top=Spacing.MD
+                ),
+
+                spacing="3", width="100%", padding_top=Spacing.MD
+            ),
+
+            style={"max_width": Design.MODAL_WIDTH_SM}
+        ),
+        open=State.show_clear_all_modal
+    )
+
+
 def delete_reference_modal() -> rx.Component:
     """Modal de confirmação para exclusão permanente de referência"""
     return rx.dialog.root(
@@ -1206,7 +1349,8 @@ def reference_card(ref) -> rx.Component:
                     rx.button(
                         rx.icon(tag="trash_2", size=14),
                         on_click=lambda: State.open_delete_reference_modal(ref.id, ref.name),
-                        variant="ghost", color_scheme="red", size="1"
+                        variant="ghost", color_scheme="red", size="1",
+                        aria_label="Excluir referência"
                     ),
                     content="Excluir permanentemente"
                 ),
@@ -1388,6 +1532,18 @@ def referencias_tab() -> rx.Component:
 def proin_page() -> rx.Component:
     """Página principal do ProIn QC (Purificada)"""
     return rx.box(
+        # Loading overlay
+        rx.cond(
+            State.is_loading_data,
+            rx.center(
+                rx.vstack(
+                    rx.spinner(size="3", color=Color.PRIMARY),
+                    ui.text("Carregando dados...", size="small", color=Color.TEXT_SECONDARY),
+                    spacing="3", align_items="center"
+                ),
+                width="100%", padding_y=Spacing.XXL
+            ),
+        ),
         rx.vstack(
             rx.box(
                 ui.animated_heading("ProIn QC - Gestão de Qualidade", level=1),
@@ -1426,5 +1582,6 @@ def proin_page() -> rx.Component:
         # Modais de Confirmação de Exclusão
         delete_qc_record_modal(),
         delete_reference_modal(),
+        clear_all_qc_modal(),
         width="100%",
     )

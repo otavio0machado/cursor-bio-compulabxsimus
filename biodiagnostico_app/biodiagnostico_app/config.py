@@ -12,15 +12,13 @@ class Config:
     # Supabase
     SUPABASE_URL = os.getenv("SUPABASE_URL", "")
     SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
-    SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")
-
-    # Auth (login unico)
-    AUTH_EMAIL = os.getenv("AUTH_EMAIL", "")
-    AUTH_PASSWORD = os.getenv("AUTH_PASSWORD", "")
-
     @classmethod
     def validate(cls):
-        """Valida se todas as configurações estão presentes"""
+        """Valida se todas as configurações obrigatórias estão presentes"""
         missing = []
+        if not cls.SUPABASE_URL:
+            missing.append("SUPABASE_URL")
+        if not cls.SUPABASE_KEY:
+            missing.append("SUPABASE_KEY")
         if missing:
             raise ValueError(f"Variáveis de ambiente faltando: {', '.join(missing)}")

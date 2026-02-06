@@ -1,8 +1,11 @@
 """
 Servico de Registros Pos-Calibracao
 """
+import logging
 from typing import List, Optional, Dict, Any
 from .supabase_client import SupabaseClient
+
+logger = logging.getLogger(__name__)
 
 
 def get_supabase():
@@ -59,5 +62,5 @@ class PostCalibrationService:
             verify = get_supabase().table("post_calibration_records").select("id").eq("id", record_id).execute()
             return not verify.data
         except Exception as e:
-            print(f"Erro ao deletar post_calibration record {record_id}: {e}")
+            logger.error(f"Erro ao deletar post_calibration record {record_id}: {e}")
             return False

@@ -1,8 +1,11 @@
 """
 Servico de Registros de Manutencao
 """
+import logging
 from typing import List, Dict, Any
 from .supabase_client import SupabaseClient
+
+logger = logging.getLogger(__name__)
 
 
 def get_supabase():
@@ -45,7 +48,7 @@ class MaintenanceService:
             verify = get_supabase().table("maintenance_records").select("id").eq("id", record_id).execute()
             return not verify.data
         except Exception as e:
-            print(f"Erro ao deletar maintenance record {record_id}: {e}")
+            logger.error(f"Erro ao deletar maintenance record {record_id}: {e}")
             return False
 
     @staticmethod
@@ -57,5 +60,5 @@ class MaintenanceService:
             response = get_supabase().table("maintenance_records").update(update_data).eq("id", record_id).execute()
             return bool(response.data)
         except Exception as e:
-            print(f"Erro ao atualizar maintenance record {record_id}: {e}")
+            logger.error(f"Erro ao atualizar maintenance record {record_id}: {e}")
             return False

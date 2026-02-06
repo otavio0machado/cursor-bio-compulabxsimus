@@ -1,12 +1,12 @@
 """
 Serviço de Controle de Qualidade (QC)
 """
+import logging
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
-# Importação circular evitada: importamos apenas para validação de tipo se necessário, 
-# mas os dados virão como dicts ou objetos do State
-# from ..state import QCRecord 
 from .supabase_client import supabase
+
+logger = logging.getLogger(__name__)
 
 class QCService:
     """Operações de banco de dados para QC"""
@@ -172,7 +172,7 @@ class QCService:
             response = supabase.table("qc_records").update(update_data).eq("id", record_id).execute()
             return bool(response.data)
         except Exception as e:
-            print(f"Erro ao atualizar QC record {record_id}: {e}")
+            logger.error(f"Erro ao atualizar QC record {record_id}: {e}")
             return False
 
     @staticmethod
@@ -190,12 +190,12 @@ class QCService:
     async def delete_qc_record(record_id: str) -> bool:
         """Remove registro de CQ"""
         try:
-            print(f"DEBUG: Tentando deletar QC record: {record_id}")
+            logger.info(f"Tentando deletar QC record: {record_id}")
 
             # Primeiro verifica se o registro existe
             check = supabase.table("qc_records").select("id").eq("id", record_id).execute()
             if not check.data or len(check.data) == 0:
-                print(f"DEBUG: Registro {record_id} não encontrado no banco.")
+                logger.warning(f"Registro {record_id} não encontrado no banco.")
                 return False
 
             # Deleta o registro
@@ -208,12 +208,12 @@ class QCService:
             # Verifica novamente se o registro ainda existe
             verify = supabase.table("qc_records").select("id").eq("id", record_id).execute()
             if not verify.data or len(verify.data) == 0:
-                print(f"DEBUG: Registro {record_id} deletado com sucesso (verificado).")
+                logger.info(f"Registro {record_id} deletado com sucesso.")
                 return True
 
-            print(f"DEBUG: Delete falhou - registro ainda existe.")
+            logger.warning(f"Delete falhou - registro {record_id} ainda existe.")
             return False
 
         except Exception as e:
-            print(f"Erro ao deletar registro QC {record_id}: {e}")
+            logger.error(f"Erro ao deletar registro QC {record_id}: {e}")
             return False

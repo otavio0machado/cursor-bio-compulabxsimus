@@ -1,8 +1,11 @@
 """
 Servico de Lotes de Reagentes
 """
+import logging
 from typing import List, Dict, Any
 from .supabase_client import SupabaseClient
+
+logger = logging.getLogger(__name__)
 
 
 def get_supabase():
@@ -47,7 +50,7 @@ class ReagentService:
             verify = get_supabase().table("reagent_lots").select("id").eq("id", lot_id).execute()
             return not verify.data
         except Exception as e:
-            print(f"Erro ao deletar reagent lot {lot_id}: {e}")
+            logger.error(f"Erro ao deletar reagent lot {lot_id}: {e}")
             return False
 
     @staticmethod
@@ -59,5 +62,5 @@ class ReagentService:
             response = get_supabase().table("reagent_lots").update(update_data).eq("id", lot_id).execute()
             return bool(response.data)
         except Exception as e:
-            print(f"Erro ao atualizar reagent lot {lot_id}: {e}")
+            logger.error(f"Erro ao atualizar reagent lot {lot_id}: {e}")
             return False

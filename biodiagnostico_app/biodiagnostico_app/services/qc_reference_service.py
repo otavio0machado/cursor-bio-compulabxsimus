@@ -2,9 +2,12 @@
 Servico de Valores Referenciais do CQ
 Gerencia cadastro de valores-alvo e tolerancias de CV% por exame
 """
+import logging
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from .supabase_client import SupabaseClient
+
+logger = logging.getLogger(__name__)
 
 
 def get_supabase():
@@ -203,19 +206,19 @@ class QCReferenceService:
 
             return len(response.data) > 0 if response.data else False
         except Exception as e:
-            print(f"Erro ao desativar referencia {id}: {e}")
+            logger.error(f"Erro ao desativar referencia {id}: {e}")
             return False
 
     @staticmethod
     async def delete_reference(id: str) -> bool:
         """Remove permanentemente um registro de referencia"""
         try:
-            print(f"DEBUG: Tentando deletar referência: {id}")
+            logger.info(f"Tentando deletar referência: {id}")
 
             # Primeiro verifica se o registro existe
             check = get_supabase().table("qc_reference_values").select("id").eq("id", id).execute()
             if not check.data or len(check.data) == 0:
-                print(f"DEBUG: Referência {id} não encontrada no banco.")
+                logger.warning(f"Referência {id} não encontrada no banco.")
                 return False
 
             # Deleta o registro
@@ -227,13 +230,13 @@ class QCReferenceService:
             # Verifica se foi realmente deletado
             verify = get_supabase().table("qc_reference_values").select("id").eq("id", id).execute()
             if not verify.data or len(verify.data) == 0:
-                print(f"DEBUG: Referência {id} deletada com sucesso (verificado).")
+                logger.info(f"Referência {id} deletada com sucesso.")
                 return True
 
-            print(f"DEBUG: Delete falhou - referência ainda existe.")
+            logger.warning(f"Delete falhou - referência {id} ainda existe.")
             return False
         except Exception as e:
-            print(f"Erro ao deletar referencia {id}: {e}")
+            logger.error(f"Erro ao deletar referencia {id}: {e}")
             return False
 
     @staticmethod

@@ -1,14 +1,14 @@
 import reflex as rx
 import asyncio
+import logging
 from typing import List, Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 import calendar
 import pandas as pd
 import io
 import base64
-from datetime import timedelta
-import reflex as rx
-from typing import List, Dict, Any, Optional
+
+logger = logging.getLogger(__name__)
 from ..models import QCRecord, ReagentLot, MaintenanceRecord, LeveyJenningsPoint, QCReferenceValue, PostCalibrationRecord
 from ..utils.qc_pdf_report import generate_qc_pdf
 from ..services.qc_service import QCService
@@ -132,6 +132,19 @@ class QCState(DashboardState):
     delete_reference_id: str = ""
     delete_reference_name: str = ""
 
+    # Modal de confirmação para limpar todos os registros
+    show_clear_all_modal: bool = False
+
+    # Loading state for initial data load
+    is_loading_data: bool = False
+
+    # Pagination
+    qc_page: int = 0
+    qc_page_size: int = 50
+
+    # Data cache timestamp
+    _last_loaded: str = ""
+
     def set_qc_report_type(self, value: str):
         """Define o tipo de relatório (Mês Atual, Específico, etc)"""
         self.qc_report_type = value
@@ -217,8 +230,31 @@ class QCState(DashboardState):
             if target == 0: return 0.0
             diff = abs(val - target)
             return (diff / target) * 100
-        except:
+        except (ValueError, TypeError):
             return 0.0
+
+    @rx.var
+    def paginated_qc_records(self) -> List[QCRecord]:
+        """Retorna registros paginados"""
+        start = self.qc_page * self.qc_page_size
+        end = start + self.qc_page_size
+        return self.qc_records[start:end]
+
+    @rx.var
+    def total_qc_pages(self) -> int:
+        """Total de páginas"""
+        total = len(self.qc_records)
+        if total == 0:
+            return 1
+        return (total + self.qc_page_size - 1) // self.qc_page_size
+
+    def next_qc_page(self):
+        if self.qc_page < self.total_qc_pages - 1:
+            self.qc_page += 1
+
+    def prev_qc_page(self):
+        if self.qc_page > 0:
+            self.qc_page -= 1
 
     @rx.var
     def qc_cv_status(self) -> str:
@@ -344,6 +380,17 @@ class QCState(DashboardState):
 
     async def load_data_from_db(self, force: bool = False):
         """Carrega registros de QC, reagentes, manutenções e pós-calibrações do banco"""
+        # Skip reload if data was recently loaded (within 30s) unless forced
+        now_str = datetime.now().isoformat()
+        if not force and self._last_loaded and self.qc_records:
+            try:
+                last = datetime.fromisoformat(self._last_loaded)
+                if (datetime.now() - last).total_seconds() < 30:
+                    return
+            except (ValueError, TypeError):
+                pass
+
+        self.is_loading_data = True
         try:
             # Carregar registros de QC
             db_records = await QCService.get_qc_records(limit=10000)
@@ -355,7 +402,7 @@ class QCState(DashboardState):
                     try:
                         refs_by_id = await QCReferenceService.get_references_by_ids(ref_ids)
                     except Exception as e:
-                        print(f"Erro ao buscar referências por ID: {e}")
+                        logger.error(f"Erro ao buscar referências por ID: {e}")
                 records: List[QCRecord] = []
                 for r in db_records:
                     reference_id = r.get("reference_id", "") or ""
@@ -390,7 +437,7 @@ class QCState(DashboardState):
 
                 self.qc_records = records
                 self.qc_records = sorted(self.qc_records, key=lambda x: x.date, reverse=True)
-                print(f"Carregados {len(self.qc_records)} registros de QC do banco")
+                logger.info(f"Carregados {len(self.qc_records)} registros de QC do banco")
 
             # Carregar lotes de reagentes
             try:
@@ -410,9 +457,9 @@ class QCState(DashboardState):
                     )
                     for r in db_lots
                 ]
-                print(f"Carregados {len(self.reagent_lots)} lotes de reagentes")
+                logger.info(f"Carregados {len(self.reagent_lots)} lotes de reagentes")
             except Exception as e:
-                print(f"Erro ao carregar reagentes: {e}")
+                logger.error(f"Erro ao carregar reagentes: {e}")
 
             # Carregar registros de manutenção
             try:
@@ -430,9 +477,9 @@ class QCState(DashboardState):
                     )
                     for r in db_maint
                 ]
-                print(f"Carregados {len(self.maintenance_records)} registros de manutenção")
+                logger.info(f"Carregados {len(self.maintenance_records)} registros de manutenção")
             except Exception as e:
-                print(f"Erro ao carregar manutenções: {e}")
+                logger.error(f"Erro ao carregar manutenções: {e}")
 
             # Carregar registros de pós-calibração
             try:
@@ -454,12 +501,16 @@ class QCState(DashboardState):
                     )
                     for r in db_postcal
                 ]
-                print(f"Carregados {len(self.post_calibration_records)} registros de pós-calibração")
+                logger.info(f"Carregados {len(self.post_calibration_records)} registros de pós-calibração")
             except Exception as e:
-                print(f"Erro ao carregar pós-calibrações: {e}")
+                logger.error(f"Erro ao carregar pós-calibrações: {e}")
+
+            self._last_loaded = datetime.now().isoformat()
 
         except Exception as e:
-            print(f"Erro ao carregar dados do banco: {e}")
+            logger.error(f"Erro ao carregar dados do banco: {e}")
+        finally:
+            self.is_loading_data = False
 
     async def handle_proin_upload(self, files: List[rx.UploadFile]):
         """Handle upload of ProIn Excel file"""
@@ -482,8 +533,46 @@ class QCState(DashboardState):
     async def process_proin_import(self):
         """Process the imported data and save to DB"""
         try:
-            count = len(self.proin_import_data)
-            self.qc_success_message = f"{count} registros importados com sucesso!"
+            if not self.proin_import_data:
+                self.qc_error_message = "Nenhum dado para importar."
+                return
+
+            # Map imported columns to DB fields
+            records_to_save = []
+            for row in self.proin_import_data:
+                record_data = {
+                    "date": str(row.get("date", row.get("data", row.get("DATA", datetime.now().isoformat())))),
+                    "exam_name": str(row.get("exam_name", row.get("exame", row.get("EXAME", "")))),
+                    "level": str(row.get("level", row.get("nivel", row.get("NIVEL", "Normal")))),
+                    "lot_number": str(row.get("lot_number", row.get("lote", row.get("LOTE", "")))),
+                    "value": float(row.get("value", row.get("valor", row.get("VALOR", 0)))),
+                    "target_value": float(row.get("target_value", row.get("alvo", row.get("ALVO", 0)))),
+                    "target_sd": float(row.get("target_sd", row.get("dp", row.get("DP", 0)))),
+                    "equipment": str(row.get("equipment", row.get("equipamento", row.get("EQUIPAMENTO", "")))),
+                    "analyst": str(row.get("analyst", row.get("analista", row.get("ANALISTA", "")))),
+                }
+                # Calculate CV if not provided
+                val = record_data["value"]
+                target = record_data["target_value"]
+                if target > 0:
+                    record_data["cv"] = round((abs(val - target) / target) * 100, 2)
+                else:
+                    record_data["cv"] = 0.0
+                record_data["status"] = "OK"
+                record_data["needs_calibration"] = False
+                records_to_save.append(record_data)
+
+            # Batch insert to database
+            result = await QCService.create_qc_records_batch(records_to_save)
+            count = len(records_to_save)
+
+            if result:
+                self.qc_success_message = f"{count} registros importados com sucesso!"
+                # Reload data from DB to sync state
+                await self.load_data_from_db(force=True)
+            else:
+                self.qc_error_message = "Erro ao salvar registros importados no banco."
+
             self.clear_proin_import()
         except Exception as e:
             self.qc_error_message = f"Erro na importação: {str(e)}"
@@ -498,7 +587,19 @@ class QCState(DashboardState):
     async def save_reagent_lot(self):
         """Salva um novo lote de reagente no Supabase"""
         self.is_saving_reagent = True
+        self.reagent_error_message = ""
+        self.reagent_success_message = ""
         try:
+             # Validação de campos obrigatórios
+             if not self.reagent_name.strip():
+                 self.reagent_error_message = "Nome do reagente é obrigatório."
+                 return
+             if not self.reagent_lot_number.strip():
+                 self.reagent_error_message = "Número do lote é obrigatório."
+                 return
+             if not self.reagent_expiry_date:
+                 self.reagent_error_message = "Data de validade é obrigatória."
+                 return
              db_result = await ReagentService.create_lot({
                  "name": self.reagent_name,
                  "lot_number": self.reagent_lot_number,
@@ -535,13 +636,25 @@ class QCState(DashboardState):
         try:
             await ReagentService.delete_lot(id)
         except Exception as e:
-            print(f"Erro ao deletar lote: {e}")
+            logger.error(f"Erro ao deletar lote: {e}")
         self.reagent_lots = [lot for lot in self.reagent_lots if lot.id != id]
 
     async def save_maintenance_record(self):
         """Registra manutenção no Supabase"""
         self.is_saving_maintenance = True
+        self.maintenance_error_message = ""
+        self.maintenance_success_message = ""
         try:
+            # Validação de campos obrigatórios
+            if not self.maintenance_equipment.strip():
+                self.maintenance_error_message = "Equipamento é obrigatório."
+                return
+            if not self.maintenance_type:
+                self.maintenance_error_message = "Tipo de manutenção é obrigatório."
+                return
+            if not self.maintenance_date:
+                self.maintenance_error_message = "Data é obrigatória."
+                return
             db_result = await MaintenanceService.create_record({
                 "equipment": self.maintenance_equipment,
                 "type": self.maintenance_type,
@@ -623,10 +736,23 @@ class QCState(DashboardState):
     def set_levey_jennings_period(self, val): self.levey_jennings_period = val
     
     async def update_levey_jennings_data(self):
-        """Atualiza dados do gráfico LJ"""
+        """Atualiza dados do gráfico LJ com filtro de período"""
         if not self.levey_jennings_exam: return
 
         filtered = [r for r in self.qc_records if r.exam_name == self.levey_jennings_exam]
+
+        # Aplicar filtro de nível
+        if self.levey_jennings_level and self.levey_jennings_level != "Todos":
+            filtered = [r for r in filtered if r.level == self.levey_jennings_level]
+
+        # Aplicar filtro de período (dias)
+        try:
+            period_days = int(self.levey_jennings_period or 30)
+            cutoff_date = (datetime.now() - timedelta(days=period_days)).isoformat()
+            filtered = [r for r in filtered if r.date >= cutoff_date]
+        except (ValueError, TypeError):
+            pass
+
         # Ordenar por data crescente (mais antigo primeiro) para o gráfico mostrar progressão temporal
         filtered = sorted(filtered, key=lambda x: x.date, reverse=False)
 
@@ -639,11 +765,6 @@ class QCState(DashboardState):
                 cv=r.cv
             ) for r in filtered
         ]
-        
-        # Calculate stats (legacy attributes for charts)
-        if filtered:
-            values = [r.value for r in filtered]
-            # self.lj_mean = ... (Legacy attributes handled in frontend via chart data)
 
     # QC CRUD Actions
     async def save_qc_record(self):
@@ -730,6 +851,7 @@ class QCState(DashboardState):
                      self.qc_success_message = ""
 
              # Persistir no banco de dados
+             db_saved = False
              try:
                  db_record = await QCService.create_qc_record({
                      "date": new_record.date,
@@ -765,13 +887,16 @@ class QCState(DashboardState):
                          needs_calibration=new_record.needs_calibration,
                          post_calibration_id=""
                      )
+                     db_saved = True
              except Exception as db_error:
-                 print(f"Erro ao salvar no banco: {db_error}")
-                 # Continua mesmo se falhar o banco (fallback para memória)
+                 logger.error(f"Erro ao salvar no banco: {db_error}")
+                 self.qc_error_message = "Erro ao salvar no banco de dados. Tente novamente."
 
-             self.qc_records.append(new_record)
-             # Reordenar por data decrescente (mais recente primeiro)
-             self.qc_records = sorted(self.qc_records, key=lambda x: x.date, reverse=True)
+             # Only append to local state if DB save succeeded
+             if db_saved:
+                 self.qc_records.append(new_record)
+                 # Reordenar por data decrescente (mais recente primeiro)
+                 self.qc_records = sorted(self.qc_records, key=lambda x: x.date, reverse=True)
 
              # Se houve erro, não limpa o form imediatamente para permitir ajuste se foi digitação errada?
              # Por enquanto limpa para seguir fluxo normal, mas mantém msg
@@ -787,18 +912,33 @@ class QCState(DashboardState):
         try:
             await QCService.delete_qc_record(id)
         except Exception as e:
-            print(f"Erro ao deletar do banco: {e}")
+            logger.error(f"Erro ao deletar do banco: {e}")
         # Remover da lista local
         self.qc_records = [r for r in self.qc_records if r.id != id]
 
-    async def clear_all_qc_records(self):
-        # Deletar todos do banco (opcional - por segurança, deletamos um a um)
+    def open_clear_all_modal(self):
+        """Abre modal de confirmação para limpar todos os registros"""
+        self.show_clear_all_modal = True
+
+    def close_clear_all_modal(self):
+        """Fecha modal de confirmação"""
+        self.show_clear_all_modal = False
+
+    async def confirm_clear_all_qc_records(self):
+        """Confirma e executa limpeza de todos os registros"""
+        self.show_clear_all_modal = False
+        errors = 0
         for record in self.qc_records:
             try:
                 await QCService.delete_qc_record(record.id)
             except Exception as e:
-                print(f"Erro ao deletar registro {record.id}: {e}")
+                logger.error(f"Erro ao deletar registro {record.id}: {e}")
+                errors += 1
         self.qc_records = []
+        if errors > 0:
+            self.qc_warning_message = f"Histórico limpo, mas {errors} registros falharam ao ser removidos do banco."
+        else:
+            self.qc_success_message = "Todos os registros foram removidos."
 
     def clear_qc_form(self):
         """Limpa o formulário de registro de CQ"""
@@ -832,7 +972,7 @@ class QCState(DashboardState):
             else:
                 self.current_exam_reference = None
         except Exception as e:
-            print(f"Erro ao buscar referência: {e}")
+            logger.error(f"Erro ao buscar referência: {e}")
             self.current_exam_reference = None
 
     async def load_qc_references(self):
@@ -858,9 +998,9 @@ class QCState(DashboardState):
                 )
                 for r in refs
             ]
-            print(f"Referências carregadas: {len(self.qc_reference_values)}")
+            logger.info(f"Referências carregadas: {len(self.qc_reference_values)}")
         except Exception as e:
-            print(f"Erro ao carregar referências: {e}")
+            logger.error(f"Erro ao carregar referências: {e}")
             self.qc_reference_values = []
 
     async def save_qc_reference(self):
@@ -945,7 +1085,7 @@ class QCState(DashboardState):
             if success:
                 await self.load_qc_references()
         except Exception as e:
-            print(f"Erro ao desativar referência: {e}")
+            logger.error(f"Erro ao desativar referência: {e}")
 
     # === Métodos de Exclusão Permanente com Confirmação ===
 
@@ -1092,7 +1232,7 @@ class QCState(DashboardState):
                 return 0.0
             diff = abs(val - target)
             return round((diff / target) * 100, 2)
-        except:
+        except (ValueError, TypeError):
             return 0.0
 
     async def save_post_calibration(self):
@@ -1240,7 +1380,7 @@ class QCState(DashboardState):
                     start_date = f"{year}-{month:02d}-01"
                     end_date = f"{year}-{month:02d}-{last_day}"
                     period_desc = f"{month:02d}/{year}"
-                except:
+                except (ValueError, TypeError):
                     self.qc_error_message = "Mês/Ano inválidos"
                     return None, None
 
@@ -1261,7 +1401,7 @@ class QCState(DashboardState):
                     start_date = f"{year}-01-01"
                     end_date = f"{year}-12-31"
                     period_desc = f"Ano {year}"
-                 except:
+                 except (ValueError, TypeError):
                     self.qc_error_message = "Ano inválido"
                     return None, None
 
@@ -1297,7 +1437,7 @@ class QCState(DashboardState):
             return pdf_bytes, filename
 
         except Exception as e:
-            print(f"Erro interno PDF Generation: {e}")
+            logger.error(f"Erro interno PDF Generation: {e}")
             raise e
 
     async def generate_qc_report_pdf(self):
@@ -1309,7 +1449,7 @@ class QCState(DashboardState):
             pdf_bytes, filename = await self._generate_pdf_bytes()
 
             if pdf_bytes:
-                print(f"DEBUG PDF: Gerado {len(pdf_bytes)} bytes, filename={filename}")
+                logger.info(f"PDF gerado: {len(pdf_bytes)} bytes, filename={filename}")
                 b64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
                 self.qc_pdf_preview = b64_pdf
                 self.is_generating_qc_report = False
@@ -1317,13 +1457,36 @@ class QCState(DashboardState):
                 # Usar bytes diretamente ao invés de data URI
                 yield rx.download(data=pdf_bytes, filename=filename)
             else:
-                print("DEBUG PDF: pdf_bytes está vazio")
+                logger.warning("PDF generation retornou bytes vazios")
                 self.qc_error_message = "Erro: PDF não foi gerado"
                 self.is_generating_qc_report = False
 
         except Exception as e:
-            print(f"Erro ao gerar PDF QC: {e}")
-            import traceback
-            traceback.print_exc()
+            logger.error(f"Erro ao gerar PDF QC: {e}", exc_info=True)
             self.qc_error_message = f"Erro na geração do PDF: {str(e)}"
             self.is_generating_qc_report = False
+
+    async def export_qc_csv(self):
+        """Exporta registros de QC como CSV para download"""
+        if not self.qc_records:
+            self.qc_error_message = "Nenhum registro para exportar."
+            return
+
+        header = "Data,Exame,Nível,Lote,Valor,Alvo,DP,CV%,Status,Equipamento,Analista\n"
+        rows = []
+        for r in self.qc_records:
+            row = f"{r.date},{r.exam_name},{r.level},{r.lot_number},{r.value},{r.target_value},{r.target_sd},{r.cv:.2f},{r.status},{r.equipment},{r.analyst}"
+            rows.append(row)
+
+        csv_content = header + "\n".join(rows)
+        csv_bytes = csv_content.encode("utf-8-sig")
+        filename = f"QC_Export_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
+        yield rx.download(data=csv_bytes, filename=filename)
+
+    async def delete_maintenance_record(self, record_id: str):
+        """Deleta registro de manutenção do Supabase"""
+        try:
+            await MaintenanceService.delete_record(record_id)
+        except Exception as e:
+            logger.error(f"Erro ao deletar manutenção: {e}")
+        self.maintenance_records = [r for r in self.maintenance_records if r.id != record_id]

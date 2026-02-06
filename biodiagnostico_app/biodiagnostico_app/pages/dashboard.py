@@ -4,8 +4,13 @@ from ..styles import Color, Design, Typography, Spacing
 from ..components import ui
 
 
-def quick_access_card(title: str, description: str, icon: str, page: str, delay: str = "0s") -> rx.Component:
+def quick_access_card(title: str, description: str, icon: str, page: str, delay: str = "0s", tab: str = "") -> rx.Component:
     """Card de acesso rápido com animação de entrada"""
+    def on_card_click():
+        if tab:
+            return [State.set_page(page), State.set_proin_tab(tab)]
+        return State.set_page(page)
+
     return rx.box(
         ui.card(
             rx.vstack(
@@ -20,7 +25,7 @@ def quick_access_card(title: str, description: str, icon: str, page: str, delay:
                 align_items="start",
                 spacing="2"
             ),
-            on_click=lambda: State.set_page(page),
+            on_click=on_card_click,
             cursor="pointer",
             transition="all 0.2s ease",
             _hover={
@@ -359,21 +364,24 @@ def dashboard_page() -> rx.Component:
                         "Registre novos controles de qualidade com validação Westgard automática.",
                         "clipboard-plus",
                         "proin",
-                        "0.35s"
+                        "0.35s",
+                        tab="registro"
                     ),
                     quick_access_card(
                         "Reagentes e Lotes",
                         "Gerencie estoque de reagentes, datas de validade e consumo.",
                         "flask-round",
                         "proin",
-                        "0.45s"
+                        "0.45s",
+                        tab="reagentes"
                     ),
                     quick_access_card(
                         "Relatórios QC",
                         "Gere relatórios em PDF por período para auditoria e controle.",
                         "file-bar-chart",
                         "proin",
-                        "0.55s"
+                        "0.55s",
+                        tab="relatorios"
                     ),
                     columns={"initial": "1", "md": "3"},
                     spacing="6",

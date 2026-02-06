@@ -55,12 +55,20 @@ def index() -> rx.Component:
 
 def index_dashboard() -> rx.Component:
     """Rota Dashboard"""
-    return authenticated_layout(dashboard_page())
+    return rx.cond(
+        State.is_authenticated,
+        authenticated_layout(dashboard_page()),
+        login_page()
+    )
 
 
 def route_proin() -> rx.Component:
     """Rota Controle de Qualidade"""
-    return authenticated_layout(proin_page())
+    return rx.cond(
+        State.is_authenticated,
+        authenticated_layout(proin_page()),
+        login_page()
+    )
 
 
 # Configurar aplicação
@@ -84,6 +92,6 @@ app = rx.App(
 )
 
 # Rotas
-app.add_page(index, route="/", title="QC Lab - Login", on_load=State.load_data_from_db)
-app.add_page(index_dashboard, route="/dashboard", title="QC Lab - Dashboard", on_load=State.load_data_from_db)
-app.add_page(route_proin, route="/proin", title="QC Lab - Controle de Qualidade", on_load=State.load_data_from_db)
+app.add_page(index, route="/", title="QC Lab - Login", on_load=[State.restore_session, State.load_data_from_db])
+app.add_page(index_dashboard, route="/dashboard", title="QC Lab - Dashboard", on_load=[State.restore_session, State.load_data_from_db])
+app.add_page(route_proin, route="/proin", title="QC Lab - Controle de Qualidade", on_load=[State.restore_session, State.load_data_from_db])

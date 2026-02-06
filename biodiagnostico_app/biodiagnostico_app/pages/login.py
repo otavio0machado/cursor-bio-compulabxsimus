@@ -85,12 +85,52 @@ def login_page() -> rx.Component:
                             margin_top=Spacing.SM
                         ),
 
+                        rx.button(
+                            "Esqueci minha senha",
+                            on_click=State.toggle_forgot_password,
+                            variant="ghost", size="1",
+                            color=Color.TEXT_SECONDARY,
+                            _hover={"color": Color.PRIMARY},
+                            width="100%",
+                        ),
+
                         gap=Spacing.MD,
                         width="100%"
                     ),
                     width="100%",
                     max_width="400px",
                     padding=Spacing.XL,
+                ),
+
+                # Password Recovery Section
+                rx.cond(
+                    State.show_forgot_password,
+                    ui.card(
+                        rx.vstack(
+                            ui.heading("Recuperar Senha", level=4),
+                            ui.text("Informe seu e-mail para receber o link de recuperação.", size="small", color=Color.TEXT_SECONDARY),
+                            ui.form_field(
+                                "E-mail",
+                                ui.input(
+                                    placeholder="seu@biodiagnostico.com",
+                                    value=State.forgot_password_email,
+                                    on_change=State.set_forgot_password_email,
+                                    type="email"
+                                )
+                            ),
+                            rx.cond(
+                                State.forgot_password_message != "",
+                                rx.callout(State.forgot_password_message, icon="circle_check", color_scheme="green", width="100%")
+                            ),
+                            rx.cond(
+                                State.forgot_password_error != "",
+                                rx.callout(State.forgot_password_error, icon="triangle_alert", color_scheme="red", width="100%")
+                            ),
+                            ui.button("Enviar Link de Recuperação", icon="mail", on_click=State.send_password_reset, width="100%", variant="secondary"),
+                            gap=Spacing.MD, width="100%"
+                        ),
+                        width="100%", max_width="400px", padding=Spacing.LG, margin_top=Spacing.MD
+                    )
                 ),
 
                 rx.hstack(
