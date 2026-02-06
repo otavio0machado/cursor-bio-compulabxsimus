@@ -269,13 +269,14 @@ def dashboard_tab() -> rx.Component:
                         ),
                         width="100%"
                     ),
-                    bg=Color.SURFACE, border=f"1px solid {Color.BORDER}", border_radius=Design.RADIUS_XL, box_shadow=Design.SHADOW_SM, overflow="hidden"
+                    bg=Color.SURFACE, border=f"1px solid {Color.BORDER}", border_radius=Design.RADIUS_XL, box_shadow=Design.SHADOW_SM, overflow="hidden",
+                    width="100%", overflow_x="auto"
                 ),
                 width="100%", margin_top=Spacing.LG, max_width="6xl", margin_x="auto"
             ),
             width="100%"
         ),
-        
+
         spacing="0", width="100%",
     )
 
@@ -504,7 +505,8 @@ def registro_qc_tab() -> rx.Component:
                             ),
                             width="100%"
                         ),
-                        bg=Color.SURFACE, border=f"1px solid {Color.BORDER}", border_radius=Design.RADIUS_XL, box_shadow=Design.SHADOW_SM, overflow="hidden"
+                        bg=Color.SURFACE, border=f"1px solid {Color.BORDER}", border_radius=Design.RADIUS_XL, box_shadow=Design.SHADOW_SM, overflow="hidden",
+                        width="100%", overflow_x="auto"
                     ),
                     rx.center(
                         rx.vstack(
