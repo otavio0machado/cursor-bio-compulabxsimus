@@ -11,15 +11,15 @@ def login_page() -> rx.Component:
         rx.box(
             rx.vstack(
                 rx.box(
-                    rx.icon(tag="flask-conical", size=40, color="white"),
+                    rx.icon(tag="flask-conical", size=40, color=Color.WHITE),
                     bg="rgba(255, 255, 255, 0.15)",
                     p="3", border_radius=Design.RADIUS_LG,
                     backdrop_filter="blur(8px)",
                     margin_bottom=Spacing.LG
                 ),
-                rx.heading("BIODIAGNÓSTICO", size="3", color="white", letter_spacing="0.1em", opacity="0.9"),
-                rx.heading("Sistema de Controle de Qualidade Laboratorial", size="7", color="white", font_weight="700", line_height="1.2"),
-                rx.text("Precisão e confiabilidade em cada resultado.", size="3", color="white", opacity="0.8"),
+                rx.heading("BIODIAGNÓSTICO", size="3", color=Color.WHITE, letter_spacing="0.1em", opacity="0.9"),
+                rx.heading("Sistema de Controle de Qualidade Laboratorial", size="7", color=Color.WHITE, font_weight="700", line_height="1.2"),
+                rx.text("Precisão e confiabilidade em cada resultado.", size="3", color=Color.WHITE, opacity="0.8"),
 
                 align_items="start",
                 justify_content="center",
@@ -28,7 +28,7 @@ def login_page() -> rx.Component:
                 max_width="700px"
             ),
             width=["0%", "0%", "50%"],
-            background="linear-gradient(135deg, rgba(22, 101, 52, 0.92) 0%, rgba(5, 46, 22, 0.96) 100%), url('/login_bg.png')",
+            background=f"{Color.GRADIENT_LOGIN_HERO}, url('/login_bg.png')",
             background_size="cover",
             background_position="center",
             display=["none", "none", "flex"],
@@ -97,7 +97,7 @@ def login_page() -> rx.Component:
                     rx.icon(tag="shield-check", size=14, color=Color.TEXT_SECONDARY),
                     ui.text("Ambiente Seguro e Monitorado", size="caption"),
                     align_items="center",
-                    gap="6px",
+                    gap=Spacing.XS,
                     margin_top=Spacing.XXL
                 ),
 

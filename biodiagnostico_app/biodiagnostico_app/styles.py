@@ -26,6 +26,11 @@ class Color:
     TEXT_PRIMARY = "#1E293B"
     TEXT_SECONDARY = "#64748B"
     BORDER = "#E2E8F0"
+    BORDER_HOVER = "#CBD5E1"
+    WHITE = "#FFFFFF"
+
+    # --- Focus ---
+    FOCUS_RING = "rgba(22, 101, 52, 0.12)"
 
     # --- Status (Semantic) ---
     ERROR = "#EF4444"
@@ -39,6 +44,7 @@ class Color:
     GRADIENT_PRIMARY = "linear-gradient(135deg, #166534 0%, #14532D 100%)"
     GRADIENT_SURFACE = "linear-gradient(160deg, rgba(255,255,255,0.98) 0%, rgba(241,245,249,0.95) 100%)"
     GRADIENT_GLASS = "linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%)"
+    GRADIENT_LOGIN_HERO = "linear-gradient(135deg, rgba(22, 101, 52, 0.92) 0%, rgba(5, 46, 22, 0.96) 100%)"
 
 class Design:
     RADIUS_SM = "8px"
@@ -46,11 +52,23 @@ class Design:
     RADIUS_LG = "16px"
     RADIUS_XL = "20px"
     RADIUS_XXL = "24px"
+    RADIUS_FULL = "9999px"
 
     SHADOW_SM = "0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04)"
     SHADOW_DEFAULT = "0 4px 12px rgba(15, 23, 42, 0.08)"
     SHADOW_MD = "0 8px 24px rgba(15, 23, 42, 0.1)"
     SHADOW_LG = "0 16px 40px rgba(15, 23, 42, 0.12)"
+
+    HEIGHT_MD = "44px"
+    HEIGHT_LG = "52px"
+
+    MODAL_WIDTH_SM = "450px"
+    MODAL_WIDTH_MD = "500px"
+
+    MAX_WIDTH_APP = "1400px"
+
+    Z_INDEX_NAVBAR = "1000"
+    Z_INDEX_TOAST = "9999"
 
 class Typography:
     H1 = {"font_size": "1.875rem", "font_weight": "700", "line_height": "1.2", "color": Color.DEEP, "font_family": "var(--font-display)"}
@@ -68,19 +86,27 @@ class Typography:
     LABEL = {"font_size": "0.8125rem", "font_weight": "500", "color": Color.TEXT_PRIMARY, "margin_bottom": "4px", "font_family": "var(--font-body)"}
     LABEL_LARGE = {"font_size": "0.9375rem", "font_weight": "500", "color": Color.TEXT_PRIMARY, "font_family": "var(--font-body)"}
 
+    DISPLAY = {"font_size": "2rem", "font_weight": "800", "line_height": "1.1", "color": Color.DEEP, "font_family": "var(--font-display)"}
+
+    # --- Size constants for direct use (replace hardcoded font_size values) ---
+    SIZE_2XS = "0.65rem"
+    SIZE_XS = "0.7rem"
+    SIZE_SM_XS = "0.75rem"
+    SIZE_SM = "0.8rem"
+    SIZE_MD_SM = "0.9rem"
+    SIZE_MD = "0.95rem"
+    SIZE_LG = "1.1rem"
+    SIZE_XL = "1.25rem"
+
 class Spacing:
+    XXS = "2px"
     XS = "4px"
     SM = "8px"
+    SM_MD = "12px"
     MD = "16px"
     LG = "24px"
     XL = "32px"
     XXL = "48px"
-
-class Animation:
-    FADE_IN_UP = {
-        "0%": {"opacity": "0", "transform": "translateY(20px)"},
-        "100%": {"opacity": "1", "transform": "translateY(0)"},
-    }
 
 STYLES = {
     "font_family": "var(--font-body)",
@@ -105,7 +131,7 @@ INPUT_STYLE = {
     "border": f"1px solid {Color.BORDER}",
     "border_radius": Design.RADIUS_MD,
     "padding": f"{Spacing.SM} {Spacing.MD}",
-    "min_height": "44px",
+    "min_height": Design.HEIGHT_MD,
     "bg": Color.SURFACE,
     "color": Color.TEXT_PRIMARY,
     "placeholder_color": Color.TEXT_SECONDARY,
@@ -113,17 +139,17 @@ INPUT_STYLE = {
     "transition": "all 0.15s ease",
     "_focus": {
         "border_color": Color.PRIMARY,
-        "box_shadow": "0 0 0 3px rgba(22, 101, 52, 0.12)",
+        "box_shadow": f"0 0 0 3px {Color.FOCUS_RING}",
         "outline": "none"
     },
-    "_hover": {"border_color": "#CBD5E1"}
+    "_hover": {"border_color": Color.BORDER_HOVER}
 }
 
 INPUT_XL_STYLE = {
     "border": f"1px solid {Color.BORDER}",
     "border_radius": Design.RADIUS_MD,
-    "padding": f"12px {Spacing.MD}",
-    "height": "52px",
+    "padding": f"{Spacing.SM_MD} {Spacing.MD}",
+    "min_height": Design.HEIGHT_LG,
     "width": "100%",
     "bg": Color.SURFACE,
     "color": Color.TEXT_PRIMARY,
@@ -132,18 +158,18 @@ INPUT_XL_STYLE = {
     "transition": "all 0.15s ease",
     "_focus": {
         "border_color": Color.PRIMARY,
-        "box_shadow": "0 0 0 3px rgba(22, 101, 52, 0.12)",
+        "box_shadow": f"0 0 0 3px {Color.FOCUS_RING}",
         "outline": "none"
     },
-    "_hover": {"border_color": "#CBD5E1"}
+    "_hover": {"border_color": Color.BORDER_HOVER}
 }
 
 BUTTON_PRIMARY_STYLE = {
     "bg": Color.PRIMARY,
-    "color": "white",
+    "color": Color.WHITE,
     "border": "1px solid transparent",
     "padding_x": Spacing.LG,
-    "min_height": "44px",
+    "min_height": Design.HEIGHT_MD,
     "border_radius": Design.RADIUS_MD,
     "font_weight": "600",
     "font_size": "0.875rem",
@@ -160,10 +186,10 @@ BUTTON_PRIMARY_STYLE = {
 
 BUTTON_XL_STYLE = {
     "bg": Color.PRIMARY,
-    "color": "white",
+    "color": Color.WHITE,
     "border": "1px solid transparent",
     "padding_x": Spacing.XL,
-    "height": "52px",
+    "min_height": Design.HEIGHT_LG,
     "width": "100%",
     "border_radius": Design.RADIUS_MD,
     "font_weight": "600",
@@ -198,7 +224,7 @@ BUTTON_SECONDARY_STYLE = {
     "border": f"1px solid {Color.BORDER}",
     "padding_y": Spacing.SM,
     "padding_x": Spacing.LG,
-    "min_height": "44px",
+    "min_height": Design.HEIGHT_MD,
     "border_radius": Design.RADIUS_MD,
     "font_weight": "600",
     "font_size": "0.875rem",
@@ -206,7 +232,7 @@ BUTTON_SECONDARY_STYLE = {
     "transition": "all 0.15s ease",
     "_hover": {
         "bg": Color.SURFACE_ALT,
-        "border_color": "#CBD5E1",
+        "border_color": Color.BORDER_HOVER,
     },
     "_active": {"transform": "scale(0.98)"},
     "_disabled": {
@@ -220,41 +246,4 @@ GLASS_STYLE = {
     "backdrop_filter": "blur(12px) saturate(150%)",
     "-webkit-backdrop-filter": "blur(12px) saturate(150%)",
     "border": f"1px solid {Color.BORDER}",
-}
-
-TABLE_STYLE = {
-    "width": "100%",
-    "border_collapse": "separate",
-    "border_spacing": "0",
-    "border": f"1px solid {Color.BORDER}",
-    "border_radius": Design.RADIUS_LG,
-    "overflow": "hidden",
-}
-
-TABLE_HEADER_STYLE = {
-    "bg": Color.SURFACE_ALT,
-    "color": Color.TEXT_SECONDARY,
-    "font_weight": "600",
-    "font_size": "0.6875rem",
-    "text_transform": "uppercase",
-    "letter_spacing": "0.05em",
-    "padding": f"12px {Spacing.MD}",
-    "text_align": "left",
-    "border_bottom": f"1px solid {Color.BORDER}",
-}
-
-TABLE_CELL_STYLE = {
-    "padding": f"10px {Spacing.MD}",
-    "border_bottom": f"1px solid {Color.BORDER}",
-    "color": Color.TEXT_PRIMARY,
-    "font_size": "0.875rem",
-}
-
-TABLE_ROW_STYLE = {
-    "transition": "background-color 0.1s ease",
-    "_hover": {"bg": Color.SURFACE_ALT}
-}
-
-TABLE_ROW_EVEN_STYLE = {
-    "bg": Color.SURFACE_ALT,
 }

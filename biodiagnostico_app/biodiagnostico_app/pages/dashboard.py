@@ -41,9 +41,9 @@ def qc_hero_card() -> rx.Component:
             rx.vstack(
                 rx.hstack(
                     rx.icon(tag="shield-check", size=14, color=Color.PRIMARY),
-                    rx.text("TAXA DE APROVAÇÃO QC", font_size="0.7rem", font_weight="700", color=Color.TEXT_SECONDARY, letter_spacing="0.15em"),
+                    rx.text("TAXA DE APROVAÇÃO QC", font_size=Typography.SIZE_XS, font_weight="700", color=Color.TEXT_SECONDARY, letter_spacing="0.15em"),
                     align_items="center",
-                    style={"gap": "6px"}
+                    style={"gap": Spacing.XS}
                 ),
                 rx.text(
                     State.dashboard_approval_rate.to_string() + "%",
@@ -53,7 +53,7 @@ def qc_hero_card() -> rx.Component:
                     rx.box(
                         rx.icon(
                             tag=rx.cond(State.dashboard_approval_rate >= 95.0, "trending-up", "trending-down"),
-                            size=14, color="white"
+                            size=14, color=Color.WHITE
                         ),
                         bg=rx.cond(State.dashboard_approval_rate >= 95.0, Color.SUCCESS, Color.WARNING),
                         p="1", border_radius=Design.RADIUS_SM
@@ -64,19 +64,19 @@ def qc_hero_card() -> rx.Component:
                             "Excelente",
                             rx.cond(State.dashboard_approval_rate >= 85.0, "Atenção necessária", "Crítico")
                         ),
-                        font_size="0.875rem", font_weight="600",
+                        font_size=Typography.H5["font_size"], font_weight="600",
                         color=rx.cond(State.dashboard_approval_rate >= 95.0, Color.SUCCESS, Color.WARNING)
                     ),
                     align_items="center",
-                    style={"gap": "8px"}
+                    style={"gap": Spacing.SM}
                 ),
                 align_items="start",
-                style={"gap": "8px"},
+                style={"gap": Spacing.SM},
                 width="100%"
             ),
             rx.spacer(),
             rx.box(
-                rx.icon(tag="activity", size=40, color="white"),
+                rx.icon(tag="activity", size=40, color=Color.WHITE),
                 bg=Color.GRADIENT_PRIMARY,
                 p="4", border_radius=Design.RADIUS_XL,
                 display={"initial": "none", "md": "block"},
@@ -105,15 +105,15 @@ def alerts_panel() -> rx.Component:
         rx.vstack(
             rx.hstack(
                 rx.box(
-                    rx.icon(tag="bell-ring", size=18, color="white"),
+                    rx.icon(tag="bell-ring", size=18, color=Color.WHITE),
                     bg=Color.WARNING, p="2", border_radius=Design.RADIUS_SM
                 ),
-                rx.text("Alertas", font_weight="700", color=Color.DEEP, font_size="1.1rem"),
+                rx.text("Alertas", font_weight="700", color=Color.DEEP, font_size=Typography.SIZE_LG),
                 rx.spacer(),
                 ui.status_badge(State.dashboard_alerts_count.to_string() + " alertas", status="warning"),
                 align_items="center",
                 width="100%",
-                style={"gap": "10px"}
+                style={"gap": Spacing.SM_MD}
             ),
             rx.divider(opacity=0.2, margin_y=Spacing.SM),
 
@@ -123,11 +123,11 @@ def alerts_panel() -> rx.Component:
                 rx.hstack(
                     rx.icon(tag="flask-round", size=18, color=Color.WARNING),
                     rx.vstack(
-                        rx.text("Reagentes vencendo", font_size="0.9rem", font_weight="600", color=Color.TEXT_PRIMARY),
-                        rx.text(State.dashboard_expiring_lots.to_string() + " lotes vencendo em 30 dias", font_size="0.8rem", color=Color.TEXT_SECONDARY),
+                        rx.text("Reagentes vencendo", font_size=Typography.SIZE_MD_SM, font_weight="600", color=Color.TEXT_PRIMARY),
+                        rx.text(State.dashboard_expiring_lots.to_string() + " lotes vencendo em 30 dias", font_size=Typography.SIZE_SM, color=Color.TEXT_SECONDARY),
                         spacing="0",
                     ),
-                    width="100%", align_items="center", style={"gap": "12px"},
+                    width="100%", align_items="center", style={"gap": Spacing.SM_MD},
                     padding=Spacing.MD, bg=Color.WARNING_BG, border_radius=Design.RADIUS_LG,
                 ),
             ),
@@ -138,11 +138,11 @@ def alerts_panel() -> rx.Component:
                 rx.hstack(
                     rx.icon(tag="wrench", size=18, color=Color.PRIMARY),
                     rx.vstack(
-                        rx.text("Manutenções pendentes", font_size="0.9rem", font_weight="600", color=Color.TEXT_PRIMARY),
-                        rx.text(State.dashboard_pending_maintenances.to_string() + " equipamentos", font_size="0.8rem", color=Color.TEXT_SECONDARY),
+                        rx.text("Manutenções pendentes", font_size=Typography.SIZE_MD_SM, font_weight="600", color=Color.TEXT_PRIMARY),
+                        rx.text(State.dashboard_pending_maintenances.to_string() + " equipamentos", font_size=Typography.SIZE_SM, color=Color.TEXT_SECONDARY),
                         spacing="0",
                     ),
-                    width="100%", align_items="center", style={"gap": "12px"},
+                    width="100%", align_items="center", style={"gap": Spacing.SM_MD},
                     padding=Spacing.MD, bg=Color.PRIMARY_LIGHT, border_radius=Design.RADIUS_LG,
                 ),
             ),
@@ -153,11 +153,11 @@ def alerts_panel() -> rx.Component:
                 rx.hstack(
                     rx.icon(tag="triangle-alert", size=18, color=Color.ERROR),
                     rx.vstack(
-                        rx.text("Violações Westgard", font_size="0.9rem", font_weight="600", color=Color.TEXT_PRIMARY),
-                        rx.text(State.westgard_violations_month.to_string() + " este mês", font_size="0.8rem", color=Color.TEXT_SECONDARY),
+                        rx.text("Violações Westgard", font_size=Typography.SIZE_MD_SM, font_weight="600", color=Color.TEXT_PRIMARY),
+                        rx.text(State.westgard_violations_month.to_string() + " este mês", font_size=Typography.SIZE_SM, color=Color.TEXT_SECONDARY),
                         spacing="0",
                     ),
-                    width="100%", align_items="center", style={"gap": "12px"},
+                    width="100%", align_items="center", style={"gap": Spacing.SM_MD},
                     padding=Spacing.MD, bg=Color.ERROR_BG, border_radius=Design.RADIUS_LG,
                 ),
             ),
@@ -169,10 +169,10 @@ def alerts_panel() -> rx.Component:
                     rx.vstack(
                         rx.box(
                             rx.icon(tag="circle-check", size=36, color=Color.SUCCESS),
-                            bg=Color.SUCCESS_BG, p="4", border_radius="full"
+                            bg=Color.SUCCESS_BG, p="4", border_radius=Design.RADIUS_FULL
                         ),
                         rx.text("Tudo em ordem!", font_weight="600", color=Color.SUCCESS),
-                        rx.text("Nenhum alerta ativo", font_size="0.8rem", color=Color.TEXT_SECONDARY),
+                        rx.text("Nenhum alerta ativo", font_size=Typography.SIZE_SM, color=Color.TEXT_SECONDARY),
                         align_items="center",
                         spacing="2"
                     ),
@@ -204,7 +204,7 @@ def recent_records_table() -> rx.Component:
                 ui.button("Ver todos", icon="arrow-right", variant="ghost", on_click=lambda: State.set_page("proin")),
                 align_items="center",
                 width="100%",
-                style={"gap": "10px"}
+                style={"gap": Spacing.SM_MD}
             ),
             rx.divider(opacity=0.2),
             rx.cond(
@@ -214,22 +214,22 @@ def recent_records_table() -> rx.Component:
                         State.recent_qc_records,
                         lambda record: rx.hstack(
                             rx.vstack(
-                                rx.text(record["exam_name"], font_size="0.9rem", font_weight="600", color=Color.TEXT_PRIMARY),
-                                rx.text(record["date"], font_size="0.75rem", color=Color.TEXT_SECONDARY),
+                                rx.text(record["exam_name"], font_size=Typography.SIZE_MD_SM, font_weight="600", color=Color.TEXT_PRIMARY),
+                                rx.text(record["date"], font_size=Typography.SIZE_SM_XS, color=Color.TEXT_SECONDARY),
                                 spacing="0",
                                 align_items="start",
                                 flex="1",
                             ),
                             rx.vstack(
-                                rx.text("Nível", font_size="0.65rem", color=Color.TEXT_SECONDARY),
-                                rx.text(record["level"], font_size="0.8rem", font_weight="500"),
+                                rx.text("Nível", font_size=Typography.SIZE_2XS, color=Color.TEXT_SECONDARY),
+                                rx.text(record["level"], font_size=Typography.SIZE_SM, font_weight="500"),
                                 spacing="0", align_items="center",
                             ),
                             rx.vstack(
-                                rx.text("CV%", font_size="0.65rem", color=Color.TEXT_SECONDARY),
+                                rx.text("CV%", font_size=Typography.SIZE_2XS, color=Color.TEXT_SECONDARY),
                                 rx.text(
                                     record["cv"].to(str),
-                                    font_size="0.8rem", font_weight="600",
+                                    font_size=Typography.SIZE_SM, font_weight="600",
                                     color=rx.cond(record["status"] == "OK", Color.SUCCESS, Color.ERROR)
                                 ),
                                 spacing="0", align_items="center",
@@ -237,11 +237,11 @@ def recent_records_table() -> rx.Component:
                             rx.box(
                                 rx.text(
                                     record["status"],
-                                    font_size="0.75rem", font_weight="700",
+                                    font_size=Typography.SIZE_SM_XS, font_weight="700",
                                     color=rx.cond(record["status"] == "OK", Color.SUCCESS, Color.ERROR)
                                 ),
                                 bg=rx.cond(record["status"] == "OK", Color.SUCCESS_BG, Color.ERROR_BG),
-                                px="3", py="1", border_radius="full"
+                                px="3", py="1", border_radius=Design.RADIUS_FULL
                             ),
                             width="100%", align_items="center",
                             padding=Spacing.SM, border_radius=Design.RADIUS_LG,
@@ -277,33 +277,21 @@ def recent_records_table() -> rx.Component:
 def dashboard_page() -> rx.Component:
     """Dashboard de Controle de Qualidade"""
 
-    animations_css = """
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes shimmer {
-            0% { left: -100%; }
-            100% { left: 100%; }
-        }
-    """
-
     return rx.fragment(
-        rx.script(f"if(!document.getElementById('dash-anim')){{ const s=document.createElement('style'); s.id='dash-anim'; s.textContent=`{animations_css}`; document.head.appendChild(s); }}"),
         rx.box(
             rx.vstack(
                 # Welcome Banner
                 rx.box(
                     rx.vstack(
                         rx.hstack(
-                            rx.text("🔬", font_size="2rem"),
+                            rx.text("🔬", font_size=Typography.DISPLAY["font_size"]),
                             rx.text("Controle de Qualidade", style=Typography.H1, color=Color.DEEP),
                             align_items="center",
-                            style={"gap": "12px"}
+                            style={"gap": Spacing.SM_MD}
                         ),
                         rx.text("Painel de monitoramento e indicadores", style=Typography.BODY_SECONDARY, color=Color.TEXT_SECONDARY),
                         align_items="center",
-                        style={"gap": "4px"}
+                        style={"gap": Spacing.XS}
                     ),
                     width="100%", display="flex", justify_content="center",
                     animation="fadeInUp 0.4s ease-out both",
@@ -356,11 +344,11 @@ def dashboard_page() -> rx.Component:
                             rx.icon(tag="layout-grid", size=20, color=Color.PRIMARY),
                             rx.text("Acesso Rápido", style=Typography.H2, color=Color.DEEP),
                             align_items="center",
-                            style={"gap": "10px"}
+                            style={"gap": Spacing.SM_MD}
                         ),
-                        rx.text("Atalhos para as principais funções", font_size="0.9rem", color=Color.TEXT_SECONDARY),
+                        rx.text("Atalhos para as principais funções", font_size=Typography.SIZE_MD_SM, color=Color.TEXT_SECONDARY),
                         align_items="center",
-                        style={"gap": "4px"},
+                        style={"gap": Spacing.XS},
                         margin_bottom=Spacing.LG
                     ),
                     animation="fadeInUp 0.8s ease-out 0.3s both"
@@ -390,12 +378,12 @@ def dashboard_page() -> rx.Component:
                     columns={"initial": "1", "md": "3"},
                     spacing="6",
                     width="100%",
-                    max_width="6xl", margin_x="auto", margin_bottom="4rem"
+                    max_width="6xl", margin_x="auto", margin_bottom=Spacing.XXL
                 ),
 
                 width="100%",
                 align_items="center",
-                padding_bottom="4rem"
+                padding_bottom=Spacing.XXL
             ),
             width="100%"
         )

@@ -1,6 +1,6 @@
 import reflex as rx
 from ..state import State
-from ..styles import Color, Spacing, Design
+from ..styles import Color, Spacing, Design, Typography, GLASS_STYLE
 
 def navbar_link(text: str, url: str, icon: str) -> rx.Component:
     """Link de navegação com estados visuais claros e acessíveis"""
@@ -24,10 +24,10 @@ def navbar_link(text: str, url: str, icon: str) -> rx.Component:
                 rx.text(
                     text,
                     font_weight=rx.cond(is_active, "700", "500"),
-                    font_size="0.95rem",
+                    font_size=Typography.SIZE_MD,
                     transition="all 0.2s ease",
                 ),
-                style={"gap": "8px"},
+                style={"gap": Spacing.SM},
                 align="center",
                 color=rx.cond(is_active, Color.DEEP, Color.TEXT_SECONDARY),
                 padding_x=Spacing.MD,
@@ -45,7 +45,7 @@ def navbar_link(text: str, url: str, icon: str) -> rx.Component:
                     width="50%",
                     height="2px",
                     bg=Color.PRIMARY,
-                    border_radius="full",
+                    border_radius=Design.RADIUS_FULL,
                     animation="fadeIn 0.2s ease",
                 ),
                 rx.box(width="0%", height="2px", bg="transparent")
@@ -87,7 +87,7 @@ def navbar() -> rx.Component:
             rx.hstack(
                 navbar_link("Dashboard", "dashboard", "layout_dashboard"),
                 navbar_link("Controle de Qualidade", "proin", "activity"),
-                style={"gap": "4px"},
+                style={"gap": Spacing.XS},
                 display=["none", "none", "lg", "flex"],
                 padding=Spacing.XS,
                 border_radius=Design.RADIUS_LG,
@@ -102,24 +102,24 @@ def navbar() -> rx.Component:
                 rx.menu.root(
                     rx.menu.trigger(
                         rx.hstack(
-                            rx.avatar(fallback="AD", size="2", radius="full", cursor="pointer", bg=Color.PRIMARY, color="white"),
+                            rx.avatar(fallback="AD", size="2", radius="full", cursor="pointer", bg=Color.PRIMARY, color=Color.WHITE),
                             rx.vstack(
-                                rx.text("Admin", font_size="0.8125rem", font_weight="600", color=Color.TEXT_PRIMARY),
+                                rx.text("Admin", font_size=Typography.SMALL["font_size"], font_weight="600", color=Color.TEXT_PRIMARY),
                                 spacing="0",
                                 display=["none", "none", "md", "flex"]
                             ),
                             rx.icon(tag="chevron_down", size=14, color=Color.TEXT_SECONDARY),
-                            style={"gap": "8px"},
+                            style={"gap": Spacing.SM},
                             align="center",
                             padding=f"{Spacing.XS} {Spacing.SM}",
-                            border_radius="full",
+                            border_radius=Design.RADIUS_FULL,
                             cursor="pointer",
                             _hover={"bg": Color.SURFACE_ALT}
                         ),
                     ),
                     rx.menu.content(
                         rx.menu.separator(),
-                        rx.menu.item("Sair", color="red", on_select=State.logout),
+                        rx.menu.item("Sair", color=Color.ERROR, on_select=State.logout),
                     ),
                 ),
 
@@ -136,16 +136,14 @@ def navbar() -> rx.Component:
             align="center",
             padding_x=[Spacing.MD, Spacing.LG],
             padding_y=Spacing.SM,
-            bg="rgba(255, 255, 255, 0.85)",
-            backdrop_filter="blur(12px) saturate(150%)",
-            border=f"1px solid {Color.BORDER}",
+            **GLASS_STYLE,
             border_radius=Design.RADIUS_LG,
             box_shadow=Design.SHADOW_SM,
         ),
         width="100%",
         position="sticky",
         top=["0.5rem", "0.75rem"],
-        z_index="1000",
+        z_index=Design.Z_INDEX_NAVBAR,
         padding_x=[Spacing.SM, Spacing.MD, Spacing.LG],
     )
 
@@ -163,10 +161,10 @@ def mobile_nav_trigger() -> rx.Component:
             )
         ),
         rx.menu.content(
-            rx.menu.item(rx.hstack(rx.icon(tag="layout_dashboard", size=18), rx.text("Dashboard", font_size="1rem")), on_select=lambda: State.set_page("dashboard"), padding="12px"),
-            rx.menu.item(rx.hstack(rx.icon(tag="activity", size=18), rx.text("Controle de Qualidade", font_size="1rem")), on_select=lambda: State.set_page("proin"), padding="12px"),
+            rx.menu.item(rx.hstack(rx.icon(tag="layout_dashboard", size=18), rx.text("Dashboard", font_size=Typography.H4["font_size"])), on_select=lambda: State.set_page("dashboard"), padding=Spacing.SM_MD),
+            rx.menu.item(rx.hstack(rx.icon(tag="activity", size=18), rx.text("Controle de Qualidade", font_size=Typography.H4["font_size"])), on_select=lambda: State.set_page("proin"), padding=Spacing.SM_MD),
             rx.menu.separator(),
-            rx.menu.item(rx.hstack(rx.icon(tag="log_out", size=18), rx.text("Sair", font_size="1rem")), color="red", on_select=State.logout, padding="12px"),
+            rx.menu.item(rx.hstack(rx.icon(tag="log_out", size=18), rx.text("Sair", font_size=Typography.H4["font_size"])), color=Color.ERROR, on_select=State.logout, padding=Spacing.SM_MD),
             size="2",
             width="260px",
         )

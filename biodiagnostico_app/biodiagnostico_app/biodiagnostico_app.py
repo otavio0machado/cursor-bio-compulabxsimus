@@ -7,7 +7,7 @@ from .components.navbar import navbar, mobile_nav
 from .pages.login import login_page
 from .pages.proin import proin_page
 from .pages.dashboard import dashboard_page
-from .styles import Color
+from .styles import Color, Design, Spacing
 
 
 def main_content() -> rx.Component:
@@ -28,10 +28,10 @@ def authenticated_layout(content: rx.Component = None) -> rx.Component:
             rx.box(
                 content if content else main_content(),
                 width="100%",
-                max_width="1400px",
+                max_width=Design.MAX_WIDTH_APP,
                 margin_x="auto",
-                padding_x=["0.75rem", "1.5rem", "3rem"],
-                padding_y=["1rem", "2rem"],
+                padding_x=[Spacing.SM_MD, Spacing.LG, Spacing.XXL],
+                padding_y=[Spacing.MD, Spacing.XL],
             ),
             spacing="0",
             width="100%",
@@ -72,7 +72,7 @@ app = rx.App(
     ),
     head_components=[
         rx.el.link(rel="manifest", href="/manifest.json"),
-        rx.el.meta(name="theme-color", content=Color.DEEP),
+        rx.el.meta(name="theme-color", content=Color.PRIMARY),
         rx.el.meta(name="apple-mobile-web-app-capable", content="yes"),
         rx.el.meta(name="mobile-web-app-capable", content="yes"),
         rx.el.meta(name="apple-mobile-web-app-status-bar-style", content="black-translucent"),

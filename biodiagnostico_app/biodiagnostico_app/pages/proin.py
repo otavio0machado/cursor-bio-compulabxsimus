@@ -50,16 +50,16 @@ def tab_button(label: str, icon: str, tab_id: str) -> rx.Component:
     return rx.button(
         rx.hstack(
             rx.icon(tag=icon, size=16),
-            rx.text(label, font_size="0.8125rem", font_weight="500"),
-            style={"gap": "6px"},
+            rx.text(label, font_size=Typography.SMALL["font_size"], font_weight="500"),
+            style={"gap": Spacing.XS},
             align_items="center",
         ),
         on_click=lambda: State.set_proin_tab(tab_id),
         bg=rx.cond(is_active, Color.PRIMARY_LIGHT, "transparent"),
         color=rx.cond(is_active, Color.PRIMARY, Color.TEXT_SECONDARY),
         border_radius=Design.RADIUS_MD,
-        padding_x="1rem",
-        padding_y="0.5rem",
+        padding_x=Spacing.MD,
+        padding_y=Spacing.SM,
         border=rx.cond(is_active, f"1px solid {Color.PRIMARY}30", "1px solid transparent"),
         _hover={
             "bg": Color.SURFACE_ALT,
@@ -84,7 +84,7 @@ def dashboard_tab() -> rx.Component:
                 rx.hstack(
                     rx.icon(tag="refresh_cw", size=18),
                     rx.text("Atualizar", display=["none", "none", "block"]),
-                    style={"gap": "8px"},
+                    style={"gap": Spacing.SM},
                 ),
                 on_click=State.load_data_from_db(True),
                 variant="ghost", size="2", color=Color.TEXT_SECONDARY,
@@ -136,7 +136,7 @@ def dashboard_tab() -> rx.Component:
                                         rx.spacer(),
                                         rx.text(
                                             State.dashboard_pending_maintenances,
-                                            font_size="2rem", font_weight="800",
+                                            font_size=Typography.DISPLAY["font_size"], font_weight="800",
                                             color=rx.cond(State.has_pending_maintenances, Color.WARNING, Color.SUCCESS),
                                             line_height="1"
                                         ),
@@ -149,7 +149,7 @@ def dashboard_tab() -> rx.Component:
                                 rx.box(
                                     rx.hstack(
                                         rx.box(
-                                            rx.icon(tag="clock", size=24, color=Color.ERROR), 
+                                            rx.icon(tag="clock", size=24, color=Color.ERROR),
                                             bg=Color.ERROR_BG, p="3", border_radius=Design.RADIUS_MD,
                                             display="flex", align_items="center", justify_content="center"
                                         ),
@@ -161,7 +161,7 @@ def dashboard_tab() -> rx.Component:
                                         rx.spacer(),
                                         rx.text(
                                             State.dashboard_expiring_lots,
-                                            font_size="2rem", font_weight="800",
+                                            font_size=Typography.DISPLAY["font_size"], font_weight="800",
                                             color=rx.cond(State.has_expiring_lots, Color.ERROR, Color.SUCCESS),
                                             line_height="1"
                                         ),
@@ -190,7 +190,7 @@ def dashboard_tab() -> rx.Component:
                                     rx.foreach(
                                         State.qc_records_with_alerts[:4],
                                         lambda r: rx.hstack(
-                                            rx.box(width="8px", height="8px", border_radius="full", bg=Color.ERROR),
+                                            rx.box(width="8px", height="8px", border_radius=Design.RADIUS_FULL, bg=Color.ERROR),
                                             rx.vstack(
                                                 ui.text(r["exam_name"], size="label"),
                                                 ui.text(r["date"], size="small"),
@@ -202,7 +202,7 @@ def dashboard_tab() -> rx.Component:
                                             padding=Spacing.XS, border_radius=Design.RADIUS_MD, _hover={"bg": Color.ERROR_BG}
                                         )
                                     ),
-                                    style={"gap": "8px"},
+                                    style={"gap": Spacing.SM},
                                 ),
                                 rx.center(
                                     rx.vstack(
@@ -326,7 +326,7 @@ def registro_qc_tab() -> rx.Component:
                             rx.text("Referencia ativa: ", font_weight="600"),
                             rx.text(State.current_exam_reference["name"]),
                             rx.spacer(),
-                            rx.text("CV% Max: <=" + format_cv(State.current_cv_max_threshold) + "%", font_size="0.8rem"),
+                            rx.text("CV% Max: <=" + format_cv(State.current_cv_max_threshold) + "%", font_size=Typography.SIZE_SM),
                             width="100%", align_items="center", flex_wrap="wrap", gap="2"
                         ),
                         icon="info", color_scheme="green", width="100%", margin_y=Spacing.SM
@@ -355,7 +355,7 @@ def registro_qc_tab() -> rx.Component:
                             rx.hstack(
                                 rx.text(
                                     format_cv(State.qc_calculated_cv) + "%",
-                                    font_size="1.125rem", font_weight="bold",
+                                    font_size=Typography.H3["font_size"], font_weight="bold",
                                     color=rx.cond(State.qc_cv_status == "ok", Color.SUCCESS, rx.cond(State.qc_cv_status == "warning", Color.WARNING, Color.ERROR))
                                 ),
                                 rx.icon(
@@ -363,7 +363,7 @@ def registro_qc_tab() -> rx.Component:
                                     size=18,
                                     color=rx.cond(State.qc_cv_status == "ok", Color.SUCCESS, rx.cond(State.qc_cv_status == "warning", Color.WARNING, Color.ERROR))
                                 ),
-                                align_items="center", style={"gap": "8px"}, height="100%",
+                                align_items="center", style={"gap": Spacing.SM}, height="100%",
                             ),
                             width="100%", height="44px", display="flex", align_items="center", padding_x=Spacing.MD, bg=Color.SURFACE, border_radius=Design.RADIUS_LG,
                             border=rx.cond(State.qc_cv_status == "ok", f"1px solid {Color.SUCCESS}40", rx.cond(State.qc_cv_status == "warning", f"1px solid {Color.WARNING}40", f"1px solid {Color.ERROR}40"))
@@ -442,7 +442,7 @@ def registro_qc_tab() -> rx.Component:
                                 rx.foreach(
                                     State.qc_records,
                                     lambda r: rx.table.row(
-                                        rx.table.cell(rx.text(r.date[:16], color=Color.TEXT_SECONDARY, font_size="0.875rem")),
+                                        rx.table.cell(rx.text(r.date[:16], color=Color.TEXT_SECONDARY, font_size=Typography.H5["font_size"])),
                                         rx.table.cell(rx.text(r.exam_name, font_weight="600")),
                                         rx.table.cell(r.value.to_string()),
                                         rx.table.cell(rx.text(format_cv(r.cv) + "%", font_weight="600", color=rx.cond(r.cv <= r.cv_max_threshold, Color.SUCCESS, Color.ERROR))),
@@ -485,7 +485,7 @@ def registro_qc_tab() -> rx.Component:
                                                     rx.icon(tag="link", size=14, color=Color.PRIMARY),
                                                     content="Referencia vinculada"
                                                 ),
-                                                rx.text("-", color=Color.TEXT_SECONDARY, font_size="0.75rem")
+                                                rx.text("-", color=Color.TEXT_SECONDARY, font_size=Typography.SIZE_SM_XS)
                                             )
                                         ),
                                         rx.table.cell(
@@ -520,7 +520,7 @@ def registro_qc_tab() -> rx.Component:
             width="100%", margin_top=Spacing.XL
         ),
         
-        width="100%", padding_bottom="3rem"
+        width="100%", padding_bottom=Spacing.XXL
     )
 
 def reagentes_tab() -> rx.Component:
@@ -584,7 +584,7 @@ def reagentes_tab() -> rx.Component:
                                             ui.text(lot["name"], font_weight="500"),
                                             rx.hstack(
                                                 ui.text(lot["lot_number"], size="small", color=Color.TEXT_SECONDARY),
-                                                rx.text("•", color=Color.TEXT_SECONDARY, font_size="0.75rem"),
+                                                rx.text("•", color=Color.TEXT_SECONDARY, font_size=Typography.SIZE_SM_XS),
                                                 ui.text(lot["manufacturer"], size="small", color=Color.TEXT_SECONDARY),
                                                 spacing="1",
                                             ),
@@ -600,14 +600,14 @@ def reagentes_tab() -> rx.Component:
                                                 color_scheme=rx.cond(lot["days_left"] <= 7, "red", rx.cond(lot["days_left"] <= 30, "amber", "green")),
                                                 variant="solid"
                                             ),
-                                            rx.cond(lot["days_left"] <= 30, rx.text(lot["expiry_date"], font_size="0.65rem", color=Color.TEXT_SECONDARY, text_align="center")),
+                                            rx.cond(lot["days_left"] <= 30, rx.text(lot["expiry_date"], font_size=Typography.SIZE_2XS, color=Color.TEXT_SECONDARY, text_align="center")),
                                             # Risco de Ruptura
                                             rx.cond(
                                                 lot["days_to_rupture"] != None,
                                                 rx.badge(
                                                     rx.cond(lot["days_to_rupture"] <= 5, "RISCO RUPTURA", f"Estoque: {lot['days_to_rupture']} dias"),
                                                     color_scheme=rx.cond(lot["days_to_rupture"] <= 5, "red", "gray"),
-                                                    variant="outline", margin_top="4px"
+                                                    variant="outline", margin_top=Spacing.XS
                                                 )
                                             ),
                                             spacing="0", align_items="center"
@@ -687,7 +687,7 @@ def relatorios_tab() -> rx.Component:
                         State.qc_pdf_preview != "",
                         rx.badge("Preview Ativo", color_scheme="green", variant="soft")
                     ),
-                    style={"gap": "8px"}, align_items="center", margin_bottom=Spacing.MD, width="100%"
+                    style={"gap": Spacing.SM}, align_items="center", margin_bottom=Spacing.MD, width="100%"
                 ),
                 
                 rx.hstack(
@@ -695,27 +695,27 @@ def relatorios_tab() -> rx.Component:
                     rx.vstack(
                         rx.grid(
                             rx.box(
-                                ui.text("Período", size="label", margin_bottom="4px"),
+                                ui.text("Período", size="label", margin_bottom=Spacing.XS),
                                 ui.select(["Mês Atual", "Mês Específico", "3 Meses", "6 Meses", "Ano Atual", "Ano Específico"], value=State.qc_report_type, on_change=State.set_qc_report_type)
                             ),
                             rx.cond(
                                 State.qc_report_type == "Mês Específico",
                                 rx.box(
-                                    ui.text("Mês", size="label", margin_bottom="4px"),
+                                    ui.text("Mês", size="label", margin_bottom=Spacing.XS),
                                     ui.select(["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"], value=State.qc_report_month, on_change=State.set_qc_report_month, placeholder="Mês")
                                 )
                             ),
                             rx.cond(
                                 (State.qc_report_type == "Mês Específico") | (State.qc_report_type == "Ano Específico"),
                                 rx.box(
-                                    ui.text("Ano", size="label", margin_bottom="4px"),
+                                    ui.text("Ano", size="label", margin_bottom=Spacing.XS),
                                     ui.input(value=State.qc_report_year, on_change=State.set_qc_report_year, placeholder="Ano (ex: 2024)")
                                 )
                             ),
                             columns={"initial": "1", "sm": "2"}, style={"gap": Spacing.MD}, width="100%"
                         ),
                         rx.box(
-                             ui.button("Baixar PDF", icon="download", on_click=State.generate_qc_report_pdf, is_loading=State.is_generating_qc_report, variant="primary", width="100%", margin_top="24px"),
+                             ui.button("Baixar PDF", icon="download", on_click=State.generate_qc_report_pdf, is_loading=State.is_generating_qc_report, variant="primary", width="100%", margin_top=Spacing.LG),
                         ),
                         rx.cond(
                             State.qc_error_message != "",
@@ -767,9 +767,9 @@ def relatorios_tab() -> rx.Component:
             rx.vstack(
                 # Legend (Purified)
                 rx.hstack(
-                    rx.hstack(rx.box(width="12px", height="12px", border_radius="full", bg=Color.SUCCESS), rx.text("±1 DP", style=Typography.CAPTION), style={"gap": "4px"}),
-                    rx.hstack(rx.box(width="12px", height="12px", border_radius="full", bg=Color.WARNING), rx.text("±2 DP", style=Typography.CAPTION), style={"gap": "4px"}),
-                    rx.hstack(rx.box(width="12px", height="12px", border_radius="full", bg=Color.ERROR), rx.text("±3 DP", style=Typography.CAPTION), style={"gap": "4px"}),
+                    rx.hstack(rx.box(width="12px", height="12px", border_radius=Design.RADIUS_FULL, bg=Color.SUCCESS), rx.text("±1 DP", style=Typography.CAPTION), style={"gap": Spacing.XS}),
+                    rx.hstack(rx.box(width="12px", height="12px", border_radius=Design.RADIUS_FULL, bg=Color.WARNING), rx.text("±2 DP", style=Typography.CAPTION), style={"gap": Spacing.XS}),
+                    rx.hstack(rx.box(width="12px", height="12px", border_radius=Design.RADIUS_FULL, bg=Color.ERROR), rx.text("±3 DP", style=Typography.CAPTION), style={"gap": Spacing.XS}),
                     style={"gap": Spacing.LG}, justify_content="center", width="100%", margin_bottom=Spacing.MD
                 ),
                 
@@ -830,7 +830,7 @@ def relatorios_tab() -> rx.Component:
                                     rx.foreach(
                                         State.levey_jennings_data,
                                         lambda d: rx.table.row(
-                                            rx.table.cell(rx.text(d.date, font_size="0.875rem")),
+                                            rx.table.cell(rx.text(d.date, font_size=Typography.H5["font_size"])),
                                             rx.table.cell(rx.text(d.value.to_string(), font_weight="600")),
                                             rx.table.cell(d.target.to_string()),
                                             rx.table.cell(d.sd.to_string()),
@@ -926,7 +926,7 @@ def importar_tab() -> rx.Component:
                                 rx.foreach(
                                     State.proin_import_preview,
                                     lambda row: rx.table.row(
-                                        rx.foreach(row, lambda cell: rx.table.cell(rx.text(cell, font_size="0.875rem")))
+                                        rx.foreach(row, lambda cell: rx.table.cell(rx.text(cell, font_size=Typography.H5["font_size"])))
                                     )
                                 )
                             ), width="100%"
@@ -949,12 +949,12 @@ def post_calibration_modal() -> rx.Component:
             rx.dialog.title(
                 rx.hstack(
                     rx.icon(tag="settings_2", size=24, color=Color.PRIMARY),
-                    rx.text("Medição Pós-Calibração", font_weight="700", font_size="1.25rem"),
+                    rx.text("Medição Pós-Calibração", font_weight="700", font_size=Typography.SIZE_XL),
                     spacing="2", align_items="center"
                 )
             ),
             rx.dialog.description(
-                rx.text("Registre o novo valor após a calibração do equipamento", color=Color.TEXT_SECONDARY, font_size="0.875rem")
+                rx.text("Registre o novo valor após a calibração do equipamento", color=Color.TEXT_SECONDARY, font_size=Typography.H5["font_size"])
             ),
 
             rx.vstack(
@@ -963,25 +963,25 @@ def post_calibration_modal() -> rx.Component:
                     State.selected_qc_record_for_calibration != None,
                     rx.box(
                         rx.vstack(
-                            rx.text("Registro Original", font_weight="600", color=Color.TEXT_SECONDARY, font_size="0.75rem", style={"text_transform": "uppercase", "letter_spacing": "0.05em"}),
+                            rx.text("Registro Original", font_weight="600", color=Color.TEXT_SECONDARY, font_size=Typography.SIZE_SM_XS, style={"text_transform": "uppercase", "letter_spacing": "0.05em"}),
                             rx.grid(
                                 rx.vstack(
-                                    rx.text("Exame", font_size="0.75rem", color=Color.TEXT_SECONDARY),
+                                    rx.text("Exame", font_size=Typography.SIZE_SM_XS, color=Color.TEXT_SECONDARY),
                                     rx.text(State.selected_qc_record_for_calibration["exam_name"], font_weight="600"),
                                     spacing="0", align_items="start"
                                 ),
                                 rx.vstack(
-                                    rx.text("Valor Original", font_size="0.75rem", color=Color.TEXT_SECONDARY),
+                                    rx.text("Valor Original", font_size=Typography.SIZE_SM_XS, color=Color.TEXT_SECONDARY),
                                     rx.text(State.selected_qc_record_for_calibration["value"].to_string(), font_weight="600", color=Color.ERROR),
                                     spacing="0", align_items="start"
                                 ),
                                 rx.vstack(
-                                    rx.text("CV% Original", font_size="0.75rem", color=Color.TEXT_SECONDARY),
+                                    rx.text("CV% Original", font_size=Typography.SIZE_SM_XS, color=Color.TEXT_SECONDARY),
                                     rx.text(format_cv(State.selected_qc_record_for_calibration["cv"]) + "%", font_weight="600", color=Color.ERROR),
                                     spacing="0", align_items="start"
                                 ),
                                 rx.vstack(
-                                    rx.text("Valor Alvo", font_size="0.75rem", color=Color.TEXT_SECONDARY),
+                                    rx.text("Valor Alvo", font_size=Typography.SIZE_SM_XS, color=Color.TEXT_SECONDARY),
                                     rx.text(State.selected_qc_record_for_calibration["target_value"].to_string(), font_weight="600"),
                                     spacing="0", align_items="start"
                                 ),
@@ -1012,7 +1012,7 @@ def post_calibration_modal() -> rx.Component:
                         State.post_cal_value != "",
                         rx.box(
                             rx.hstack(
-                                rx.text("CV% Pós-Calibração: ", font_size="0.875rem"),
+                                rx.text("CV% Pós-Calibração: ", font_size=Typography.H5["font_size"]),
                                 rx.text(
                                     format_cv(State.post_cal_calculated_cv) + "%",
                                     font_weight="700",
@@ -1076,7 +1076,7 @@ def post_calibration_modal() -> rx.Component:
                 spacing="3", width="100%", padding_top=Spacing.MD
             ),
 
-            style={"max_width": "500px"}
+            style={"max_width": Design.MODAL_WIDTH_MD}
         ),
         open=State.show_post_calibration_modal
     )
@@ -1089,20 +1089,20 @@ def delete_qc_record_modal() -> rx.Component:
             rx.dialog.title(
                 rx.hstack(
                     rx.icon(tag="triangle-alert", size=24, color=Color.ERROR),
-                    rx.text("Confirmar Exclusão", font_weight="700", font_size="1.25rem"),
+                    rx.text("Confirmar Exclusão", font_weight="700", font_size=Typography.SIZE_XL),
                     spacing="2", align_items="center"
                 )
             ),
             rx.dialog.description(
-                rx.text("Esta ação não pode ser desfeita!", color=Color.ERROR, font_size="0.875rem")
+                rx.text("Esta ação não pode ser desfeita!", color=Color.ERROR, font_size=Typography.H5["font_size"])
             ),
 
             rx.vstack(
                 rx.box(
                     rx.vstack(
-                        rx.text("Você está prestes a excluir permanentemente o registro:", font_size="0.9rem"),
-                        rx.text(State.delete_qc_record_name, font_weight="700", font_size="1.1rem", color=Color.PRIMARY),
-                        rx.text("Este registro será removido do banco de dados e não poderá ser recuperado.", font_size="0.8rem", color=Color.TEXT_SECONDARY),
+                        rx.text("Você está prestes a excluir permanentemente o registro:", font_size=Typography.SIZE_MD_SM),
+                        rx.text(State.delete_qc_record_name, font_weight="700", font_size=Typography.SIZE_LG, color=Color.PRIMARY),
+                        rx.text("Este registro será removido do banco de dados e não poderá ser recuperado.", font_size=Typography.SIZE_SM, color=Color.TEXT_SECONDARY),
                         spacing="2", align_items="center", width="100%"
                     ),
                     bg=Color.ERROR_BG, padding=Spacing.MD, border_radius=Design.RADIUS_LG, width="100%", margin_y=Spacing.MD
@@ -1121,7 +1121,7 @@ def delete_qc_record_modal() -> rx.Component:
                 spacing="3", width="100%", padding_top=Spacing.MD
             ),
 
-            style={"max_width": "450px"}
+            style={"max_width": Design.MODAL_WIDTH_SM}
         ),
         open=State.show_delete_qc_record_modal
     )
@@ -1134,20 +1134,20 @@ def delete_reference_modal() -> rx.Component:
             rx.dialog.title(
                 rx.hstack(
                     rx.icon(tag="triangle-alert", size=24, color=Color.ERROR),
-                    rx.text("Confirmar Exclusão", font_weight="700", font_size="1.25rem"),
+                    rx.text("Confirmar Exclusão", font_weight="700", font_size=Typography.SIZE_XL),
                     spacing="2", align_items="center"
                 )
             ),
             rx.dialog.description(
-                rx.text("Esta ação não pode ser desfeita!", color=Color.ERROR, font_size="0.875rem")
+                rx.text("Esta ação não pode ser desfeita!", color=Color.ERROR, font_size=Typography.H5["font_size"])
             ),
 
             rx.vstack(
                 rx.box(
                     rx.vstack(
-                        rx.text("Você está prestes a excluir permanentemente a referência:", font_size="0.9rem"),
-                        rx.text(State.delete_reference_name, font_weight="700", font_size="1.1rem", color=Color.PRIMARY),
-                        rx.text("Esta referência será removida do banco de dados e não poderá ser recuperada.", font_size="0.8rem", color=Color.TEXT_SECONDARY),
+                        rx.text("Você está prestes a excluir permanentemente a referência:", font_size=Typography.SIZE_MD_SM),
+                        rx.text(State.delete_reference_name, font_weight="700", font_size=Typography.SIZE_LG, color=Color.PRIMARY),
+                        rx.text("Esta referência será removida do banco de dados e não poderá ser recuperada.", font_size=Typography.SIZE_SM, color=Color.TEXT_SECONDARY),
                         spacing="2", align_items="center", width="100%"
                     ),
                     bg=Color.ERROR_BG, padding=Spacing.MD, border_radius=Design.RADIUS_LG, width="100%", margin_y=Spacing.MD
@@ -1166,7 +1166,7 @@ def delete_reference_modal() -> rx.Component:
                 spacing="3", width="100%", padding_top=Spacing.MD
             ),
 
-            style={"max_width": "450px"}
+            style={"max_width": Design.MODAL_WIDTH_SM}
         ),
         open=State.show_delete_reference_modal
     )
@@ -1177,7 +1177,7 @@ def reference_card(ref) -> rx.Component:
     return rx.box(
         rx.hstack(
             rx.vstack(
-                rx.text(ref.name, font_weight="600", font_size="0.95rem"),
+                rx.text(ref.name, font_weight="600", font_size=Typography.SIZE_MD),
                 rx.hstack(
                     rx.badge(ref.exam_name, color_scheme="blue", size="1"),
                     rx.badge(ref.level, variant="outline", size="1"),
@@ -1185,11 +1185,11 @@ def reference_card(ref) -> rx.Component:
                 ),
                 rx.text(
                     "Alvo: " + ref.target_value.to_string() + " | CV% Max: <=" + format_cv(ref.cv_max_threshold) + "%",
-                    font_size="0.75rem", color=Color.TEXT_SECONDARY
+                    font_size=Typography.SIZE_SM_XS, color=Color.TEXT_SECONDARY
                 ),
                 rx.text(
                     f"Valido a partir de: {ref.valid_from}",
-                    font_size="0.7rem", color=Color.TEXT_SECONDARY
+                    font_size=Typography.SIZE_XS, color=Color.TEXT_SECONDARY
                 ),
                 spacing="1", align_items="start"
             ),
@@ -1214,7 +1214,7 @@ def reference_card(ref) -> rx.Component:
         ),
         padding=Spacing.MD, width="100%",
         bg=Color.SURFACE, border=f"1px solid {Color.BORDER}", border_radius=Design.RADIUS_LG,
-        _hover={"border_color": Color.PRIMARY, "box_shadow": Design.SHADOW_SM},
+        _hover={"border_color": Color.PRIMARY, "box_shadow": Design.SHADOW_DEFAULT},
         transition="all 0.2s ease"
     )
 
