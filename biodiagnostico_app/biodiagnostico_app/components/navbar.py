@@ -4,19 +4,13 @@ from ..styles import Color, Spacing, Design
 
 def navbar_link(text: str, url: str, icon: str) -> rx.Component:
     """Link de navegação com estados visuais claros e acessíveis"""
-    
-    # Map internal IDs to routes
+
     route_map = {
         "dashboard": "/dashboard",
-        "conversor": "/conversor",
-        "analise": "/analise",
         "proin": "/proin",
-        "detetive": "/detetive",
-        "api": "/settings"
     }
     href = route_map.get(url, "/")
-    
-    # Use the router path to detect active page (works with direct navigation)
+
     is_active = rx.State.router.page.path == href
 
     return rx.link(
@@ -30,26 +24,27 @@ def navbar_link(text: str, url: str, icon: str) -> rx.Component:
                 rx.text(
                     text,
                     font_weight=rx.cond(is_active, "700", "500"),
-                    font_size="1rem",
+                    font_size="0.95rem",
                     transition="all 0.2s ease",
                 ),
                 style={"gap": "8px"},
                 align="center",
-                color=rx.cond(is_active, Color.PRIMARY, Color.TEXT_SECONDARY),
+                color=rx.cond(is_active, Color.DEEP, Color.TEXT_SECONDARY),
                 padding_x=Spacing.MD,
                 padding_y=Spacing.SM,
                 border_radius=Design.RADIUS_LG,
+                bg=rx.cond(is_active, Color.PRIMARY_LIGHT, "transparent"),
+                border=rx.cond(is_active, f"1px solid {Color.PRIMARY}40", "1px solid transparent"),
                 transition="all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                 _hover={"bg": Color.PRIMARY_LIGHT, "transform": "translateY(-1px)"},
                 min_height="44px",
             ),
-            # Active Indicator Line
             rx.cond(
                 is_active,
                 rx.box(
-                    width="40%",
+                    width="60%",
                     height="3px",
-                    bg=Color.PRIMARY,
+                    bg=Color.GRADIENT_PRIMARY,
                     border_radius="full",
                     animation="fadeIn 0.3s ease",
                 ),
@@ -67,7 +62,7 @@ def navbar_link(text: str, url: str, icon: str) -> rx.Component:
     )
 
 def navbar() -> rx.Component:
-    """Barra de navegação principal com estilos aprimorados e responsivos"""
+    """Barra de navegação principal"""
     return rx.box(
         rx.hstack(
             # Logo / Brand
@@ -91,10 +86,7 @@ def navbar() -> rx.Component:
             # Desktop Navigation Links
             rx.hstack(
                 navbar_link("Dashboard", "dashboard", "layout_dashboard"),
-                navbar_link("Conversor PDF", "conversor", "file_text"),
-                navbar_link("Análise", "analise", "chart_bar"),
-                navbar_link("Proin QC", "proin", "activity"),
-                navbar_link("Bio IA", "detetive", "dna"),
+                navbar_link("Controle de Qualidade", "proin", "activity"),
                 style={"gap": "8px"},
                 display=["none", "none", "lg", "flex"],
                 padding=Spacing.XS,
@@ -107,15 +99,6 @@ def navbar() -> rx.Component:
 
             # Right Side
             rx.hstack(
-                rx.box(
-                    rx.icon(tag="bell", size=20, color=Color.TEXT_SECONDARY),
-                    padding=Spacing.SM,
-                    border_radius="full",
-                    cursor="pointer",
-                    display=["none", "flex", "flex"],
-                    _hover={"bg": Color.PRIMARY_LIGHT, "color": Color.PRIMARY}
-                ),
-                
                 rx.menu.root(
                     rx.menu.trigger(
                         rx.hstack(
@@ -135,7 +118,6 @@ def navbar() -> rx.Component:
                         ),
                     ),
                     rx.menu.content(
-                        rx.menu.item("Configurações", on_select=lambda: State.set_page("api")),
                         rx.menu.separator(),
                         rx.menu.item("Sair", color="red", on_select=State.logout),
                     ),
@@ -145,7 +127,7 @@ def navbar() -> rx.Component:
                     mobile_nav_trigger(),
                     display=["flex", "flex", "lg", "none"]
                 ),
-                
+
                 spacing={"initial": "2", "sm": "4"},
                 align="center"
             ),
@@ -154,11 +136,11 @@ def navbar() -> rx.Component:
             align="center",
             padding_x=[Spacing.MD, Spacing.LG],
             padding_y=Spacing.SM,
-            background_color="rgba(255, 255, 255, 0.8)", # Keep true glass
+            bg=Color.GRADIENT_GLASS,
             backdrop_filter="blur(16px) saturate(180%)",
-            border=f"1px solid {Color.BORDER}", # Use token
+            border=f"1px solid {Color.BORDER}",
             border_radius=Design.RADIUS_XL,
-            box_shadow=Design.SHADOW_MD, # Use token
+            box_shadow=Design.SHADOW_MD,
         ),
         width="100%",
         position="sticky",
@@ -182,15 +164,11 @@ def mobile_nav_trigger() -> rx.Component:
         ),
         rx.menu.content(
             rx.menu.item(rx.hstack(rx.icon(tag="layout_dashboard", size=18), rx.text("Dashboard", font_size="1rem")), on_select=lambda: State.set_page("dashboard"), padding="12px"),
-            rx.menu.item(rx.hstack(rx.icon(tag="file_text", size=18), rx.text("Conversor PDF", font_size="1rem")), on_select=lambda: State.set_page("conversor"), padding="12px"),
-            rx.menu.item(rx.hstack(rx.icon(tag="chart_bar", size=18), rx.text("Análise", font_size="1rem")), on_select=lambda: State.set_page("analise"), padding="12px"),
-            rx.menu.item(rx.hstack(rx.icon(tag="activity", size=18), rx.text("Proin QC", font_size="1rem")), on_select=lambda: State.set_page("proin"), padding="12px"),
-            rx.menu.item(rx.hstack(rx.icon(tag="dna", size=18), rx.text("Bio IA", font_size="1rem")), on_select=lambda: State.set_page("detetive"), padding="12px"),
+            rx.menu.item(rx.hstack(rx.icon(tag="activity", size=18), rx.text("Controle de Qualidade", font_size="1rem")), on_select=lambda: State.set_page("proin"), padding="12px"),
             rx.menu.separator(),
-            rx.menu.item(rx.hstack(rx.icon(tag="settings", size=18), rx.text("Configurações", font_size="1rem")), on_select=lambda: State.set_page("api"), padding="12px"),
             rx.menu.item(rx.hstack(rx.icon(tag="log_out", size=18), rx.text("Sair", font_size="1rem")), color="red", on_select=State.logout, padding="12px"),
             size="2",
-            width="220px",
+            width="260px",
         )
     )
 

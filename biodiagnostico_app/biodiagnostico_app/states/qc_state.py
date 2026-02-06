@@ -13,7 +13,6 @@ from ..models import QCRecord, ReagentLot, MaintenanceRecord, LeveyJenningsPoint
 from ..utils.qc_pdf_report import generate_qc_pdf
 from ..services.qc_service import QCService
 from ..services.qc_reference_service import QCReferenceService
-from ..services.mapping_service import mapping_service
 from ..services.westgard_service import WestgardService
 from .dashboard_state import DashboardState
 
@@ -559,7 +558,7 @@ class QCState(DashboardState):
         self.reset_qc_messages()
         try:
              # Normalizar nome do exame antes de salvar
-             canonical_name = mapping_service.get_canonical_name_sync(self.qc_exam_name)
+             canonical_name = self.qc_exam_name.strip()
              
              # Prepare history for Westgard check (Filter by same exam)
              # Assuming self.qc_records is sorted by date descending

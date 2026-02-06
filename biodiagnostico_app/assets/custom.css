@@ -1,4 +1,91 @@
-/* Biodiagnóstico App - Custom Animations */
+/* Biodiagnostico App - Custom Animations + Global Theme */
+
+:root {
+    --font-display: "Space Grotesk", "DM Sans", system-ui, sans-serif;
+    --font-body: "DM Sans", system-ui, sans-serif;
+
+    --lab-primary: #0f766e;
+    --lab-primary-strong: #0b4d45;
+    --lab-primary-soft: #d9f4ef;
+    --lab-secondary: #1fb6a6;
+    --lab-accent: #f97316;
+    --lab-accent-soft: #fff3e6;
+
+    --lab-ink-strong: #0b1f1a;
+    --lab-ink: #132b25;
+    --lab-ink-muted: #5f6f68;
+
+    --lab-canvas: #f7f4ee;
+    --lab-surface: #ffffff;
+    --lab-surface-alt: #f2efe9;
+    --lab-border: #e1e5df;
+
+    --lab-success: #10b981;
+    --lab-success-soft: #e7fbf4;
+    --lab-warning: #f59e0b;
+    --lab-warning-soft: #fff7ed;
+    --lab-error: #ef4444;
+    --lab-error-soft: #fef2f2;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    margin: 0;
+    font-family: var(--font-body);
+    background: var(--lab-canvas);
+    color: var(--lab-ink);
+}
+
+.app-shell {
+    min-height: 100vh;
+    position: relative;
+    overflow: hidden;
+    background:
+        radial-gradient(900px circle at 8% -20%, rgba(15, 118, 110, 0.18) 0%, transparent 60%),
+        radial-gradient(900px circle at 95% 0%, rgba(249, 115, 22, 0.16) 0%, transparent 55%),
+        linear-gradient(180deg, #f8f6f1 0%, #f0ece4 100%);
+}
+
+.app-shell::before,
+.app-shell::after {
+    content: "";
+    position: absolute;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.app-shell::before {
+    width: 520px;
+    height: 520px;
+    top: -260px;
+    right: -160px;
+    background: radial-gradient(circle at center, rgba(15, 118, 110, 0.28) 0%, rgba(15, 118, 110, 0) 65%);
+    filter: blur(4px);
+    animation: floatSlow 16s ease-in-out infinite;
+}
+
+.app-shell::after {
+    width: 520px;
+    height: 520px;
+    bottom: -240px;
+    left: -200px;
+    background: radial-gradient(circle at center, rgba(249, 115, 22, 0.22) 0%, rgba(249, 115, 22, 0) 65%);
+    filter: blur(6px);
+    animation: floatSlow 20s ease-in-out infinite reverse;
+}
+
+.login-shell {
+    min-height: 100vh;
+    background: var(--lab-canvas);
+}
 
 /* Keyframe Animations */
 @keyframes fadeInUp {
@@ -24,7 +111,6 @@
 }
 
 @keyframes shake {
-
     10%,
     90% {
         transform: translate3d(-1px, 0, 0);
@@ -56,6 +142,17 @@
     100% {
         opacity: 1;
         transform: translateY(0);
+    }
+}
+
+@keyframes floatSlow {
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(18px);
     }
 }
 
@@ -121,10 +218,10 @@ textarea {
     transition: all 0.2s ease-in-out;
 }
 
-/* Focus visible for accessibility - remove default outline and add custom */
+/* Focus visible for accessibility */
 *:focus-visible {
-    outline: none !important;
-    box-shadow: none !important;
+    outline: 2px solid var(--lab-primary);
+    outline-offset: 2px;
 }
 
 input:focus,
@@ -134,14 +231,13 @@ textarea:focus,
 .rt-TextAreaInput:focus,
 .rt-SelectTrigger:focus {
     outline: none !important;
-    box-shadow: none !important;
+    box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.18) !important;
     --tw-ring-color: transparent !important;
     --tw-ring-shadow: none !important;
 }
 
 /* Pulse animation for loading states */
 @keyframes pulse {
-
     0%,
     100% {
         opacity: 1;
@@ -175,7 +271,6 @@ textarea:focus,
 
 /* Bounce animation for attention */
 @keyframes bounce {
-
     0%,
     100% {
         transform: translateY(0);
@@ -194,7 +289,7 @@ textarea:focus,
 @keyframes scaleUp {
     0% {
         opacity: 0;
-        transform: scale(0.9);
+        transform: scale(0.96);
     }
 
     100% {
@@ -207,11 +302,6 @@ textarea:focus,
     animation: scaleUp 0.2s ease-out forwards;
 }
 
-/* Smooth scrolling for the entire page */
-html {
-    scroll-behavior: smooth;
-}
-
 /* Custom scrollbar styling */
 ::-webkit-scrollbar {
     width: 10px;
@@ -219,14 +309,14 @@ html {
 }
 
 ::-webkit-scrollbar-track {
-    background: #F8F9FA;
+    background: #f3f0ea;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #4CAF50;
-    border-radius: 5px;
+    background: rgba(15, 118, 110, 0.6);
+    border-radius: 6px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #43A047;
+    background: rgba(15, 118, 110, 0.8);
 }
