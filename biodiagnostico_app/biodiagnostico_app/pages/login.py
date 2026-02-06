@@ -18,8 +18,8 @@ def login_page() -> rx.Component:
                     margin_bottom=Spacing.LG
                 ),
                 rx.heading("BIODIAGNÓSTICO", size="3", color="white", letter_spacing="0.1em"),
-                rx.heading("Sistema de Auditoria & Inteligência Laboratorial", size="8", color="white", font_weight="800", line_height="1.2"),
-                rx.text("Segurança e precisão em cada análise.", size="4", color="white", opacity="0.9"),
+                rx.heading("Sistema de Controle de Qualidade Laboratorial", size="8", color="white", font_weight="800", line_height="1.2"),
+                rx.text("Precisão e confiabilidade em cada resultado.", size="4", color="white", opacity="0.9"),
                 
                 align_items="start",
                 justify_content="center",
