@@ -11,7 +11,7 @@ class SupabaseClient:
     def get_client(cls) -> Client:
         """Retorna instância única do cliente Supabase"""
         if cls._instance is None:
-            # Config.validate()
+            Config.validate()
             if Config.SUPABASE_URL and Config.SUPABASE_KEY:
                 cls._instance = create_client(
                     Config.SUPABASE_URL,

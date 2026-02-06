@@ -1438,7 +1438,7 @@ class QCState(DashboardState):
 
         except Exception as e:
             logger.error(f"Erro interno PDF Generation: {e}")
-            raise e
+            raise
 
     async def generate_qc_report_pdf(self):
         """Gera PDF das tabelas de QC e inicia download"""
