@@ -22,10 +22,10 @@ def quick_access_card(title: str, description: str, icon: str, page: str, delay:
             ),
             on_click=lambda: State.set_page(page),
             cursor="pointer",
-            transition="all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+            transition="all 0.2s ease",
             _hover={
-                "box_shadow": Design.SHADOW_LG,
-                "transform": "translateY(-6px)",
+                "box_shadow": Design.SHADOW_MD,
+                "transform": "translateY(-2px)",
                 "border_color": Color.PRIMARY
             }
         ),
@@ -56,7 +56,7 @@ def qc_hero_card() -> rx.Component:
                             size=14, color="white"
                         ),
                         bg=rx.cond(State.dashboard_approval_rate >= 95.0, Color.SUCCESS, Color.WARNING),
-                        p="1", border_radius="6px"
+                        p="1", border_radius=Design.RADIUS_SM
                     ),
                     rx.text(
                         rx.cond(
@@ -78,9 +78,9 @@ def qc_hero_card() -> rx.Component:
             rx.box(
                 rx.icon(tag="activity", size=40, color="white"),
                 bg=Color.GRADIENT_PRIMARY,
-                p="4", border_radius="20px",
+                p="4", border_radius=Design.RADIUS_XL,
                 display={"initial": "none", "md": "block"},
-                box_shadow=f"0 8px 24px -4px {Color.PRIMARY}60"
+                box_shadow=Design.SHADOW_MD
             ),
             width="100%",
             align_items="center",
@@ -89,12 +89,12 @@ def qc_hero_card() -> rx.Component:
         ),
         bg=Color.SURFACE,
         border=f"1px solid {Color.BORDER}",
-        border_radius="20px",
+        border_radius=Design.RADIUS_XL,
         padding=[Spacing.MD, Spacing.LG, Spacing.XL],
-        box_shadow=Design.SHADOW_MD,
-        transition="all 0.3s ease",
-        _hover={"box_shadow": Design.SHADOW_LG, "border_color": Color.PRIMARY},
-        animation="fadeInUp 0.5s ease-out both",
+        box_shadow=Design.SHADOW_SM,
+        transition="all 0.2s ease",
+        _hover={"box_shadow": Design.SHADOW_DEFAULT},
+        animation="fadeInUp 0.4s ease-out both",
         width="100%"
     )
 
@@ -106,7 +106,7 @@ def alerts_panel() -> rx.Component:
             rx.hstack(
                 rx.box(
                     rx.icon(tag="bell-ring", size=18, color="white"),
-                    bg=Color.WARNING, p="2", border_radius="10px"
+                    bg=Color.WARNING, p="2", border_radius=Design.RADIUS_SM
                 ),
                 rx.text("Alertas", font_weight="700", color=Color.DEEP, font_size="1.1rem"),
                 rx.spacer(),
@@ -186,7 +186,7 @@ def alerts_panel() -> rx.Component:
         ),
         bg=Color.SURFACE,
         border=f"1px solid {Color.BORDER}",
-        border_radius="20px",
+        border_radius=Design.RADIUS_XL,
         padding=Spacing.LG,
         height="100%",
         animation="fadeInUp 0.6s ease-out 0.15s both"
@@ -267,7 +267,7 @@ def recent_records_table() -> rx.Component:
         ),
         bg=Color.SURFACE,
         border=f"1px solid {Color.BORDER}",
-        border_radius="20px",
+        border_radius=Design.RADIUS_XL,
         padding=Spacing.LG,
         animation="fadeInUp 0.7s ease-out 0.2s both",
         width="100%"

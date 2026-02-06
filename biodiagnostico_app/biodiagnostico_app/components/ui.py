@@ -162,19 +162,19 @@ def stat_card(title: str, value: str, icon: str, trend: str = "neutral", subtext
         rx.vstack(
             rx.hstack(
                 rx.box(
-                    rx.icon(tag=icon, size=24, color=Color.PRIMARY),
-                    padding="12px", border_radius="12px", bg=Color.PRIMARY_LIGHT,
+                    rx.icon(tag=icon, size=20, color=Color.PRIMARY),
+                    padding="10px", border_radius=Design.RADIUS_MD, bg=Color.PRIMARY_LIGHT,
                 ),
                 rx.spacer(),
                 rx.cond(subtext != "", status_badge(subtext, status=trend)),
                 width="100%", align_items="center"
             ),
             rx.vstack(
-                rx.text(value, font_size="2rem", font_weight="800", color=Color.DEEP, line_height="1.1"),
-                rx.text(title, style=Typography.SMALL, color=Color.TEXT_SECONDARY, text_transform="uppercase"),
+                rx.text(value, font_size="1.5rem", font_weight="700", color=Color.DEEP, line_height="1.2"),
+                rx.text(title, style=Typography.CAPTION, color=Color.TEXT_SECONDARY),
                 gap="2px", align_items="start"
             ),
-            gap=Spacing.LG
+            gap=Spacing.MD
         )
     )
 

@@ -44,28 +44,28 @@ def qc_status_kind(status, cv, cv_max) -> rx.Var:
 
 
 def tab_button(label: str, icon: str, tab_id: str) -> rx.Component:
-    """Botão de aba do ProIn - Purificado"""
+    """Botão de aba do ProIn"""
     is_active = State.proin_current_tab == tab_id
-    
+
     return rx.button(
         rx.hstack(
-            rx.icon(tag=icon, size=18),
-            rx.text(label, font_size="0.875rem", font_weight="500"),
-            style={"gap": "8px"},
+            rx.icon(tag=icon, size=16),
+            rx.text(label, font_size="0.8125rem", font_weight="500"),
+            style={"gap": "6px"},
             align_items="center",
         ),
         on_click=lambda: State.set_proin_tab(tab_id),
         bg=rx.cond(is_active, Color.PRIMARY_LIGHT, "transparent"),
         color=rx.cond(is_active, Color.PRIMARY, Color.TEXT_SECONDARY),
-        border_radius=Design.RADIUS_LG,
-        padding_x="1.5rem",
-        padding_y="0.75rem",
-        border=rx.cond(is_active, f"1px solid {Color.PRIMARY}40", "1px solid transparent"),
+        border_radius=Design.RADIUS_MD,
+        padding_x="1rem",
+        padding_y="0.5rem",
+        border=rx.cond(is_active, f"1px solid {Color.PRIMARY}30", "1px solid transparent"),
         _hover={
-            "bg": Color.PRIMARY_LIGHT,
-            "color": Color.PRIMARY,
+            "bg": Color.SURFACE_ALT,
+            "color": Color.TEXT_PRIMARY,
         },
-        transition="all 0.2s cubic-bezier(0.4, 0, 0.2, 1)"
+        transition="all 0.15s ease"
     )
 
 
@@ -125,7 +125,7 @@ def dashboard_tab() -> rx.Component:
                                     rx.hstack(
                                         rx.box(
                                             rx.icon(tag="wrench", size=24, color=Color.WARNING), 
-                                            bg=Color.WARNING_BG, p="3", border_radius="12px",
+                                            bg=Color.WARNING_BG, p="3", border_radius=Design.RADIUS_MD,
                                             display="flex", align_items="center", justify_content="center"
                                         ),
                                         rx.vstack(
@@ -150,7 +150,7 @@ def dashboard_tab() -> rx.Component:
                                     rx.hstack(
                                         rx.box(
                                             rx.icon(tag="clock", size=24, color=Color.ERROR), 
-                                            bg=Color.ERROR_BG, p="3", border_radius="12px",
+                                            bg=Color.ERROR_BG, p="3", border_radius=Design.RADIUS_MD,
                                             display="flex", align_items="center", justify_content="center"
                                         ),
                                         rx.vstack(
@@ -404,9 +404,9 @@ def registro_qc_tab() -> rx.Component:
                 ),
                 width="100%"
             ),
-            max_width="4xl", margin_x="auto", width="100%"
+            width="100%"
         ),
-        
+
         # Histórico Table Section
         rx.box(
             rx.vstack(
@@ -517,7 +517,7 @@ def registro_qc_tab() -> rx.Component:
                 ),
                 width="100%"
             ),
-            width="100%", margin_top=Spacing.XL, max_width="4xl", margin_x="auto"
+            width="100%", margin_top=Spacing.XL
         ),
         
         width="100%", padding_bottom="3rem"
@@ -578,7 +578,7 @@ def reagentes_tab() -> rx.Component:
                                         rx.box(
                                             rx.icon(tag="package", size=20, color=Color.TEXT_SECONDARY),
                                             bg=rx.cond(lot["days_left"] <= 7, Color.ERROR_BG, rx.cond(lot["days_left"] <= 30, Color.WARNING_BG, Color.PRIMARY_LIGHT)),
-                                            p="2", border_radius="10px"
+                                            p="2", border_radius=Design.RADIUS_SM
                                         ),
                                         rx.vstack(
                                             ui.text(lot["name"], font_weight="500"),
@@ -680,7 +680,7 @@ def relatorios_tab() -> rx.Component:
         ui.card(
             rx.vstack(
                 rx.hstack(
-                    rx.box(rx.icon(tag="file_text", size=20, color=Color.PRIMARY), bg=Color.PRIMARY_LIGHT, p="2", border_radius="8px"),
+                    rx.box(rx.icon(tag="file_text", size=20, color=Color.PRIMARY), bg=Color.PRIMARY_LIGHT, p="2", border_radius=Design.RADIUS_SM),
                     ui.heading("Exportar Tabela QC (PDF)", level=3),
                     rx.spacer(),
                     rx.cond(
@@ -731,7 +731,7 @@ def relatorios_tab() -> rx.Component:
                             rx.html(
                                 f'<iframe src="data:application/pdf;base64,' + State.qc_pdf_preview + '" width="100%" height="400px" style="border: none; border-radius: 8px; background: white;"></iframe>'
                             ),
-                            width="60%", height="400px", bg=Color.BACKGROUND, border_radius="12px", border=f"1px solid {Color.BORDER}"
+                            width="60%", height="400px", bg=Color.BACKGROUND, border_radius=Design.RADIUS_MD, border=f"1px solid {Color.BORDER}"
                         )
                     ),
                     width="100%", spacing="6", align_items="start"
@@ -758,7 +758,7 @@ def relatorios_tab() -> rx.Component:
                 ),
                 ui.button("Gerar Gráfico", icon="chart_line", on_click=State.update_levey_jennings_data, margin_top=Spacing.MD),
             ),
-            max_width="3xl", margin_x="auto", width="100%"
+            width="100%"
         ),
         
         # Chart Area
@@ -899,7 +899,7 @@ def importar_tab() -> rx.Component:
                         spacing="2", align_items="center", width="100%"
                     )
                 ),
-                max_width="2xl", margin_x="auto", width="100%"
+                max_width="3xl", margin_x="auto", width="100%"
             )
         ),
         

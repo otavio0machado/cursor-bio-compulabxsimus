@@ -1,4 +1,4 @@
-/* Biodiagnostico App - Custom Animations + Global Theme */
+/* Biodiagnostico App - Design System CSS */
 
 :root {
     --font-display: "Space Grotesk", "DM Sans", system-ui, sans-serif;
@@ -11,19 +11,19 @@
     --lab-accent: #15803D;
     --lab-accent-soft: #F0FDF4;
 
-    --lab-ink-strong: #052E16;
-    --lab-ink: #14532D;
-    --lab-ink-muted: #5f6f68;
+    --lab-ink-strong: #0F172A;
+    --lab-ink: #1E293B;
+    --lab-ink-muted: #64748B;
 
-    --lab-canvas: #f7f4ee;
+    --lab-canvas: #F8FAFC;
     --lab-surface: #ffffff;
-    --lab-surface-alt: #f2efe9;
-    --lab-border: #D1E5D8;
+    --lab-surface-alt: #F1F5F9;
+    --lab-border: #E2E8F0;
 
     --lab-success: #10b981;
-    --lab-success-soft: #e7fbf4;
+    --lab-success-soft: #ECFDF5;
     --lab-warning: #f59e0b;
-    --lab-warning-soft: #fff7ed;
+    --lab-warning-soft: #FFFBEB;
     --lab-error: #ef4444;
     --lab-error-soft: #fef2f2;
 }
@@ -48,9 +48,9 @@ body {
     position: relative;
     overflow: hidden;
     background:
-        radial-gradient(900px circle at 8% -20%, rgba(22, 101, 52, 0.18) 0%, transparent 60%),
-        radial-gradient(900px circle at 95% 0%, rgba(34, 197, 94, 0.12) 0%, transparent 55%),
-        linear-gradient(180deg, #f8f6f1 0%, #f0ece4 100%);
+        radial-gradient(800px circle at 10% -15%, rgba(22, 101, 52, 0.06) 0%, transparent 60%),
+        radial-gradient(600px circle at 90% 5%, rgba(34, 197, 94, 0.04) 0%, transparent 50%),
+        var(--lab-canvas);
 }
 
 .app-shell::before,
@@ -59,25 +59,25 @@ body {
     position: absolute;
     z-index: 0;
     pointer-events: none;
-    opacity: 0.7;
+    opacity: 0.5;
 }
 
 .app-shell::before {
-    width: 520px;
-    height: 520px;
-    top: -260px;
-    right: -160px;
-    background: radial-gradient(circle at center, rgba(22, 101, 52, 0.28) 0%, rgba(22, 101, 52, 0) 65%);
+    width: 400px;
+    height: 400px;
+    top: -200px;
+    right: -100px;
+    background: radial-gradient(circle at center, rgba(22, 101, 52, 0.08) 0%, rgba(22, 101, 52, 0) 65%);
     filter: blur(4px);
     animation: floatSlow 16s ease-in-out infinite;
 }
 
 .app-shell::after {
-    width: 520px;
-    height: 520px;
-    bottom: -240px;
-    left: -200px;
-    background: radial-gradient(circle at center, rgba(34, 197, 94, 0.18) 0%, rgba(34, 197, 94, 0) 65%);
+    width: 400px;
+    height: 400px;
+    bottom: -200px;
+    left: -150px;
+    background: radial-gradient(circle at center, rgba(34, 197, 94, 0.06) 0%, rgba(34, 197, 94, 0) 65%);
     filter: blur(6px);
     animation: floatSlow 20s ease-in-out infinite reverse;
 }
@@ -91,7 +91,7 @@ body {
 @keyframes fadeInUp {
     0% {
         opacity: 0;
-        transform: translateY(20px);
+        transform: translateY(16px);
     }
 
     100% {
@@ -136,7 +136,7 @@ body {
 @keyframes slideInFromBottom {
     0% {
         opacity: 0;
-        transform: translateY(30px);
+        transform: translateY(24px);
     }
 
     100% {
@@ -152,30 +152,29 @@ body {
     }
 
     50% {
-        transform: translateY(18px);
+        transform: translateY(12px);
     }
 }
 
 /* Animation Classes */
 .animate-fade-in {
-    animation: fadeIn 0.5s ease-out forwards;
+    animation: fadeIn 0.4s ease-out forwards;
 }
 
 .animate-fade-in-up {
-    animation: fadeInUp 0.5s ease-out forwards;
+    animation: fadeInUp 0.4s ease-out forwards;
 }
 
 .animate-slide-up {
-    animation: fadeInUp 0.6s ease-out forwards;
+    animation: fadeInUp 0.5s ease-out forwards;
 }
 
 .animate-shake {
     animation: shake 0.82s cubic-bezier(.36, .07, .19, .97) both;
 }
 
-/* Tailwind animate-in override for reflex */
 .animate-in {
-    animation-duration: 0.5s;
+    animation-duration: 0.4s;
     animation-timing-function: ease-out;
     animation-fill-mode: forwards;
 }
@@ -209,13 +208,13 @@ body {
     animation-delay: 500ms;
 }
 
-/* Smooth transitions for all interactive elements */
+/* Smooth transitions for interactive elements */
 button,
 a,
 input,
 select,
 textarea {
-    transition: all 0.2s ease-in-out;
+    transition: all 0.15s ease;
 }
 
 /* Focus visible for accessibility */
@@ -231,7 +230,7 @@ textarea:focus,
 .rt-TextAreaInput:focus,
 .rt-SelectTrigger:focus {
     outline: none !important;
-    box-shadow: 0 0 0 4px rgba(22, 101, 52, 0.18) !important;
+    box-shadow: 0 0 0 3px rgba(22, 101, 52, 0.12) !important;
     --tw-ring-color: transparent !important;
     --tw-ring-shadow: none !important;
 }
@@ -269,7 +268,7 @@ textarea:focus,
     animation: slideInFromRight 0.3s ease-out forwards;
 }
 
-/* Bounce animation for attention */
+/* Bounce animation */
 @keyframes bounce {
     0%,
     100% {
@@ -277,7 +276,7 @@ textarea:focus,
     }
 
     50% {
-        transform: translateY(-10px);
+        transform: translateY(-8px);
     }
 }
 
@@ -285,7 +284,7 @@ textarea:focus,
     animation: bounce 0.5s ease-in-out;
 }
 
-/* Scale up animation for modals/dialogs */
+/* Scale up animation for modals */
 @keyframes scaleUp {
     0% {
         opacity: 0;
@@ -302,21 +301,21 @@ textarea:focus,
     animation: scaleUp 0.2s ease-out forwards;
 }
 
-/* Custom scrollbar styling */
+/* Custom scrollbar */
 ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-    background: #f3f0ea;
+    background: var(--lab-surface-alt);
 }
 
 ::-webkit-scrollbar-thumb {
-    background: rgba(22, 101, 52, 0.6);
-    border-radius: 6px;
+    background: var(--lab-border);
+    border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: rgba(22, 101, 52, 0.8);
+    background: var(--lab-ink-muted);
 }

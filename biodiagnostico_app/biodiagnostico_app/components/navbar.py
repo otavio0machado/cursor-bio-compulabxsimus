@@ -32,23 +32,23 @@ def navbar_link(text: str, url: str, icon: str) -> rx.Component:
                 color=rx.cond(is_active, Color.DEEP, Color.TEXT_SECONDARY),
                 padding_x=Spacing.MD,
                 padding_y=Spacing.SM,
-                border_radius=Design.RADIUS_LG,
+                border_radius=Design.RADIUS_MD,
                 bg=rx.cond(is_active, Color.PRIMARY_LIGHT, "transparent"),
-                border=rx.cond(is_active, f"1px solid {Color.PRIMARY}40", "1px solid transparent"),
-                transition="all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                _hover={"bg": Color.PRIMARY_LIGHT, "transform": "translateY(-1px)"},
-                min_height="44px",
+                border=rx.cond(is_active, f"1px solid {Color.PRIMARY}25", "1px solid transparent"),
+                transition="all 0.15s ease",
+                _hover={"bg": Color.SURFACE_ALT},
+                min_height="40px",
             ),
             rx.cond(
                 is_active,
                 rx.box(
-                    width="60%",
-                    height="3px",
-                    bg=Color.GRADIENT_PRIMARY,
+                    width="50%",
+                    height="2px",
+                    bg=Color.PRIMARY,
                     border_radius="full",
-                    animation="fadeIn 0.3s ease",
+                    animation="fadeIn 0.2s ease",
                 ),
-                rx.box(width="0%", height="3px", bg="transparent")
+                rx.box(width="0%", height="2px", bg="transparent")
             ),
             spacing="0",
             align="center",
@@ -69,7 +69,7 @@ def navbar() -> rx.Component:
             rx.box(
                 rx.image(
                     src="/logo.jpg",
-                    height=["35px", "45px", "50px"],
+                    height=["32px", "40px", "44px"],
                     width="auto",
                     alt="Logo Biodiagnóstico",
                     object_fit="contain",
@@ -77,8 +77,8 @@ def navbar() -> rx.Component:
                 cursor="pointer",
                 on_click=lambda: State.set_page("dashboard"),
                 padding=Spacing.XS,
-                border_radius=Design.RADIUS_MD,
-                transition="all 0.2s ease",
+                border_radius=Design.RADIUS_SM,
+                transition="all 0.15s ease",
             ),
 
             rx.spacer(),
@@ -87,11 +87,11 @@ def navbar() -> rx.Component:
             rx.hstack(
                 navbar_link("Dashboard", "dashboard", "layout_dashboard"),
                 navbar_link("Controle de Qualidade", "proin", "activity"),
-                style={"gap": "8px"},
+                style={"gap": "4px"},
                 display=["none", "none", "lg", "flex"],
                 padding=Spacing.XS,
-                border_radius=Design.RADIUS_XL,
-                bg=Color.BACKGROUND,
+                border_radius=Design.RADIUS_LG,
+                bg=Color.SURFACE_ALT,
                 border=f"1px solid {Color.BORDER}"
             ),
 
@@ -104,17 +104,17 @@ def navbar() -> rx.Component:
                         rx.hstack(
                             rx.avatar(fallback="AD", size="2", radius="full", cursor="pointer", bg=Color.PRIMARY, color="white"),
                             rx.vstack(
-                                rx.text("Admin", font_size="0.875rem", font_weight="600", color=Color.TEXT_PRIMARY),
+                                rx.text("Admin", font_size="0.8125rem", font_weight="600", color=Color.TEXT_PRIMARY),
                                 spacing="0",
                                 display=["none", "none", "md", "flex"]
                             ),
-                            rx.icon(tag="chevron_down", size=16, color=Color.TEXT_SECONDARY),
+                            rx.icon(tag="chevron_down", size=14, color=Color.TEXT_SECONDARY),
                             style={"gap": "8px"},
                             align="center",
                             padding=f"{Spacing.XS} {Spacing.SM}",
                             border_radius="full",
                             cursor="pointer",
-                            _hover={"bg": Color.BACKGROUND}
+                            _hover={"bg": Color.SURFACE_ALT}
                         ),
                     ),
                     rx.menu.content(
@@ -136,15 +136,15 @@ def navbar() -> rx.Component:
             align="center",
             padding_x=[Spacing.MD, Spacing.LG],
             padding_y=Spacing.SM,
-            bg=Color.GRADIENT_GLASS,
-            backdrop_filter="blur(16px) saturate(180%)",
+            bg="rgba(255, 255, 255, 0.85)",
+            backdrop_filter="blur(12px) saturate(150%)",
             border=f"1px solid {Color.BORDER}",
-            border_radius=Design.RADIUS_XL,
-            box_shadow=Design.SHADOW_MD,
+            border_radius=Design.RADIUS_LG,
+            box_shadow=Design.SHADOW_SM,
         ),
         width="100%",
         position="sticky",
-        top=["0.5rem", "1rem"],
+        top=["0.5rem", "0.75rem"],
         z_index="1000",
         padding_x=[Spacing.SM, Spacing.MD, Spacing.LG],
     )
@@ -158,8 +158,8 @@ def mobile_nav_trigger() -> rx.Component:
                 padding=Spacing.SM,
                 border_radius=Design.RADIUS_MD,
                 cursor="pointer",
-                bg=Color.BACKGROUND,
-                _hover={"bg": Color.PRIMARY_LIGHT}
+                bg=Color.SURFACE_ALT,
+                _hover={"bg": Color.BORDER}
             )
         ),
         rx.menu.content(
