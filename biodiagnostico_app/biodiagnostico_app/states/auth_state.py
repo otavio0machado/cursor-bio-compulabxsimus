@@ -1,49 +1,70 @@
 import reflex as rx
-from typing import Optional
-from ..config import Config
+from ..services.supabase_client import supabase
+
 
 class AuthState(rx.State):
-    """Estado responsável pela autenticação e controle de acesso"""
-    
-    # Autenticação - Login único
+    """Estado responsável pela autenticação via Supabase"""
+
     is_authenticated: bool = False
     login_email: str = ""
     login_password: str = ""
     login_error: str = ""
+    _user_id: str = ""
 
-    # Credenciais validas (definidas via variaveis de ambiente)
-    def _credentials_configured(self) -> bool:
-        return bool(Config.AUTH_EMAIL and Config.AUTH_PASSWORD)
-    
     def set_login_email(self, email: str):
         self.login_email = email
-        
+
     def set_login_password(self, password: str):
         self.login_password = password
-        
+
     def attempt_login(self):
-        """Tenta realizar login com as credenciais fornecidas"""
-        if not self._credentials_configured():
-            self.login_error = "Login indisponivel. Configure AUTH_EMAIL e AUTH_PASSWORD."
-            self.is_authenticated = False
+        """Tenta realizar login via Supabase Auth"""
+        if not self.login_email or not self.login_password:
+            self.login_error = "Preencha e-mail e senha."
             return
-        if self.login_email == Config.AUTH_EMAIL and self.login_password == Config.AUTH_PASSWORD:
-            self.is_authenticated = True
-            self.login_error = ""
-            return rx.redirect("/")
-        else:
-            self.login_error = "Credenciais inválidas. Tente novamente."
+
+        if supabase is None:
+            self.login_error = "Serviço indisponível. Verifique a configuração do Supabase."
+            return
+
+        try:
+            response = supabase.auth.sign_in_with_password({
+                "email": self.login_email,
+                "password": self.login_password,
+            })
+            if response.user:
+                self.is_authenticated = True
+                self._user_id = response.user.id
+                self.login_error = ""
+                return rx.redirect("/")
+            else:
+                self.login_error = "Credenciais inválidas."
+                self.is_authenticated = False
+        except Exception as e:
+            msg = str(e)
+            if "Invalid login credentials" in msg:
+                self.login_error = "E-mail ou senha incorretos."
+            elif "Email not confirmed" in msg:
+                self.login_error = "E-mail não confirmado. Verifique sua caixa de entrada."
+            else:
+                self.login_error = "Erro ao autenticar. Tente novamente."
             self.is_authenticated = False
-            
+
     def logout(self):
-        """Realiza logout do usuário"""
+        """Realiza logout"""
+        if supabase:
+            try:
+                supabase.auth.sign_out()
+            except Exception:
+                pass
         self.is_authenticated = False
         self.login_email = ""
         self.login_password = ""
         self.login_error = ""
-        return rx.redirect("/login")
+        self._user_id = ""
+        return rx.redirect("/")
 
     def check_auth(self):
-        """Verifica se o usuário está autenticado e redireciona se não estiver"""
+        """Verifica se o usuário está autenticado"""
         if not self.is_authenticated:
             return rx.redirect("/")
