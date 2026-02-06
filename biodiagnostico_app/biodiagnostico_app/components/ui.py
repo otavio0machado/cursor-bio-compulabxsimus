@@ -73,8 +73,11 @@ def button(label: str, icon: str = None, variant: str = "primary", size: str = "
         "primary": BUTTON_PRIMARY_STYLE,
         "secondary": BUTTON_SECONDARY_STYLE,
         "ghost": {
-            "bg": "transparent", "color": Color.TEXT_SECONDARY, "padding_x": "0.75rem",
-            "_hover": {"bg": Color.PRIMARY_LIGHT, "color": Color.DEEP}
+            "bg": "transparent",
+            "color": Color.DEEP,
+            "padding_x": "0.75rem",
+            "border": "1px solid transparent",
+            "_hover": {"bg": Color.PRIMARY_LIGHT, "color": Color.DEEP, "border_color": Color.PRIMARY}
         },
         "danger": {
             "bg": Color.ERROR_BG, "color": Color.ERROR, "border": f"1px solid {Color.ERROR}40",

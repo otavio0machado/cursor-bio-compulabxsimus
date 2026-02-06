@@ -28,7 +28,7 @@ def login_page() -> rx.Component:
                 max_width="800px"
             ),
             width=["0%", "0%", "50%"],
-            background="linear-gradient(135deg, rgba(16, 185, 129, 0.95) 0%, rgba(4, 120, 87, 0.9) 100%), url('/login_bg.png')",
+            background="linear-gradient(135deg, rgba(15, 118, 110, 0.92) 0%, rgba(8, 53, 48, 0.96) 100%), url('/login_bg.png')",
             background_size="cover",
             background_position="center",
             display=["none", "none", "flex"],
@@ -117,5 +117,6 @@ def login_page() -> rx.Component:
         width="100%",
         min_height="100vh",
         display="flex",
-        flex_direction=["column", "column", "row"]
+        flex_direction=["column", "column", "row"],
+        class_name="login-shell"
     )

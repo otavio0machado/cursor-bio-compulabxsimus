@@ -11,64 +11,68 @@ import reflex as rx
 
 class Color:
     # --- Primary Brand (Modern Emerald) ---
-    PRIMARY = "#10B981"          # Emerald 500 - Vivid, Friendly
-    PRIMARY_HOVER = "#059669"    # Emerald 600 - Deep Interaction
-    PRIMARY_LIGHT = "#ECFDF5"    # Emerald 50 - Backgrounds, Badges
+    PRIMARY = "#0F766E"          # Teal core
+    PRIMARY_HOVER = "#0B4D45"
+    PRIMARY_LIGHT = "#D9F4EF"
+    SECONDARY = "#1FB6A6"
+    ACCENT = "#F97316"
+    ACCENT_LIGHT = "#FFF3E6"
     
     # --- Deep & Contrast (Text & Headers) ---
-    DEEP = "#064E3B"             # Emerald 900 - Almost Black, but richer
-    SECONDARY = "#34D399"        # Emerald 400 - Accents
+    DEEP = "#0B1F1A"
     
     # --- Neutrals (Clean Slate) ---
-    BACKGROUND = "#F8FAFC"       # Slate 50 - Cool Gray Background
-    SURFACE = "#FFFFFF"          # Pure White
-    TEXT_PRIMARY = "#0F172A"     # Slate 900 - Sharper text
-    TEXT_SECONDARY = "#64748B"   # Slate 500 - Soft text
-    BORDER = "#E2E8F0"           # Slate 200 - Subtle borders
+    BACKGROUND = "#F7F4EE"
+    SURFACE = "#FFFFFF"
+    SURFACE_ALT = "#F2EFE9"
+    TEXT_PRIMARY = "#132B25"
+    TEXT_SECONDARY = "#5F6F68"
+    BORDER = "#E1E5DF"
     
     # --- Status (Semantic) ---
-    ERROR = "#EF4444"            # Red 500
-    ERROR_BG = "#FEF2F2"         # Red 50
-    SUCCESS = "#10B981"          # Emerald 500
-    SUCCESS_BG = "#ECFDF5"       # Emerald 50
-    WARNING = "#F59E0B"          # Amber 500
-    WARNING_BG = "#FFFBEB"       # Amber 50
+    ERROR = "#EF4444"
+    ERROR_BG = "#FEF2F2"
+    SUCCESS = "#10B981"
+    SUCCESS_BG = "#E7FBF4"
+    WARNING = "#F59E0B"
+    WARNING_BG = "#FFF7ED"
 
     # --- Vibe Gradients ---
-    GRADIENT_PRIMARY = "linear-gradient(135deg, #10B981 0%, #059669 100%)"
-    GRADIENT_SURFACE = "radial-gradient(circle at top left, #F8FAFC 0%, #E2E8F0 100%)"
-    GRADIENT_GLASS = "linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%)"
+    GRADIENT_PRIMARY = "linear-gradient(135deg, #0F766E 0%, #0B4D45 100%)"
+    GRADIENT_SURFACE = "linear-gradient(160deg, rgba(255,255,255,0.96) 0%, rgba(242,239,233,0.9) 100%)"
+    GRADIENT_GLASS = "linear-gradient(180deg, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.65) 100%)"
 
 class Design:
     # --- Radius (Curvier = Friendlier) ---
-    RADIUS_MD = "10px"
-    RADIUS_LG = "16px"
-    RADIUS_XL = "24px" 
+    RADIUS_MD = "12px"
+    RADIUS_LG = "18px"
+    RADIUS_XL = "26px"
+    RADIUS_XXL = "32px"
     
     # --- Shadows (Soft & floating) ---
-    SHADOW_SM = "0 1px 2px 0 rgba(0, 0, 0, 0.05)"
-    SHADOW_DEFAULT = "0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)"
-    SHADOW_MD = "0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025)"
-    SHADOW_LG = "0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02)"
+    SHADOW_SM = "0 2px 8px rgba(10, 20, 16, 0.06)"
+    SHADOW_DEFAULT = "0 10px 24px -18px rgba(10, 20, 16, 0.35)"
+    SHADOW_MD = "0 18px 32px -22px rgba(10, 20, 16, 0.4)"
+    SHADOW_LG = "0 28px 50px -26px rgba(10, 20, 16, 0.45)"
 
 class Typography:
     # --- Headings ---
-    H1 = {"font_size": "2.5rem", "font_weight": "800", "line_height": "1.2", "color": Color.DEEP}
-    H2 = {"font_size": "2rem", "font_weight": "700", "line_height": "1.3", "color": Color.DEEP}
-    H3 = {"font_size": "1.5rem", "font_weight": "600", "line_height": "1.4", "color": Color.DEEP}
-    H4 = {"font_size": "1.25rem", "font_weight": "600", "color": Color.TEXT_PRIMARY}
-    H5 = {"font_size": "1rem", "font_weight": "600", "color": Color.TEXT_PRIMARY}
+    H1 = {"font_size": "2.7rem", "font_weight": "700", "line_height": "1.1", "color": Color.DEEP, "font_family": "var(--font-display)"}
+    H2 = {"font_size": "2.1rem", "font_weight": "700", "line_height": "1.2", "color": Color.DEEP, "font_family": "var(--font-display)"}
+    H3 = {"font_size": "1.55rem", "font_weight": "600", "line_height": "1.3", "color": Color.DEEP, "font_family": "var(--font-display)"}
+    H4 = {"font_size": "1.2rem", "font_weight": "600", "color": Color.TEXT_PRIMARY, "font_family": "var(--font-display)"}
+    H5 = {"font_size": "1rem", "font_weight": "600", "color": Color.TEXT_PRIMARY, "font_family": "var(--font-display)"}
     
     # --- Body ---
-    BODY = {"font_size": "1rem", "font_weight": "400", "line_height": "1.6", "color": Color.TEXT_PRIMARY}
-    BODY_LARGE = {"font_size": "1.125rem", "font_weight": "400", "color": Color.TEXT_PRIMARY}
-    BODY_SECONDARY = {"font_size": "1rem", "color": Color.TEXT_SECONDARY}
-    SMALL = {"font_size": "0.875rem", "color": Color.TEXT_SECONDARY}
-    CAPTION = {"font_size": "0.75rem", "color": Color.TEXT_SECONDARY}
+    BODY = {"font_size": "1rem", "font_weight": "400", "line_height": "1.6", "color": Color.TEXT_PRIMARY, "font_family": "var(--font-body)"}
+    BODY_LARGE = {"font_size": "1.1rem", "font_weight": "400", "color": Color.TEXT_PRIMARY, "font_family": "var(--font-body)"}
+    BODY_SECONDARY = {"font_size": "1rem", "color": Color.TEXT_SECONDARY, "font_family": "var(--font-body)"}
+    SMALL = {"font_size": "0.875rem", "color": Color.TEXT_SECONDARY, "font_family": "var(--font-body)"}
+    CAPTION = {"font_size": "0.75rem", "color": Color.TEXT_SECONDARY, "font_family": "var(--font-body)"}
     
     # --- UI Elements ---
-    LABEL = {"font_size": "0.875rem", "font_weight": "500", "color": Color.TEXT_PRIMARY, "margin_bottom": "4px"}
-    LABEL_LARGE = {"font_size": "1rem", "font_weight": "500", "color": Color.TEXT_PRIMARY}
+    LABEL = {"font_size": "0.875rem", "font_weight": "500", "color": Color.TEXT_PRIMARY, "margin_bottom": "4px", "font_family": "var(--font-body)"}
+    LABEL_LARGE = {"font_size": "1rem", "font_weight": "500", "color": Color.TEXT_PRIMARY, "font_family": "var(--font-body)"}
 
 class Spacing:
     # --- Consistent Rhythm (4px base) ---
@@ -89,13 +93,13 @@ class Animation:
 # TYPOGRAPHY (KISS: Default to Reflex Text props, define only specifics)
 # =============================================================================
 # We use standard Reflex rx.text(size="...") but provide helpers here if needed.
-# For now, we trust the defaults + Inter font.
+# For now, we trust the defaults + font variables.
 
 # =============================================================================
 # ANIMATIONS (Vibe Motion)
 # =============================================================================
 STYLES = {
-    "font_family": "'Inter', 'Outfit', sans-serif",
+    "font_family": "var(--font-body)",
     "background_color": Color.BACKGROUND,
     
     # Keyframes
@@ -125,13 +129,14 @@ INPUT_STYLE = {
     "min_height": "48px", # Touch target accessible
     "bg": Color.SURFACE,
     "color": Color.TEXT_PRIMARY,
+    "placeholder_color": Color.TEXT_SECONDARY,
     "transition": "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
     "_focus": {
         "border_color": Color.PRIMARY,
-        "box_shadow": f"0 0 0 4px {Color.PRIMARY_LIGHT}",
+        "box_shadow": "0 0 0 4px rgba(15, 118, 110, 0.18)",
         "outline": "none"
     },
-    "_hover": {"border_color": Color.SECONDARY}
+    "_hover": {"border_color": Color.PRIMARY}
 }
 
 # --- Large Input (Matching Button XL) ---
@@ -143,28 +148,31 @@ INPUT_XL_STYLE = {
     "width": "100%",  # Explicit Full Width
     "bg": Color.SURFACE,
     "color": Color.TEXT_PRIMARY,
+    "placeholder_color": Color.TEXT_SECONDARY,
     "font_size": "1rem",
     "transition": "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
     "_focus": {
         "border_color": Color.PRIMARY,
-        "box_shadow": f"0 0 0 4px {Color.PRIMARY_LIGHT}",
+        "box_shadow": "0 0 0 4px rgba(15, 118, 110, 0.18)",
         "outline": "none"
     },
-    "_hover": {"border_color": Color.SECONDARY}
+    "_hover": {"border_color": Color.PRIMARY}
 }
 
 # --- Primary Button ---
 BUTTON_PRIMARY_STYLE = {
-    "bg": Color.PRIMARY,
+    "bg": Color.GRADIENT_PRIMARY,
     "color": "white",
+    "border": f"1px solid {Color.PRIMARY_HOVER}",
     "padding_x": Spacing.LG,
     "min_height": "48px",
     "border_radius": Design.RADIUS_LG,
     "font_weight": "600",
+    "letter_spacing": "0.01em",
     "transition": "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
     "box_shadow": Design.SHADOW_DEFAULT,
     "_hover": {
-        "bg": Color.PRIMARY_HOVER,
+        "bg": "linear-gradient(135deg, rgba(15, 118, 110, 0.95) 0%, rgba(11, 77, 69, 0.95) 100%)",
         "transform": "translateY(-2px)",
         "box_shadow": Design.SHADOW_MD,
     },
@@ -176,8 +184,9 @@ BUTTON_PRIMARY_STYLE = {
 
 # --- Large/XL Button (Impact) ---
 BUTTON_XL_STYLE = {
-    "bg": Color.PRIMARY,
+    "bg": Color.GRADIENT_PRIMARY,
     "color": "white",
+    "border": f"1px solid {Color.PRIMARY_HOVER}",
     "padding_x": Spacing.XL,
     "height": "56px", # Taller for impact
     "width": "100%",  # Usually full width
@@ -187,7 +196,7 @@ BUTTON_XL_STYLE = {
     "transition": "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
     "box_shadow": Design.SHADOW_MD,
     "_hover": {
-        "bg": Color.PRIMARY_HOVER,
+        "bg": "linear-gradient(135deg, rgba(15, 118, 110, 0.95) 0%, rgba(11, 77, 69, 0.95) 100%)",
         "transform": "translateY(-2px)",
         "box_shadow": Design.SHADOW_LG,
     },
@@ -199,7 +208,7 @@ BUTTON_XL_STYLE = {
 
 # --- Glass Card ( The Crown Jewel) ---
 CARD_STYLE = {
-    "bg": Color.SURFACE,
+    "bg": Color.GRADIENT_SURFACE,
     "border": f"1px solid {Color.BORDER}",
     "border_radius": Design.RADIUS_XL,
     "padding": Spacing.LG,
@@ -213,9 +222,9 @@ CARD_STYLE = {
 
 # Botão Secundário / Outline
 BUTTON_SECONDARY_STYLE = {
-    "bg": "transparent",
+    "bg": Color.SURFACE,
     "color": Color.DEEP,
-    "border": f"2px solid {Color.BORDER}",
+    "border": f"1px solid {Color.BORDER}",
     "padding_y": Spacing.SM,
     "padding_x": Spacing.LG,
     "min_height": "48px",
@@ -245,10 +254,10 @@ BUTTON_SECONDARY_STYLE = {
 
 # Glassmorphism Style
 GLASS_STYLE = {
-    "background_color": "rgba(255, 255, 255, 0.7)",
-    "backdrop_filter": "blur(12px) saturate(180%)",
-    "-webkit-backdrop-filter": "blur(12px) saturate(180%)",
-    "border": "1px solid rgba(255, 255, 255, 0.3)",
+    "background_color": "rgba(255, 255, 255, 0.75)",
+    "backdrop_filter": "blur(14px) saturate(170%)",
+    "-webkit-backdrop-filter": "blur(14px) saturate(170%)",
+    "border": "1px solid rgba(255, 255, 255, 0.35)",
 }
 
 # Estilo para Tabelas
@@ -286,5 +295,5 @@ TABLE_ROW_STYLE = {
 }
 
 TABLE_ROW_EVEN_STYLE = {
-    "bg": "#F9FAFB",
+    "bg": Color.SURFACE_ALT,
 }
