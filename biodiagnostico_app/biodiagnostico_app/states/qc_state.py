@@ -17,6 +17,8 @@ from ..services.westgard_service import WestgardService
 from ..services.reagent_service import ReagentService
 from ..services.maintenance_service import MaintenanceService
 from ..services.post_calibration_service import PostCalibrationService
+from ..services.qc_exam_service import QCExamService
+from ..services.qc_registry_name_service import QCRegistryNameService
 from .dashboard_state import DashboardState
 
 class QCState(DashboardState):
@@ -42,7 +44,13 @@ class QCState(DashboardState):
     qc_success_message: str = ""
     qc_warning_message: str = ""
     qc_error_message: str = ""
-    
+
+    # Lista dinamica de exames (carregada do banco)
+    qc_exams_list: List[str] = []
+    show_add_exam_modal: bool = False
+    new_exam_name: str = ""
+    add_exam_error: str = ""
+
     # ProIn Import State
     is_importing: bool = False
     proin_import_preview: List[List[str]] = []
@@ -111,6 +119,12 @@ class QCState(DashboardState):
     is_saving_reference: bool = False
     ref_success_message: str = ""
     ref_error_message: str = ""
+
+    # Lista dinamica de nomes de registro (carregada do banco)
+    qc_registry_names: List[str] = []
+    show_add_name_modal: bool = False
+    new_registry_name: str = ""
+    add_name_error: str = ""
 
     # === Pop-up Medição Pós-Calibração ===
     post_calibration_records: List[PostCalibrationRecord] = []  # Histórico de pós-calibrações
@@ -338,30 +352,101 @@ class QCState(DashboardState):
         if self.lj_target_sd_val == 0: return 100.0 # Auto fallback
         return self.lj_target_val + (4 * self.lj_target_sd_val)
 
-    # Lista restrita de exames permitidos no QC (Nomes Canônicos)
-    ALLOWED_QC_EXAMS: List[str] = [
-        "GLICOSE",
-        "COLESTEROL TOTAL",
-        "TRIGLICERIDEOS",
-        "UREIA",
-        "CREATININA",
-        "ACIDO URICO",
-        "GOT",
-        "GPT",
-        "GAMA GT",
-        "FOSFATASE ALCALINA",
-        "AMILASE",
-        "CREATINOFOSFOQUINASE",
-        "COLESTEROL HDL",
-        "COLESTEROL LDL"
+    # Fallback hardcoded (usado apenas se banco estiver indisponivel)
+    _FALLBACK_EXAMS: List[str] = [
+        "GLICOSE", "COLESTEROL TOTAL", "TRIGLICERIDEOS", "UREIA",
+        "CREATININA", "ACIDO URICO", "GOT", "GPT", "GAMA GT",
+        "FOSFATASE ALCALINA", "AMILASE", "CREATINOFOSFOQUINASE",
+        "COLESTEROL HDL", "COLESTEROL LDL"
     ]
 
     @rx.var
     def unique_exam_names(self) -> List[str]:
-        """Lista única de exames para dropdown"""
-        names = set(r.exam_name for r in self.qc_records)
-        names.update(self.ALLOWED_QC_EXAMS)
-        return sorted(list(names))
+        """Lista de exames para dropdown (do banco, na ordem de cadastro)"""
+        if self.qc_exams_list:
+            return list(self.qc_exams_list)
+        return list(self._FALLBACK_EXAMS)
+
+    async def load_qc_exams(self):
+        """Carrega lista de exames do banco"""
+        try:
+            names = await QCExamService.get_exam_names(active_only=True)
+            if names:
+                self.qc_exams_list = names
+            elif not self.qc_exams_list:
+                self.qc_exams_list = list(self._FALLBACK_EXAMS)
+        except Exception as e:
+            logger.error(f"Erro ao carregar exames: {e}")
+            if not self.qc_exams_list:
+                self.qc_exams_list = list(self._FALLBACK_EXAMS)
+
+    async def add_new_exam(self):
+        """Adiciona novo exame ao banco e recarrega lista"""
+        name = (self.new_exam_name or "").strip().upper()
+        if not name:
+            self.add_exam_error = "Nome do exame nao pode ser vazio"
+            return
+        if name in self.qc_exams_list:
+            self.add_exam_error = f"Exame '{name}' ja existe"
+            return
+        try:
+            await QCExamService.create_exam(name)
+            await self.load_qc_exams()
+            self.new_exam_name = ""
+            self.add_exam_error = ""
+            self.show_add_exam_modal = False
+        except Exception as e:
+            logger.error(f"Erro ao criar exame: {e}")
+            self.add_exam_error = f"Erro ao salvar: {e}"
+
+    def open_add_exam_modal(self):
+        self.new_exam_name = ""
+        self.add_exam_error = ""
+        self.show_add_exam_modal = True
+
+    def close_add_exam_modal(self):
+        self.show_add_exam_modal = False
+        self.add_exam_error = ""
+
+    # === Handlers para Nomes de Registro ===
+
+    async def load_registry_names(self):
+        """Carrega lista de nomes de registro do banco"""
+        try:
+            names = await QCRegistryNameService.get_names(active_only=True)
+            self.qc_registry_names = names
+        except Exception as e:
+            logger.error(f"Erro ao carregar nomes de registro: {e}")
+
+    async def add_registry_name(self):
+        """Adiciona novo nome de registro ao banco e recarrega lista"""
+        name = (self.new_registry_name or "").strip()
+        if not name:
+            self.add_name_error = "Nome nao pode ser vazio"
+            return
+        if name in self.qc_registry_names:
+            self.add_name_error = f"Nome '{name}' ja existe"
+            return
+        try:
+            await QCRegistryNameService.create_name(name)
+            await self.load_registry_names()
+            self.new_registry_name = ""
+            self.add_name_error = ""
+            self.show_add_name_modal = False
+            # Selecionar o nome recem-adicionado
+            self.ref_name = name
+        except Exception as e:
+            logger.error(f"Erro ao criar nome de registro: {e}")
+            self.add_name_error = f"Erro ao salvar: {e}"
+
+    def open_add_name_modal(self):
+        self.new_registry_name = ""
+        self.add_name_error = ""
+        self.show_add_name_modal = True
+
+    def close_add_name_modal(self):
+        self.show_add_name_modal = False
+        self.add_name_error = ""
 
     def set_qc_report_year(self, value: str):
         """Define o ano para o relatório"""
@@ -372,11 +457,23 @@ class QCState(DashboardState):
     async def set_proin_tab(self, tab: str):
         """Alterna a tab ativa do ProIn e carrega dados necessários"""
         self.proin_current_tab = tab
+        # Carregar exames do banco em qualquer aba
+        await self.load_qc_exams()
         # Carregar dados automaticamente ao abrir certas abas
         if tab == "referencias":
             await self.load_qc_references()
+            await self.load_registry_names()
+            # Sprint 5: Auto-preencher data "Valido a partir de" com hoje
+            if not self.ref_valid_from:
+                self.ref_valid_from = datetime.now().strftime("%Y-%m-%d")
         elif tab in ["dashboard", "registro", "relatorios"]:
             await self.load_data_from_db()
+        # Auto-preencher data e equipamento ao abrir aba de registro
+        if tab == "registro":
+            self.qc_date = datetime.now().strftime("%Y-%m-%d")
+            # Auto-preencher equipamento do ultimo registro de manutencao
+            if not self.qc_equipment and self.maintenance_records:
+                self.qc_equipment = self.maintenance_records[0].equipment
 
     async def load_data_from_db(self, force: bool = False):
         """Carrega registros de QC, reagentes, manutenções e pós-calibrações do banco"""
@@ -392,6 +489,9 @@ class QCState(DashboardState):
 
         self.is_loading_data = True
         try:
+            # Carregar exames dinamicos
+            await self.load_qc_exams()
+
             # Carregar registros de QC
             db_records = await QCService.get_qc_records(limit=10000)
 
@@ -410,8 +510,7 @@ class QCState(DashboardState):
                     cv = float(r.get("cv", 0)) if r.get("cv") else 0.0
                     cv_max_threshold = float(ref.get("cv_max_threshold") or 10.0)
                     status = r.get("status", "OK") or "OK"
-                    cv_out = cv > cv_max_threshold
-                    needs_calibration = bool(r.get("needs_calibration", False)) or cv_out
+                    needs_calibration = bool(r.get("needs_calibration", False))
 
                     records.append(
                         QCRecord(
@@ -799,7 +898,7 @@ class QCState(DashboardState):
 
              new_record = QCRecord(
                  id=str(len(self.qc_records) + 1),
-                 date=self.qc_date or datetime.now().isoformat(),
+                 date=self.qc_date or datetime.now().strftime("%Y-%m-%d"),
                  exam_name=canonical_name,
                  level=self.qc_level,
                  lot_number=self.qc_lot_number,
@@ -842,10 +941,13 @@ class QCState(DashboardState):
                  self.qc_error_message = ""
                  self.qc_warning_message = ""
 
-             # Aplicar regra de CV% para calibração (sem sobrescrever status)
+             # Aplicar regra de CV% para calibração e status
              cv_out = cv > cv_max_threshold
              if cv_out:
                  new_record.needs_calibration = True
+                 # Definir status de CV no registro se nao houve violacao Westgard mais grave
+                 if new_record.status == "OK":
+                     new_record.status = "ALERTA (CV)"
                  if not self.qc_error_message and not self.qc_warning_message:
                      self.qc_warning_message = "CV acima do limite. Calibração necessária."
                      self.qc_success_message = ""
@@ -943,6 +1045,7 @@ class QCState(DashboardState):
     def clear_qc_form(self):
         """Limpa o formulário de registro de CQ"""
         self.qc_value = ""
+        self.qc_date = datetime.now().strftime("%Y-%m-%d")
         self.reset_qc_messages()
         
     def reset_qc_messages(self):

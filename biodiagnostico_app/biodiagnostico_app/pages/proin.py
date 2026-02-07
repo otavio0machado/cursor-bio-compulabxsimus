@@ -20,25 +20,17 @@ def format_cv(value) -> rx.Var:
 
 
 def qc_status_label(status, cv, cv_max) -> rx.Var:
-    """Status exibido baseado no status original + CV%."""
+    """Status exibido baseado APENAS no status salvo no banco (Westgard + CV ja avaliados ao salvar)."""
     status_var = rx.Var.create(status)
-    cv_var = rx.Var.create(cv).to(float)
-    cv_max_var = rx.Var.create(cv_max).to(float)
-    return rx.cond(
-        status_var == "OK",
-        rx.cond(cv_var > cv_max_var, "ALERTA (CV)", "OK"),
-        status_var
-    )
+    return status_var
 
 
 def qc_status_kind(status, cv, cv_max) -> rx.Var:
-    """Tipo visual do status (success/warning/error)."""
+    """Tipo visual do status baseado APENAS no status salvo no banco."""
     status_var = rx.Var.create(status)
-    cv_var = rx.Var.create(cv).to(float)
-    cv_max_var = rx.Var.create(cv_max).to(float)
     return rx.cond(
         status_var == "OK",
-        rx.cond(cv_var > cv_max_var, "warning", "success"),
+        "success",
         rx.cond(status_var.contains("ALERTA"), "warning", "error")
     )
 
@@ -307,15 +299,10 @@ def registro_qc_tab() -> rx.Component:
                         required=True
                     ),
                     ui.form_field(
-                        "Número do Lote (Opcional)",
-                        ui.input(placeholder="LOT...", value=State.qc_lot_number, on_change=State.set_qc_lot_number)
+                        "Data (Automatico)",
+                        ui.input(type="date", value=State.qc_date, read_only=True),
                     ),
-                    ui.form_field(
-                        "Data/Hora (Obrigatório)",
-                        ui.input(type="datetime-local", value=State.qc_date, on_change=State.set_qc_date),
-                        required=True
-                    ),
-                    columns={"initial": "1", "sm": "1", "md": "3"},
+                    columns={"initial": "1", "sm": "2"},
                     spacing="4", width="100%",
                 ),
 
@@ -378,7 +365,7 @@ def registro_qc_tab() -> rx.Component:
                 rx.divider(margin_y=Spacing.LG, opacity=0.3),
                 
                 rx.grid(
-                    ui.form_field("Equipamento (Opcional)", ui.input(placeholder="Ex: Cobas c111", value=State.qc_equipment, on_change=State.set_qc_equipment)),
+                    ui.form_field("Equipamento (Automatico)", ui.input(placeholder="Ex: Cobas c111", value=State.qc_equipment, on_change=State.set_qc_equipment)),
                     ui.form_field("Analista Responsável (Opcional)", ui.input(placeholder="Nome do analista", value=State.qc_analyst, on_change=State.set_qc_analyst)),
                     columns={"initial": "1", "sm": "2"},
                     spacing="4", width="100%",
@@ -1380,10 +1367,25 @@ def referencias_tab() -> rx.Component:
                 rx.vstack(
                     ui.text("Nova Referencia", size="label", color=Color.PRIMARY, style={"letter_spacing": "0.05em", "text_transform": "uppercase"}, margin_bottom=Spacing.MD),
 
-                    # Nome do Registro
+                    # Nome do Registro (dropdown dinamico + botao adicionar)
                     ui.form_field(
                         "Nome do Registro",
-                        ui.input(placeholder="Ex: Kit ControlLab Jan/2026", value=State.ref_name, on_change=State.set_ref_name),
+                        rx.vstack(
+                            ui.select(
+                                State.qc_registry_names,
+                                placeholder="Selecione o Nome",
+                                value=State.ref_name,
+                                on_change=State.set_ref_name,
+                            ),
+                            rx.button(
+                                rx.icon(tag="plus", size=14),
+                                rx.text("Adicionar Nome", font_size=Typography.SIZE_SM_XS),
+                                on_click=State.open_add_name_modal,
+                                variant="ghost", color_scheme="blue", size="1",
+                                width="100%",
+                            ),
+                            spacing="1", width="100%"
+                        ),
                         required=True
                     ),
 
@@ -1391,11 +1393,21 @@ def referencias_tab() -> rx.Component:
                     rx.grid(
                         ui.form_field(
                             "Exame",
-                            ui.select(
-                                State.ALLOWED_QC_EXAMS,
-                                placeholder="Selecione o Exame",
-                                value=State.ref_exam_name,
-                                on_change=State.set_ref_exam_name
+                            rx.vstack(
+                                ui.select(
+                                    State.unique_exam_names,
+                                    placeholder="Selecione o Exame",
+                                    value=State.ref_exam_name,
+                                    on_change=State.set_ref_exam_name
+                                ),
+                                rx.button(
+                                    rx.icon(tag="plus", size=14),
+                                    rx.text("Adicionar Exame", font_size=Typography.SIZE_SM_XS),
+                                    on_click=State.open_add_exam_modal,
+                                    variant="ghost", color_scheme="blue", size="1",
+                                    width="100%",
+                                ),
+                                spacing="1", width="100%"
                             ),
                             required=True
                         ),
@@ -1413,7 +1425,7 @@ def referencias_tab() -> rx.Component:
                     # Datas de Validade
                     rx.grid(
                         ui.form_field(
-                            "Valido a partir de",
+                            "Valido a partir de (Automatico)",
                             ui.input(type="date", value=State.ref_valid_from, on_change=State.set_ref_valid_from),
                             required=True
                         ),
@@ -1529,6 +1541,80 @@ def referencias_tab() -> rx.Component:
     )
 
 
+def add_exam_modal() -> rx.Component:
+    """Modal para adicionar novo exame a lista"""
+    return rx.alert_dialog.root(
+        rx.alert_dialog.content(
+            rx.alert_dialog.title("Adicionar Novo Exame"),
+            rx.alert_dialog.description(
+                rx.vstack(
+                    ui.text("O novo exame ficara disponivel nas abas Registro CQ e Referencias CQ.", size="small", color=Color.TEXT_SECONDARY),
+                    ui.form_field(
+                        "Nome do Exame",
+                        ui.input(
+                            placeholder="Ex: HEMOGLOBINA GLICADA",
+                            value=State.new_exam_name,
+                            on_change=State.set_new_exam_name,
+                        ),
+                        required=True
+                    ),
+                    rx.cond(
+                        State.add_exam_error != "",
+                        rx.callout(State.add_exam_error, icon="triangle_alert", color_scheme="red", width="100%")
+                    ),
+                    spacing="3", width="100%"
+                )
+            ),
+            rx.hstack(
+                rx.alert_dialog.cancel(
+                    rx.button("Cancelar", variant="outline", on_click=State.close_add_exam_modal)
+                ),
+                rx.button("Salvar Exame", on_click=State.add_new_exam, color_scheme="blue"),
+                spacing="3", justify="end", width="100%", margin_top=Spacing.MD
+            ),
+            max_width="450px"
+        ),
+        open=State.show_add_exam_modal
+    )
+
+
+def add_name_modal() -> rx.Component:
+    """Modal para adicionar novo nome de registro"""
+    return rx.alert_dialog.root(
+        rx.alert_dialog.content(
+            rx.alert_dialog.title("Adicionar Nome de Registro"),
+            rx.alert_dialog.description(
+                rx.vstack(
+                    ui.text("Este nome ficara disponivel no dropdown da aba Referencias CQ.", size="small", color=Color.TEXT_SECONDARY),
+                    ui.form_field(
+                        "Nome do Registro",
+                        ui.input(
+                            placeholder="Ex: Kit ControlLab Jan/2026",
+                            value=State.new_registry_name,
+                            on_change=State.set_new_registry_name,
+                        ),
+                        required=True
+                    ),
+                    rx.cond(
+                        State.add_name_error != "",
+                        rx.callout(State.add_name_error, icon="triangle_alert", color_scheme="red", width="100%")
+                    ),
+                    spacing="3", width="100%"
+                )
+            ),
+            rx.hstack(
+                rx.alert_dialog.cancel(
+                    rx.button("Cancelar", variant="outline", on_click=State.close_add_name_modal)
+                ),
+                rx.button("Salvar Nome", on_click=State.add_registry_name, color_scheme="blue"),
+                spacing="3", justify="end", width="100%", margin_top=Spacing.MD
+            ),
+            max_width="450px"
+        ),
+        open=State.show_add_name_modal
+    )
+
+
 def proin_page() -> rx.Component:
     """Página principal do ProIn QC (Purificada)"""
     return rx.box(
@@ -1583,5 +1669,9 @@ def proin_page() -> rx.Component:
         delete_qc_record_modal(),
         delete_reference_modal(),
         clear_all_qc_modal(),
+        # Modal de Adicionar Exame
+        add_exam_modal(),
+        # Modal de Adicionar Nome de Registro
+        add_name_modal(),
         width="100%",
     )

@@ -14,8 +14,6 @@ class QCService:
     @staticmethod
     async def create_qc_record(record_data: Dict[str, Any]) -> Dict[str, Any]:
         """Insere novo registro de CQ"""
-        # Prepara os dados para inserção
-        # NOTA: 'cv' e 'status' são colunas geradas no banco, não devem ser inseridas
         data = {
             "date": record_data.get("date"),
             "exam_name": record_data.get("exam_name"),
@@ -26,6 +24,8 @@ class QCService:
             "target_sd": float(record_data.get("target_sd", 0)),
             "equipment_name": record_data.get("equipment"),
             "analyst_name": record_data.get("analyst"),
+            "cv": float(record_data.get("cv", 0)),
+            "status": record_data.get("status", "OK"),
             "reference_id": record_data.get("reference_id"),
             "needs_calibration": record_data.get("needs_calibration", False),
         }

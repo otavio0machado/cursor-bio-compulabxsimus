@@ -50,10 +50,10 @@ class DashboardState(AuthState):
 
     @rx.var
     def qc_records_with_alerts(self) -> List[Dict[str, Any]]:
-        """Registros com alerta (status != OK ou CV acima do threshold)"""
+        """Registros com alerta (apenas status != OK, definido por regras Westgard/CV no momento do registro)"""
         if not hasattr(self, 'qc_records'):
             return []
-        return [r.dict() for r in self.qc_records if (r.status != "OK" or r.cv > r.cv_max_threshold)]
+        return [r.dict() for r in self.qc_records if r.status != "OK"]
 
     @rx.var
     def dashboard_pending_maintenances(self) -> str:
