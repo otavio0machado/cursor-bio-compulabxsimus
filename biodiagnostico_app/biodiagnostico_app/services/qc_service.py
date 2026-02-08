@@ -24,8 +24,7 @@ class QCService:
             "target_sd": float(record_data.get("target_sd", 0)),
             "equipment_name": record_data.get("equipment"),
             "analyst_name": record_data.get("analyst"),
-            "cv": float(record_data.get("cv", 0)),
-            "status": record_data.get("status", "OK"),
+            # cv e status sao colunas geradas (GENERATED ALWAYS) no banco
             "reference_id": record_data.get("reference_id"),
             "needs_calibration": record_data.get("needs_calibration", False),
         }
