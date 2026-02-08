@@ -552,16 +552,16 @@ class QCState(DashboardState):
                 db_lots = await ReagentService.get_lots()
                 self.reagent_lots = [
                     ReagentLot(
-                        id=str(r.get("id", "")),
-                        name=r.get("name", ""),
-                        lot_number=r.get("lot_number", ""),
-                        expiry_date=r.get("expiry_date", ""),
-                        quantity=r.get("quantity", ""),
-                        manufacturer=r.get("manufacturer", ""),
-                        storage_temp=r.get("storage_temp", ""),
-                        current_stock=float(r.get("current_stock", 0)),
-                        estimated_consumption=float(r.get("estimated_consumption", 0)),
-                        created_at=str(r.get("created_at", ""))
+                        id=str(r.get("id") or ""),
+                        name=r.get("name") or "",
+                        lot_number=r.get("lot_number") or "",
+                        expiry_date=r.get("expiry_date") or "",
+                        quantity=r.get("quantity") or "",
+                        manufacturer=r.get("manufacturer") or "",
+                        storage_temp=r.get("storage_temp") or "",
+                        current_stock=float(r.get("current_stock") or 0),
+                        estimated_consumption=float(r.get("estimated_consumption") or 0),
+                        created_at=str(r.get("created_at") or "")
                     )
                     for r in db_lots
                 ]
@@ -574,14 +574,14 @@ class QCState(DashboardState):
                 db_maint = await MaintenanceService.get_records()
                 self.maintenance_records = [
                     MaintenanceRecord(
-                        id=str(r.get("id", "")),
-                        equipment=r.get("equipment", ""),
-                        type=r.get("type", ""),
-                        date=r.get("date", ""),
-                        next_date=r.get("next_date", ""),
-                        technician=r.get("technician", ""),
-                        notes=r.get("notes", ""),
-                        created_at=str(r.get("created_at", ""))
+                        id=str(r.get("id") or ""),
+                        equipment=r.get("equipment") or "",
+                        type=r.get("type") or "",
+                        date=r.get("date") or "",
+                        next_date=r.get("next_date") or "",
+                        technician=r.get("technician") or "",
+                        notes=r.get("notes") or "",
+                        created_at=str(r.get("created_at") or "")
                     )
                     for r in db_maint
                 ]
@@ -594,18 +594,18 @@ class QCState(DashboardState):
                 db_postcal = await PostCalibrationService.get_records()
                 self.post_calibration_records = [
                     PostCalibrationRecord(
-                        id=str(r.get("id", "")),
-                        qc_record_id=str(r.get("qc_record_id", "")),
-                        date=r.get("date", ""),
-                        exam_name=r.get("exam_name", ""),
-                        original_value=float(r.get("original_value", 0)),
-                        original_cv=float(r.get("original_cv", 0)),
-                        post_calibration_value=float(r.get("post_calibration_value", 0)),
-                        post_calibration_cv=float(r.get("post_calibration_cv", 0)),
-                        target_value=float(r.get("target_value", 0)),
-                        analyst=r.get("analyst", ""),
-                        notes=r.get("notes", ""),
-                        created_at=str(r.get("created_at", ""))
+                        id=str(r.get("id") or ""),
+                        qc_record_id=str(r.get("qc_record_id") or ""),
+                        date=r.get("date") or "",
+                        exam_name=r.get("exam_name") or "",
+                        original_value=float(r.get("original_value") or 0),
+                        original_cv=float(r.get("original_cv") or 0),
+                        post_calibration_value=float(r.get("post_calibration_value") or 0),
+                        post_calibration_cv=float(r.get("post_calibration_cv") or 0),
+                        target_value=float(r.get("target_value") or 0),
+                        analyst=r.get("analyst") or "",
+                        notes=r.get("notes") or "",
+                        created_at=str(r.get("created_at") or "")
                     )
                     for r in db_postcal
                 ]
