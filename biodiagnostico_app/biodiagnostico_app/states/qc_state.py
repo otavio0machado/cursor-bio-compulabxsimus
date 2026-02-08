@@ -1001,7 +1001,7 @@ class QCState(DashboardState):
                      db_saved = True
              except Exception as db_error:
                  logger.error(f"Erro ao salvar no banco: {db_error}")
-                 self.qc_error_message = "Erro ao salvar no banco de dados. Tente novamente."
+                 self.qc_error_message = f"Erro ao salvar no banco: {db_error}"
 
              # Only append to local state if DB save succeeded
              if db_saved:
