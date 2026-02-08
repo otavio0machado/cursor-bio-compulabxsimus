@@ -1,13 +1,11 @@
--- Migracao: Garantir RLS policy na tabela qc_records
+-- Migracao: Desabilitar RLS na tabela qc_records
 -- Data: 2026-02-08
--- Descricao: Se RLS estiver habilitado em qc_records sem policy,
---            todas as operacoes sao bloqueadas. Esta migracao garante
---            que a policy de acesso publico existe.
+-- Descricao: A tabela qc_records nao precisa de RLS pois o app usa
+--            a chave anon do Supabase. Manter RLS desabilitado para
+--            garantir acesso livre a leitura e escrita.
 
--- Habilitar RLS (idempotente)
-ALTER TABLE public.qc_records ENABLE ROW LEVEL SECURITY;
+-- Desabilitar RLS (a tabela nunca teve RLS habilitado originalmente)
+ALTER TABLE public.qc_records DISABLE ROW LEVEL SECURITY;
 
--- Criar policy permissiva (permite todas as operacoes)
+-- Limpar policy caso exista (nao sera necessaria sem RLS)
 DROP POLICY IF EXISTS "Permitir acesso publico qc_records" ON public.qc_records;
-CREATE POLICY "Permitir acesso publico qc_records" ON public.qc_records
-    FOR ALL USING (true) WITH CHECK (true);
