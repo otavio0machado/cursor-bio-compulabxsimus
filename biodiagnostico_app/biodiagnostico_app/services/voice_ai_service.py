@@ -150,7 +150,7 @@ class VoiceAIService:
                                 data=audio_bytes,
                                 mime_type=mime_type,
                             ),
-                            types.Part.from_text(prompt),
+                            types.Part.from_text(text=prompt),
                         ]
                     )
                 ],
