@@ -119,6 +119,11 @@ STYLES = {
         "from": {"opacity": "0", "transform": "translateY(10px)"},
         "to": {"opacity": "1", "transform": "translateY(0)"},
     },
+    "@keyframes voicePulse": {
+        "0%": {"box_shadow": "0 0 0 0 rgba(239, 68, 68, 0.4)"},
+        "70%": {"box_shadow": "0 0 0 20px rgba(239, 68, 68, 0)"},
+        "100%": {"box_shadow": "0 0 0 0 rgba(239, 68, 68, 0)"},
+    },
     ".animate-fade-in": {"animation": "fadeIn 0.4s ease-out"},
     ".animate-slide-up": {"animation": "slideUp 0.5s cubic-bezier(0.2, 0.8, 0.2, 1)"},
 }

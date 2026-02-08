@@ -12,6 +12,9 @@ class Config:
     # Supabase
     SUPABASE_URL = os.getenv("SUPABASE_URL", "")
     SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
+
+    # Gemini AI (Voice-to-Form)
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
     @classmethod
     def validate(cls):
         """Valida se todas as configurações obrigatórias estão presentes"""

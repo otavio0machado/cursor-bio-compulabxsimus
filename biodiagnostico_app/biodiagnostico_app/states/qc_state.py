@@ -149,6 +149,15 @@ class QCState(DashboardState):
     # Modal de confirmação para limpar todos os registros
     show_clear_all_modal: bool = False
 
+    # === Voice-to-Form (Voz para Formulario) ===
+    show_voice_modal: bool = False
+    voice_form_target: str = ""       # "registro", "referencia", "reagente", "manutencao"
+    voice_is_recording: bool = False
+    voice_is_processing: bool = False
+    voice_audio_base64: str = ""
+    voice_status_message: str = ""
+    voice_error_message: str = ""
+
     # Loading state for initial data load
     is_loading_data: bool = False
 
@@ -1593,3 +1602,143 @@ class QCState(DashboardState):
         except Exception as e:
             logger.error(f"Erro ao deletar manutenção: {e}")
         self.maintenance_records = [r for r in self.maintenance_records if r.id != record_id]
+
+    # ===== Voice-to-Form Handlers =====
+
+    def open_voice_modal(self, form_type: str):
+        """Abre modal de gravacao de voz para o formulario especificado"""
+        self.show_voice_modal = True
+        self.voice_form_target = form_type
+        self.voice_is_recording = False
+        self.voice_is_processing = False
+        self.voice_audio_base64 = ""
+        self.voice_status_message = "Toque no microfone para iniciar"
+        self.voice_error_message = ""
+
+    def close_voice_modal(self):
+        """Fecha modal de voz e limpa estado"""
+        self.show_voice_modal = False
+        self.voice_form_target = ""
+        self.voice_is_recording = False
+        self.voice_is_processing = False
+        self.voice_audio_base64 = ""
+        self.voice_status_message = ""
+        self.voice_error_message = ""
+
+    def set_voice_recording(self, is_recording: bool):
+        """Chamado pelo JS callback quando gravacao inicia/para"""
+        self.voice_is_recording = is_recording
+        if is_recording:
+            self.voice_status_message = "Gravando... Fale os dados do formulario"
+            self.voice_error_message = ""
+        else:
+            self.voice_status_message = "Gravacao finalizada"
+
+    def receive_voice_audio(self, audio_base64: str):
+        """Recebe audio base64 do JS MediaRecorder callback"""
+        self.voice_audio_base64 = audio_base64
+        self.voice_is_recording = False
+        return QCState.process_voice_audio
+
+    async def process_voice_audio(self):
+        """Envia audio ao Gemini e preenche campos do formulario"""
+        if not self.voice_audio_base64:
+            self.voice_error_message = "Nenhum audio capturado. Tente novamente."
+            return
+
+        self.voice_is_processing = True
+        self.voice_status_message = "Analisando audio com IA..."
+        self.voice_error_message = ""
+        yield
+
+        try:
+            from ..services.voice_ai_service import VoiceAIService
+            result = await VoiceAIService.process_audio(
+                audio_base64=self.voice_audio_base64,
+                form_type=self.voice_form_target,
+            )
+
+            if "error" in result:
+                self.voice_error_message = result["error"]
+                self.voice_status_message = ""
+                return
+
+            self._apply_voice_data(result)
+            self.voice_status_message = "Campos preenchidos com sucesso!"
+            self.voice_error_message = ""
+            yield
+
+            await asyncio.sleep(1.2)
+            self.close_voice_modal()
+
+        except Exception as e:
+            logger.error(f"Voice processing error: {e}")
+            self.voice_error_message = f"Erro: {str(e)}"
+            self.voice_status_message = ""
+        finally:
+            self.voice_is_processing = False
+
+    def _apply_voice_data(self, data: Dict[str, Any]):
+        """Aplica dados extraidos pelo Gemini nos campos do formulario correto"""
+        target = self.voice_form_target
+
+        if target == "registro":
+            if data.get("exam_name"):
+                self.qc_exam_name = data["exam_name"]
+            if data.get("value") is not None:
+                self.qc_value = str(data["value"])
+            if data.get("target_value") is not None:
+                self.qc_target_value = str(data["target_value"])
+                self.calculate_sd()
+            if data.get("equipment"):
+                self.qc_equipment = data["equipment"]
+            if data.get("analyst"):
+                self.qc_analyst = data["analyst"]
+
+        elif target == "referencia":
+            if data.get("name"):
+                self.ref_name = data["name"]
+            if data.get("exam_name"):
+                self.ref_exam_name = data["exam_name"]
+            if data.get("level"):
+                self.ref_level = data["level"]
+            if data.get("valid_from"):
+                self.ref_valid_from = data["valid_from"]
+            if data.get("valid_until"):
+                self.ref_valid_until = data["valid_until"]
+            if data.get("target_value") is not None:
+                self.ref_target_value = str(data["target_value"])
+            if data.get("cv_max") is not None:
+                self.ref_cv_max_threshold = str(data["cv_max"])
+            if data.get("lot_number"):
+                self.ref_lot_number = data["lot_number"]
+            if data.get("manufacturer"):
+                self.ref_manufacturer = data["manufacturer"]
+            if data.get("notes"):
+                self.ref_notes = data["notes"]
+
+        elif target == "reagente":
+            if data.get("name"):
+                self.reagent_name = data["name"]
+            if data.get("lot_number"):
+                self.reagent_lot_number = data["lot_number"]
+            if data.get("expiry_date"):
+                self.reagent_expiry_date = data["expiry_date"]
+            if data.get("initial_stock") is not None:
+                self.reagent_initial_stock = str(data["initial_stock"])
+            if data.get("daily_consumption") is not None:
+                self.reagent_daily_consumption = str(data["daily_consumption"])
+            if data.get("manufacturer"):
+                self.reagent_manufacturer = data["manufacturer"]
+
+        elif target == "manutencao":
+            if data.get("equipment"):
+                self.maintenance_equipment = data["equipment"]
+            if data.get("type"):
+                self.maintenance_type = data["type"]
+            if data.get("date"):
+                self.maintenance_date = data["date"]
+            if data.get("next_date"):
+                self.maintenance_next_date = data["next_date"]
+            if data.get("notes"):
+                self.maintenance_notes = data["notes"]

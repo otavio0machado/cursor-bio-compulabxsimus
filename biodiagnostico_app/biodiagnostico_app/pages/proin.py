@@ -277,10 +277,18 @@ def dashboard_tab() -> rx.Component:
 def registro_qc_tab() -> rx.Component:
     """Aba de Registro de Controle de Qualidade (Purificada)"""
     return rx.vstack(
-        rx.vstack(
-            ui.heading("Registro de CQ", level=2),
-            ui.text("Insira os dados diários para cálculo automático da Variação %", size="small", color=Color.TEXT_SECONDARY),
-            spacing="1", align_items="start", margin_bottom=Spacing.LG
+        rx.hstack(
+            rx.vstack(
+                ui.heading("Registro de CQ", level=2),
+                ui.text("Insira os dados diários para cálculo automático da Variação %", size="small", color=Color.TEXT_SECONDARY),
+                spacing="1", align_items="start",
+            ),
+            rx.spacer(),
+            rx.tooltip(
+                ui.button("Voz", icon="mic", variant="ghost", on_click=State.open_voice_modal("registro")),
+                content="Preencher por voz com IA",
+            ),
+            width="100%", align_items="center", margin_bottom=Spacing.LG,
         ),
         
         ui.card(
@@ -543,10 +551,18 @@ def registro_qc_tab() -> rx.Component:
 def reagentes_tab() -> rx.Component:
     """Aba de Gestão de Reagentes (Purificada)"""
     return rx.vstack(
-        rx.vstack(
-            ui.heading("Gestão de Reagentes", level=2),
-            ui.text("Controle de lotes, validade e fabricantes", size="small", color=Color.TEXT_SECONDARY),
-            spacing="1", align_items="start", margin_bottom=Spacing.LG, width="100%"
+        rx.hstack(
+            rx.vstack(
+                ui.heading("Gestão de Reagentes", level=2),
+                ui.text("Controle de lotes, validade e fabricantes", size="small", color=Color.TEXT_SECONDARY),
+                spacing="1", align_items="start",
+            ),
+            rx.spacer(),
+            rx.tooltip(
+                ui.button("Voz", icon="mic", variant="ghost", on_click=State.open_voice_modal("reagente")),
+                content="Preencher por voz com IA",
+            ),
+            width="100%", align_items="center", margin_bottom=Spacing.LG,
         ),
         
         rx.grid(
@@ -664,7 +680,15 @@ def reagentes_tab() -> rx.Component:
                 # Diário de Manutenção
                 ui.card(
                     rx.vstack(
-                        ui.heading("Diário de Manutenção", level=3),
+                        rx.hstack(
+                            ui.heading("Diário de Manutenção", level=3),
+                            rx.spacer(),
+                            rx.tooltip(
+                                ui.button("Voz", icon="mic", variant="ghost", on_click=State.open_voice_modal("manutencao")),
+                                content="Preencher por voz com IA",
+                            ),
+                            width="100%", align_items="center",
+                        ),
                         rx.grid(
                             ui.input(placeholder="Equipamento...", value=State.maintenance_equipment, on_change=State.set_maintenance_equipment),
                             ui.select(["Preventiva", "Corretiva", "Calibração"], value=State.maintenance_type, on_change=State.set_maintenance_type),
@@ -1355,10 +1379,18 @@ def reference_card(ref) -> rx.Component:
 def referencias_tab() -> rx.Component:
     """Aba de Cadastro de Valores Referenciais do CQ"""
     return rx.vstack(
-        rx.vstack(
-            ui.heading("Valores Referenciais do CQ", level=2),
-            ui.text("Configure valores-alvo e tolerancias de CV% por exame e periodo", size="small", color=Color.TEXT_SECONDARY),
-            spacing="1", align_items="start", margin_bottom=Spacing.LG
+        rx.hstack(
+            rx.vstack(
+                ui.heading("Valores Referenciais do CQ", level=2),
+                ui.text("Configure valores-alvo e tolerancias de CV% por exame e periodo", size="small", color=Color.TEXT_SECONDARY),
+                spacing="1", align_items="start",
+            ),
+            rx.spacer(),
+            rx.tooltip(
+                ui.button("Voz", icon="mic", variant="ghost", on_click=State.open_voice_modal("referencia")),
+                content="Preencher por voz com IA",
+            ),
+            width="100%", align_items="center", margin_bottom=Spacing.LG,
         ),
 
         rx.grid(
@@ -1615,6 +1647,160 @@ def add_name_modal() -> rx.Component:
     )
 
 
+def voice_recording_modal() -> rx.Component:
+    """Modal de gravacao de voz para preenchimento de formulario via IA"""
+    js_start = """
+(async () => {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        window._voiceStream = stream;
+        const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+            ? 'audio/webm;codecs=opus' : 'audio/mp4';
+        window._voiceRecorder = new MediaRecorder(stream, { mimeType });
+        window._voiceChunks = [];
+        window._voiceRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) window._voiceChunks.push(e.data);
+        };
+        window._voiceRecorder.start();
+        return "ok";
+    } catch(err) {
+        return "error:" + err.message;
+    }
+})()
+"""
+    js_stop = """
+new Promise((resolve) => {
+    if (window._voiceRecorder && window._voiceRecorder.state === 'recording') {
+        window._voiceRecorder.onstop = async () => {
+            const blob = new Blob(window._voiceChunks, { type: window._voiceRecorder.mimeType });
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result.split(',')[1]);
+            reader.readAsDataURL(blob);
+            if (window._voiceStream) {
+                window._voiceStream.getTracks().forEach(t => t.stop());
+            }
+        };
+        window._voiceRecorder.stop();
+    } else {
+        resolve("");
+    }
+})
+"""
+    return rx.dialog.root(
+        rx.dialog.content(
+            rx.dialog.title(
+                rx.hstack(
+                    rx.icon(tag="mic", size=24, color=Color.PRIMARY),
+                    rx.text("Preencher por Voz", font_weight="700", font_size=Typography.SIZE_XL),
+                    spacing="2", align_items="center",
+                )
+            ),
+            rx.dialog.description(
+                rx.text(
+                    "Fale os dados do formulario e a IA preenchera automaticamente",
+                    color=Color.TEXT_SECONDARY, font_size=Typography.H5["font_size"],
+                )
+            ),
+            rx.vstack(
+                # Area central com botao de gravacao
+                rx.center(
+                    rx.cond(
+                        State.voice_is_recording,
+                        # Estado: Gravando (vermelho pulsando)
+                        rx.vstack(
+                            rx.box(
+                                rx.icon(tag="mic", size=48, color=Color.WHITE),
+                                width="100px", height="100px",
+                                bg=Color.ERROR,
+                                border_radius=Design.RADIUS_FULL,
+                                display="flex", align_items="center", justify_content="center",
+                                animation="voicePulse 1.5s ease-in-out infinite",
+                                cursor="pointer",
+                                on_click=[
+                                    State.set_voice_recording(False),
+                                    rx.call_script(js_stop, callback=State.receive_voice_audio),
+                                ],
+                                _hover={"opacity": "0.8"},
+                            ),
+                            rx.text("Toque para parar", color=Color.ERROR, font_weight="600",
+                                    font_size=Typography.SIZE_SM, margin_top=Spacing.SM),
+                            align_items="center",
+                        ),
+                        rx.cond(
+                            State.voice_is_processing,
+                            # Estado: Processando (spinner)
+                            rx.vstack(
+                                rx.spinner(size="3", color=Color.PRIMARY),
+                                rx.text("Analisando audio com IA...", color=Color.PRIMARY,
+                                        font_weight="600", font_size=Typography.SIZE_MD),
+                                align_items="center", spacing="3",
+                            ),
+                            # Estado: Idle (pronto para gravar)
+                            rx.vstack(
+                                rx.box(
+                                    rx.icon(tag="mic", size=48, color=Color.WHITE),
+                                    width="100px", height="100px",
+                                    bg=Color.PRIMARY,
+                                    border_radius=Design.RADIUS_FULL,
+                                    display="flex", align_items="center", justify_content="center",
+                                    cursor="pointer",
+                                    on_click=[
+                                        State.set_voice_recording(True),
+                                        rx.call_script(js_start),
+                                    ],
+                                    _hover={"bg": Color.PRIMARY_HOVER, "transform": "scale(1.05)"},
+                                    transition="all 0.2s ease",
+                                    box_shadow=Design.SHADOW_MD,
+                                ),
+                                rx.text("Toque para gravar", color=Color.TEXT_SECONDARY,
+                                        font_weight="500", font_size=Typography.SIZE_SM,
+                                        margin_top=Spacing.SM),
+                                align_items="center",
+                            ),
+                        ),
+                    ),
+                    width="100%", padding_y=Spacing.XL,
+                ),
+                # Mensagem de status
+                rx.cond(
+                    State.voice_status_message != "",
+                    rx.callout(
+                        State.voice_status_message,
+                        icon="info",
+                        color_scheme=rx.cond(
+                            State.voice_status_message.contains("sucesso"),
+                            "green", "blue",
+                        ),
+                        width="100%",
+                    ),
+                ),
+                # Mensagem de erro
+                rx.cond(
+                    State.voice_error_message != "",
+                    rx.callout(
+                        State.voice_error_message,
+                        icon="triangle_alert",
+                        color_scheme="red",
+                        width="100%",
+                    ),
+                ),
+                # Botao fechar
+                rx.hstack(
+                    ui.button(
+                        "Fechar", icon="x",
+                        variant="secondary",
+                        on_click=State.close_voice_modal,
+                    ),
+                    justify_content="flex-end", width="100%", margin_top=Spacing.MD,
+                ),
+                spacing="3", width="100%", padding_top=Spacing.MD,
+            ),
+            style={"max_width": Design.MODAL_WIDTH_MD},
+        ),
+        open=State.show_voice_modal,
+    )
+
+
 def proin_page() -> rx.Component:
     """Página principal do ProIn QC (Purificada)"""
     return rx.box(
@@ -1673,5 +1859,7 @@ def proin_page() -> rx.Component:
         add_exam_modal(),
         # Modal de Adicionar Nome de Registro
         add_name_modal(),
+        # Modal de Gravacao de Voz (IA)
+        voice_recording_modal(),
         width="100%",
     )
