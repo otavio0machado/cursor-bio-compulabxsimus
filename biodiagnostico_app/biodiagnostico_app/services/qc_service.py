@@ -30,8 +30,9 @@ class QCService:
             "needs_calibration": record_data.get("needs_calibration", False),
         }
 
-        # Remove campos None para evitar erros no Supabase
-        data = {k: v for k, v in data.items() if v is not None}
+        # Remove campos None e strings vazias para evitar erros no Supabase
+        # (reference_id vazio "" causa erro pois coluna é UUID com FK)
+        data = {k: v for k, v in data.items() if v is not None and v != ""}
 
         response = supabase.table("qc_records").insert(data).execute()
         return response.data[0] if response.data else {}
@@ -166,7 +167,7 @@ class QCService:
         try:
             if not record_id:
                 return False
-            update_data = {k: v for k, v in data.items() if v is not None}
+            update_data = {k: v for k, v in data.items() if v is not None and v != ""}
             if not update_data:
                 return False
             response = supabase.table("qc_records").update(update_data).eq("id", record_id).execute()
