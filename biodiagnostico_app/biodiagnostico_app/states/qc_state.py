@@ -523,23 +523,23 @@ class QCState(DashboardState):
 
                     records.append(
                         QCRecord(
-                            id=str(r.get("id", "")),
-                            date=r.get("date", ""),
-                            exam_name=r.get("exam_name", ""),
-                            level=r.get("level", "Normal"),
-                            lot_number=r.get("lot_number", ""),
-                            value=float(r.get("value", 0)),
-                            target_value=float(r.get("target_value", 0)),
-                            target_sd=float(r.get("target_sd", 0)),
+                            id=str(r.get("id") or ""),
+                            date=r.get("date") or "",
+                            exam_name=r.get("exam_name") or "",
+                            level=r.get("level") or "Normal",
+                            lot_number=r.get("lot_number") or "",
+                            value=float(r.get("value") or 0),
+                            target_value=float(r.get("target_value") or 0),
+                            target_sd=float(r.get("target_sd") or 0),
                             cv=cv,
                             cv_max_threshold=cv_max_threshold,
                             status=status,
-                            equipment=r.get("equipment_name", ""),
-                            analyst=r.get("analyst_name", ""),
+                            equipment=r.get("equipment_name") or "",
+                            analyst=r.get("analyst_name") or "",
                             westgard_violations=[],
                             reference_id=reference_id,
                             needs_calibration=needs_calibration,
-                            post_calibration_id=r.get("post_calibration_id", "") or ""
+                            post_calibration_id=r.get("post_calibration_id") or ""
                         )
                     )
 
