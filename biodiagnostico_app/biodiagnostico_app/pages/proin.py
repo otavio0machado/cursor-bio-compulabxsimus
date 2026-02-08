@@ -845,8 +845,9 @@ def relatorios_tab() -> rx.Component:
                         rx.box(
                              rx.grid(
                                  ui.button("Baixar PDF", icon="download", on_click=State.generate_qc_report_pdf, is_loading=State.is_generating_qc_report, variant="primary", width="100%"),
+                                 ui.button("Regenerar PDF", icon="refresh-cw", on_click=State.regenerate_qc_report_pdf, is_loading=State.is_generating_qc_report, variant="secondary", width="100%"),
                                  ui.button("Exportar CSV", icon="file-spreadsheet", on_click=State.export_qc_csv, variant="secondary", width="100%"),
-                                 columns="2", spacing="3", width="100%",
+                                 columns="3", spacing="3", width="100%",
                              ),
                              margin_top=Spacing.LG,
                         ),

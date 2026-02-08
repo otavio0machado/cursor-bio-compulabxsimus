@@ -1552,6 +1552,33 @@ class QCState(DashboardState):
             logger.error(f"Erro interno PDF Generation: {e}")
             raise
 
+    async def regenerate_qc_report_pdf(self):
+        """Recarrega dados do banco e gera novo PDF"""
+        self.is_generating_qc_report = True
+        self.qc_error_message = ""
+        yield
+
+        try:
+            await self.load_data_from_db(force=True)
+            pdf_bytes, filename = await self._generate_pdf_bytes()
+
+            if pdf_bytes:
+                logger.info(f"PDF regenerado: {len(pdf_bytes)} bytes, filename={filename}")
+                b64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
+                self.qc_pdf_preview = b64_pdf
+                self.is_generating_qc_report = False
+
+                yield rx.download(data=pdf_bytes, filename=filename)
+            else:
+                logger.warning("PDF regeneration retornou bytes vazios")
+                self.qc_error_message = "Erro: PDF não foi gerado"
+                self.is_generating_qc_report = False
+
+        except Exception as e:
+            logger.error(f"Erro ao regenerar PDF QC: {e}", exc_info=True)
+            self.qc_error_message = f"Erro na geração do PDF: {str(e)}"
+            self.is_generating_qc_report = False
+
     async def generate_qc_report_pdf(self):
         """Gera PDF das tabelas de QC e inicia download"""
         self.is_generating_qc_report = True
