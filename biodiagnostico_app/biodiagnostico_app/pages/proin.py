@@ -284,9 +284,13 @@ def registro_qc_tab() -> rx.Component:
                 spacing="1", align_items="start",
             ),
             rx.spacer(),
-            rx.tooltip(
-                ui.button("Voz", icon="mic", variant="ghost", on_click=State.open_voice_modal("registro")),
-                content="Preencher por voz com IA",
+            rx.button(
+                rx.icon(tag="mic", size=16),
+                rx.text("Voz", font_size=Typography.SIZE_SM),
+                variant="outline",
+                color_scheme="green",
+                size="2",
+                on_click=State.open_voice_modal("registro"),
             ),
             width="100%", align_items="center", margin_bottom=Spacing.LG,
         ),
@@ -558,9 +562,13 @@ def reagentes_tab() -> rx.Component:
                 spacing="1", align_items="start",
             ),
             rx.spacer(),
-            rx.tooltip(
-                ui.button("Voz", icon="mic", variant="ghost", on_click=State.open_voice_modal("reagente")),
-                content="Preencher por voz com IA",
+            rx.button(
+                rx.icon(tag="mic", size=16),
+                rx.text("Voz", font_size=Typography.SIZE_SM),
+                variant="outline",
+                color_scheme="green",
+                size="2",
+                on_click=State.open_voice_modal("reagente"),
             ),
             width="100%", align_items="center", margin_bottom=Spacing.LG,
         ),
@@ -683,9 +691,13 @@ def reagentes_tab() -> rx.Component:
                         rx.hstack(
                             ui.heading("Diário de Manutenção", level=3),
                             rx.spacer(),
-                            rx.tooltip(
-                                ui.button("Voz", icon="mic", variant="ghost", on_click=State.open_voice_modal("manutencao")),
-                                content="Preencher por voz com IA",
+                            rx.button(
+                                rx.icon(tag="mic", size=16),
+                                rx.text("Voz", font_size=Typography.SIZE_SM),
+                                variant="outline",
+                                color_scheme="green",
+                                size="2",
+                                on_click=State.open_voice_modal("manutencao"),
                             ),
                             width="100%", align_items="center",
                         ),
@@ -1386,9 +1398,13 @@ def referencias_tab() -> rx.Component:
                 spacing="1", align_items="start",
             ),
             rx.spacer(),
-            rx.tooltip(
-                ui.button("Voz", icon="mic", variant="ghost", on_click=State.open_voice_modal("referencia")),
-                content="Preencher por voz com IA",
+            rx.button(
+                rx.icon(tag="mic", size=16),
+                rx.text("Voz", font_size=Typography.SIZE_SM),
+                variant="outline",
+                color_scheme="green",
+                size="2",
+                on_click=State.open_voice_modal("referencia"),
             ),
             width="100%", align_items="center", margin_bottom=Spacing.LG,
         ),
