@@ -103,18 +103,13 @@ class AuthState(rx.State):
             self.forgot_password_error = "Erro ao enviar e-mail. Verifique o endereço e tente novamente."
 
     def logout(self):
-        """Realiza logout"""
+        """Realiza logout e limpa TODOS os dados da sessão"""
         if supabase:
             try:
                 supabase.auth.sign_out()
             except Exception:
                 pass
-        self.is_authenticated = False
-        self.login_email = ""
-        self.login_password = ""
-        self.login_error = ""
-        self._user_id = ""
-        self._session_checked = False
+        self.reset()
         return rx.redirect("/")
 
     def check_auth(self):

@@ -26,4 +26,5 @@ class State(QCState):
         return rx.redirect(f"/{page}")
 
     def reset_state(self):
-        pass
+        """Reseta todos os campos para defaults (delegado para self.reset do Reflex)"""
+        self.reset()

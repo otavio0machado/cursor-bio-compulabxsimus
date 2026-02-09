@@ -6,6 +6,8 @@ import logging
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from .supabase_client import SupabaseClient
+from .exceptions import ServiceError
+from .types import QCReferenceRow
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +24,7 @@ class QCReferenceService:
     """Operacoes CRUD para Valores Referenciais de CQ"""
 
     @staticmethod
-    async def create_reference(data: Dict[str, Any]) -> Dict[str, Any]:
+    async def create_reference(data: Dict[str, Any]) -> QCReferenceRow:
         """Cria novo registro de referencia"""
         insert_data = {
             "name": data.get("name"),
@@ -39,14 +41,16 @@ class QCReferenceService:
         }
 
         response = get_supabase().table("qc_reference_values").insert(insert_data).execute()
-        return response.data[0] if response.data else {}
+        if not response.data:
+            raise ServiceError("Insert em qc_reference_values não retornou dados.")
+        return response.data[0]
 
     @staticmethod
     async def get_references(
         exam_name: Optional[str] = None,
         active_only: bool = True,
         limit: int = 100
-    ) -> List[Dict[str, Any]]:
+    ) -> List[QCReferenceRow]:
         """Busca registros de referencia com filtros"""
         query = get_supabase().table("qc_reference_values").select("*")
 
@@ -61,7 +65,7 @@ class QCReferenceService:
         return response.data if response.data else []
 
     @staticmethod
-    async def get_references_by_ids(ids: List[str]) -> Dict[str, Dict[str, Any]]:
+    async def get_references_by_ids(ids: List[str]) -> Dict[str, QCReferenceRow]:
         """Busca referencias por uma lista de IDs"""
         unique_ids = list({i for i in ids if i})
         if not unique_ids:
@@ -82,7 +86,7 @@ class QCReferenceService:
         exam_name: str,
         level: str = "Normal",
         reference_date: Optional[str] = None
-    ) -> Optional[Dict[str, Any]]:
+    ) -> Optional[QCReferenceRow]:
         """
         Busca a referencia ativa mais recente para um exame.
 
@@ -125,7 +129,7 @@ class QCReferenceService:
         return ref
 
     @staticmethod
-    async def get_all_exams_with_references() -> Dict[str, Dict[str, Any]]:
+    async def get_all_exams_with_references() -> Dict[str, QCReferenceRow]:
         """
         Retorna um mapa {exam_name: {target_value, cv_ok_threshold, cv_alert_threshold, ...}}
         para todos os exames com referencia ativa atual.
@@ -145,7 +149,7 @@ class QCReferenceService:
             return {}
 
         # Agrupa por exam_name + level, mantendo apenas o mais recente
-        exam_map: Dict[str, Dict[str, Any]] = {}
+        exam_map: Dict[str, QCReferenceRow] = {}
         for ref in response.data:
             key = f"{ref['exam_name']}|{ref.get('level', 'Normal')}"
             if key not in exam_map:
@@ -157,7 +161,7 @@ class QCReferenceService:
         return exam_map
 
     @staticmethod
-    async def update_reference(id: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    async def update_reference(id: str, data: Dict[str, Any]) -> QCReferenceRow:
         """Atualiza registro de referencia existente"""
         update_data = {}
 
@@ -240,7 +244,7 @@ class QCReferenceService:
             return False
 
     @staticmethod
-    async def get_reference_by_id(id: str) -> Optional[Dict[str, Any]]:
+    async def get_reference_by_id(id: str) -> Optional[QCReferenceRow]:
         """Busca uma referencia pelo ID"""
         response = get_supabase().table("qc_reference_values")\
             .select("*")\

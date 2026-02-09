@@ -5,6 +5,8 @@ Gerencia nomes reutilizaveis para registros de referencia
 import logging
 from typing import List, Dict, Any
 from .supabase_client import SupabaseClient
+from .exceptions import ServiceError
+from .types import QCRegistryNameRow
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +32,7 @@ class QCRegistryNameService:
         return [r["name"] for r in response.data] if response.data else []
 
     @staticmethod
-    async def create_name(name: str) -> Dict[str, Any]:
+    async def create_name(name: str) -> QCRegistryNameRow:
         """Adiciona novo nome de registro"""
         name = name.strip()
         if not name:
@@ -39,7 +41,9 @@ class QCRegistryNameService:
             "name": name,
             "is_active": True,
         }).execute()
-        return response.data[0] if response.data else {}
+        if not response.data:
+            raise ServiceError("Insert em qc_registry_names não retornou dados.")
+        return response.data[0]
 
     @staticmethod
     async def delete_name(name_id: str) -> bool:

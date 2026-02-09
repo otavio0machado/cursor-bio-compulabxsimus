@@ -169,6 +169,13 @@ class VoiceAIService:
                 if raw_text.endswith("```"):
                     raw_text = raw_text[:-3].strip()
 
+            # Fallback: extrair JSON de texto com prosa ao redor
+            if not raw_text.startswith("{"):
+                start = raw_text.find("{")
+                end = raw_text.rfind("}")
+                if start != -1 and end != -1 and end > start:
+                    raw_text = raw_text[start:end + 1]
+
             parsed = json.loads(raw_text)
             return parsed
 

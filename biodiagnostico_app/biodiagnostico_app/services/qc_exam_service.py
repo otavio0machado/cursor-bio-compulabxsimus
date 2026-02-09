@@ -5,6 +5,8 @@ Gerencia a lista dinamica de exames disponiveis para Controle de Qualidade
 import logging
 from typing import List, Dict, Any
 from .supabase_client import SupabaseClient
+from .exceptions import ServiceError
+from .types import QCExamRow
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +22,7 @@ class QCExamService:
     """CRUD para exames de CQ no Supabase"""
 
     @staticmethod
-    async def get_exams(active_only: bool = True) -> List[Dict[str, Any]]:
+    async def get_exams(active_only: bool = True) -> List[QCExamRow]:
         """Retorna exames ordenados por display_order"""
         query = get_supabase().table("qc_exams").select("*")
         if active_only:
@@ -36,7 +38,7 @@ class QCExamService:
         return [e["name"] for e in exams]
 
     @staticmethod
-    async def create_exam(name: str) -> Dict[str, Any]:
+    async def create_exam(name: str) -> QCExamRow:
         """Adiciona novo exame com display_order automatico"""
         name = name.strip().upper()
         if not name:
@@ -52,7 +54,9 @@ class QCExamService:
             "is_active": True,
         }
         response = get_supabase().table("qc_exams").insert(insert_data).execute()
-        return response.data[0] if response.data else {}
+        if not response.data:
+            raise ServiceError("Insert em qc_exams não retornou dados.")
+        return response.data[0]
 
     @staticmethod
     async def delete_exam(exam_id: str) -> bool:

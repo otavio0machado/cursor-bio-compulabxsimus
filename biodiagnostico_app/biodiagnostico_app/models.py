@@ -28,10 +28,10 @@ class QCRecord(BaseModel):
     level: str = ""
     lot_number: str = ""
     value: float = 0.0
-    value1: float = 0.0
-    value2: float = 0.0
-    mean: float = 0.0
-    sd: float = 0.0
+    value1: float = 0.0  # DEPRECATED: campo reservado para duplicatas, não populado atualmente
+    value2: float = 0.0  # DEPRECATED: campo reservado para duplicatas, não populado atualmente
+    mean: float = 0.0  # DEPRECATED: média calculada não utilizada — cv é calculado direto de value/target
+    sd: float = 0.0  # DEPRECATED: desvio padrão local não utilizado — usa target_sd da referência
     cv: float = 0.0
     cv_max_threshold: float = 10.0
     target_value: float = 0.0
@@ -40,7 +40,7 @@ class QCRecord(BaseModel):
     analyst: str = ""
     status: str = ""
     westgard_violations: List[Dict[str, Any]] = []
-    z_score: float = 0.0
+    z_score: float = 0.0  # DEPRECATED: calculado mas não exibido na UI
     reference_id: str = ""
     needs_calibration: bool = False
     post_calibration_id: str = ""

@@ -29,7 +29,11 @@ class WestgardService:
         sd = current_record.target_sd
         
         if sd == 0:
-            return [] # Impossível calcular sem SD
+            return [{
+                "rule": "SD=0",
+                "description": "Desvio Padrão igual a zero. Verifique os valores de referência.",
+                "severity": "warning"
+            }]
 
         # Cálculo do Z-Score (Desvio em unidades de SD)
         z_score = (val - mean) / sd

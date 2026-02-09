@@ -1,16 +1,15 @@
+import os
 import reflex as rx
 import asyncio
+import base64
 import logging
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
-import calendar
-import pandas as pd
-import io
-import base64
 
 logger = logging.getLogger(__name__)
+
+CACHE_TTL_SECONDS = int(os.environ.get("CACHE_TTL_SECONDS", "30"))
 from ..models import QCRecord, ReagentLot, MaintenanceRecord, LeveyJenningsPoint, QCReferenceValue, PostCalibrationRecord
-from ..utils.qc_pdf_report import generate_qc_pdf
 from ..services.qc_service import QCService
 from ..services.qc_reference_service import QCReferenceService
 from ..services.westgard_service import WestgardService
@@ -19,6 +18,11 @@ from ..services.maintenance_service import MaintenanceService
 from ..services.post_calibration_service import PostCalibrationService
 from ..services.qc_exam_service import QCExamService
 from ..services.qc_registry_name_service import QCRegistryNameService
+from ..utils.numeric import parse_decimal
+from . import (
+    _voice_ops, _report_ops, _reagent_ops, _maintenance_ops,
+    _reference_ops, _post_calibration_ops, _import_ops,
+)
 from .dashboard_state import DashboardState
 
 class QCState(DashboardState):
@@ -164,6 +168,10 @@ class QCState(DashboardState):
     # Pagination
     qc_page: int = 0
     qc_page_size: int = 50
+    reagent_page: int = 0
+    reagent_page_size: int = 20
+    maintenance_page: int = 0
+    maintenance_page_size: int = 20
 
     # Data cache timestamp
     _last_loaded: str = ""
@@ -278,6 +286,48 @@ class QCState(DashboardState):
     def prev_qc_page(self):
         if self.qc_page > 0:
             self.qc_page -= 1
+
+    # ── Reagent pagination ──
+    @rx.var
+    def paginated_reagent_lots(self) -> List[ReagentLot]:
+        start = self.reagent_page * self.reagent_page_size
+        return self.reagent_lots[start:start + self.reagent_page_size]
+
+    @rx.var
+    def total_reagent_pages(self) -> int:
+        total = len(self.reagent_lots)
+        if total == 0:
+            return 1
+        return (total + self.reagent_page_size - 1) // self.reagent_page_size
+
+    def next_reagent_page(self):
+        if self.reagent_page < self.total_reagent_pages - 1:
+            self.reagent_page += 1
+
+    def prev_reagent_page(self):
+        if self.reagent_page > 0:
+            self.reagent_page -= 1
+
+    # ── Maintenance pagination ──
+    @rx.var
+    def paginated_maintenance_records(self) -> List[MaintenanceRecord]:
+        start = self.maintenance_page * self.maintenance_page_size
+        return self.maintenance_records[start:start + self.maintenance_page_size]
+
+    @rx.var
+    def total_maintenance_pages(self) -> int:
+        total = len(self.maintenance_records)
+        if total == 0:
+            return 1
+        return (total + self.maintenance_page_size - 1) // self.maintenance_page_size
+
+    def next_maintenance_page(self):
+        if self.maintenance_page < self.total_maintenance_pages - 1:
+            self.maintenance_page += 1
+
+    def prev_maintenance_page(self):
+        if self.maintenance_page > 0:
+            self.maintenance_page -= 1
 
     @rx.var
     def qc_cv_status(self) -> str:
@@ -491,7 +541,7 @@ class QCState(DashboardState):
         if not force and self._last_loaded and self.qc_records:
             try:
                 last = datetime.fromisoformat(self._last_loaded)
-                if (datetime.now() - last).total_seconds() < 30:
+                if (datetime.now() - last).total_seconds() < CACHE_TTL_SECONDS:
                     return
             except (ValueError, TypeError):
                 pass
@@ -550,21 +600,31 @@ class QCState(DashboardState):
             # Carregar lotes de reagentes
             try:
                 db_lots = await ReagentService.get_lots()
-                self.reagent_lots = [
-                    ReagentLot(
+                today = datetime.now().date()
+                lots = []
+                for r in db_lots:
+                    expiry_str = r.get("expiry_date") or ""
+                    days_left = 0
+                    if expiry_str:
+                        try:
+                            expiry_dt = datetime.strptime(expiry_str, "%Y-%m-%d").date()
+                            days_left = (expiry_dt - today).days
+                        except ValueError:
+                            pass
+                    lots.append(ReagentLot(
                         id=str(r.get("id") or ""),
                         name=r.get("name") or "",
                         lot_number=r.get("lot_number") or "",
-                        expiry_date=r.get("expiry_date") or "",
+                        expiry_date=expiry_str,
                         quantity=r.get("quantity") or "",
                         manufacturer=r.get("manufacturer") or "",
                         storage_temp=r.get("storage_temp") or "",
                         current_stock=float(r.get("current_stock") or 0),
                         estimated_consumption=float(r.get("estimated_consumption") or 0),
-                        created_at=str(r.get("created_at") or "")
-                    )
-                    for r in db_lots
-                ]
+                        created_at=str(r.get("created_at") or ""),
+                        days_left=days_left,
+                    ))
+                self.reagent_lots = lots
                 logger.info(f"Carregados {len(self.reagent_lots)} lotes de reagentes")
             except Exception as e:
                 logger.error(f"Erro ao carregar reagentes: {e}")
@@ -622,173 +682,27 @@ class QCState(DashboardState):
 
     async def handle_proin_upload(self, files: List[rx.UploadFile]):
         """Handle upload of ProIn Excel file"""
-        self.is_importing = True
-        self.upload_progress = 10
-        
-        try:
-            for file in files:
-                upload_data = await file.read()
-                df = pd.read_excel(io.BytesIO(upload_data))
-                self.proin_import_headers = list(df.columns)
-                self.proin_import_preview = df.head(5).values.tolist()
-                self.proin_import_data = df.to_dict('records')
-                self.upload_progress = 100
-        except Exception as e:
-            self.qc_error_message = f"Erro ao processar arquivo: {str(e)}"
-        finally:
-            self.is_importing = False
+        await _import_ops.handle_proin_upload(self, files)
 
     async def process_proin_import(self):
         """Process the imported data and save to DB"""
-        try:
-            if not self.proin_import_data:
-                self.qc_error_message = "Nenhum dado para importar."
-                return
-
-            # Map imported columns to DB fields
-            records_to_save = []
-            for row in self.proin_import_data:
-                record_data = {
-                    "date": str(row.get("date", row.get("data", row.get("DATA", datetime.now().isoformat())))),
-                    "exam_name": str(row.get("exam_name", row.get("exame", row.get("EXAME", "")))),
-                    "level": str(row.get("level", row.get("nivel", row.get("NIVEL", "Normal")))),
-                    "lot_number": str(row.get("lot_number", row.get("lote", row.get("LOTE", "")))),
-                    "value": float(row.get("value", row.get("valor", row.get("VALOR", 0)))),
-                    "target_value": float(row.get("target_value", row.get("alvo", row.get("ALVO", 0)))),
-                    "target_sd": float(row.get("target_sd", row.get("dp", row.get("DP", 0)))),
-                    "equipment": str(row.get("equipment", row.get("equipamento", row.get("EQUIPAMENTO", "")))),
-                    "analyst": str(row.get("analyst", row.get("analista", row.get("ANALISTA", "")))),
-                }
-                # Calculate CV if not provided
-                val = record_data["value"]
-                target = record_data["target_value"]
-                if target > 0:
-                    record_data["cv"] = round((abs(val - target) / target) * 100, 2)
-                else:
-                    record_data["cv"] = 0.0
-                record_data["status"] = "OK"
-                record_data["needs_calibration"] = False
-                records_to_save.append(record_data)
-
-            # Batch insert to database
-            result = await QCService.create_qc_records_batch(records_to_save)
-            count = len(records_to_save)
-
-            if result:
-                self.qc_success_message = f"{count} registros importados com sucesso!"
-                # Reload data from DB to sync state
-                await self.load_data_from_db(force=True)
-            else:
-                self.qc_error_message = "Erro ao salvar registros importados no banco."
-
-            self.clear_proin_import()
-        except Exception as e:
-            self.qc_error_message = f"Erro na importação: {str(e)}"
+        await _import_ops.process_proin_import(self)
 
     def clear_proin_import(self):
         """Clear import state"""
-        self.proin_import_preview = []
-        self.proin_import_headers = []
-        self.proin_import_data = []
-        self.upload_progress = 0
+        _import_ops.clear_proin_import(self)
 
     async def save_reagent_lot(self):
         """Salva um novo lote de reagente no Supabase"""
-        self.is_saving_reagent = True
-        self.reagent_error_message = ""
-        self.reagent_success_message = ""
-        try:
-             # Validação de campos obrigatórios
-             if not self.reagent_name.strip():
-                 self.reagent_error_message = "Nome do reagente é obrigatório."
-                 return
-             if not self.reagent_lot_number.strip():
-                 self.reagent_error_message = "Número do lote é obrigatório."
-                 return
-             if not self.reagent_expiry_date:
-                 self.reagent_error_message = "Data de validade é obrigatória."
-                 return
-             db_result = await ReagentService.create_lot({
-                 "name": self.reagent_name,
-                 "lot_number": self.reagent_lot_number,
-                 "expiry_date": self.reagent_expiry_date,
-                 "quantity": self.reagent_quantity,
-                 "manufacturer": self.reagent_manufacturer,
-                 "storage_temp": self.reagent_storage_temp,
-                 "current_stock": float(self.reagent_initial_stock or 0),
-                 "estimated_consumption": float(self.reagent_daily_consumption or 0),
-             })
-             new_lot = ReagentLot(
-                 id=str(db_result.get("id", "")),
-                 name=self.reagent_name,
-                 lot_number=self.reagent_lot_number,
-                 expiry_date=self.reagent_expiry_date,
-                 quantity=self.reagent_quantity,
-                 manufacturer=self.reagent_manufacturer,
-                 storage_temp=self.reagent_storage_temp,
-                 current_stock=float(self.reagent_initial_stock or 0),
-                 estimated_consumption=float(self.reagent_daily_consumption or 0),
-                 created_at=datetime.now().isoformat()
-             )
-             self.reagent_lots.insert(0, new_lot)
-             self.reagent_success_message = "Lote salvo com sucesso!"
-             self.reagent_name = ""
-             self.reagent_lot_number = ""
-        except Exception as e:
-            self.reagent_error_message = f"Erro ao salvar: {str(e)}"
-        finally:
-            self.is_saving_reagent = False
+        await _reagent_ops.save_reagent_lot(self)
 
     async def delete_reagent_lot(self, id: str):
         """Deleta lote de reagente do Supabase"""
-        try:
-            await ReagentService.delete_lot(id)
-        except Exception as e:
-            logger.error(f"Erro ao deletar lote: {e}")
-        self.reagent_lots = [lot for lot in self.reagent_lots if lot.id != id]
+        await _reagent_ops.delete_reagent_lot(self, id)
 
     async def save_maintenance_record(self):
         """Registra manutenção no Supabase"""
-        self.is_saving_maintenance = True
-        self.maintenance_error_message = ""
-        self.maintenance_success_message = ""
-        try:
-            # Validação de campos obrigatórios
-            if not self.maintenance_equipment.strip():
-                self.maintenance_error_message = "Equipamento é obrigatório."
-                return
-            if not self.maintenance_type:
-                self.maintenance_error_message = "Tipo de manutenção é obrigatório."
-                return
-            if not self.maintenance_date:
-                self.maintenance_error_message = "Data é obrigatória."
-                return
-            db_result = await MaintenanceService.create_record({
-                "equipment": self.maintenance_equipment,
-                "type": self.maintenance_type,
-                "date": self.maintenance_date,
-                "next_date": self.maintenance_next_date,
-                "technician": self.maintenance_technician,
-                "notes": self.maintenance_notes,
-            })
-            new_record = MaintenanceRecord(
-                id=str(db_result.get("id", "")),
-                equipment=self.maintenance_equipment,
-                type=self.maintenance_type,
-                date=self.maintenance_date,
-                next_date=self.maintenance_next_date,
-                technician=self.maintenance_technician,
-                notes=self.maintenance_notes,
-                created_at=datetime.now().isoformat()
-            )
-            self.maintenance_records.insert(0, new_record)
-            self.maintenance_success_message = "Manutenção registrada!"
-            self.maintenance_equipment = ""
-            self.maintenance_notes = ""
-        except Exception as e:
-            self.maintenance_error_message = f"Erro ao salvar: {str(e)}"
-        finally:
-            self.is_saving_maintenance = False
+        await _maintenance_ops.save_maintenance_record(self)
 
     # Lógica de cálculo SD/CV para formulário
     def calculate_sd(self):
@@ -797,14 +711,13 @@ class QCState(DashboardState):
             if not self.qc_value or not self.qc_target_value:
                 return
             
-            val_str = self.qc_value.replace(",", ".")
-            target_str = self.qc_target_value.replace(",", ".")
-            
-            if not val_str or not target_str:
-                return
+            value = parse_decimal(self.qc_value)
+            target = parse_decimal(self.qc_target_value)
 
-            value = float(val_str)
-            target = float(target_str)
+            if value == 0 and not self.qc_value.strip():
+                return
+            if target == 0 and not self.qc_target_value.strip():
+                return
             
             sd = abs(value - target)
             self.qc_target_sd = f"{sd:.2f}"
@@ -1089,115 +1002,15 @@ class QCState(DashboardState):
 
     async def load_qc_references(self):
         """Carrega todos os valores de referência ativos"""
-        try:
-            refs = await QCReferenceService.get_references(active_only=True)
-            self.qc_reference_values = [
-                QCReferenceValue(
-                    id=r.get("id") or "",
-                    name=r.get("name") or "",
-                    exam_name=r.get("exam_name") or "",
-                    valid_from=r.get("valid_from") or "",
-                    valid_until=r.get("valid_until") or "",
-                    target_value=float(r.get("target_value") or 0),
-                    cv_max_threshold=float(r.get("cv_max_threshold") or 10.0),
-                    lot_number=r.get("lot_number") or "",
-                    manufacturer=r.get("manufacturer") or "",
-                    level=r.get("level") or "Normal",
-                    notes=r.get("notes") or "",
-                    is_active=r.get("is_active", True),
-                    created_at=r.get("created_at") or "",
-                    updated_at=r.get("updated_at") or ""
-                )
-                for r in refs
-            ]
-            logger.info(f"Referências carregadas: {len(self.qc_reference_values)}")
-        except Exception as e:
-            logger.error(f"Erro ao carregar referências: {e}")
-            self.qc_reference_values = []
+        await _reference_ops.load_qc_references(self)
 
     async def save_qc_reference(self):
         """Salva novo registro de valor referencial"""
-        self.is_saving_reference = True
-        self.ref_success_message = ""
-        self.ref_error_message = ""
-
-        try:
-            # Validações
-            if not self.ref_name:
-                self.ref_error_message = "Nome do registro é obrigatório"
-                return
-            if not self.ref_exam_name:
-                self.ref_error_message = "Exame é obrigatório"
-                return
-            if not self.ref_valid_from:
-                self.ref_error_message = "Data de início é obrigatória"
-                return
-            if not self.ref_target_value:
-                self.ref_error_message = "Valor-alvo é obrigatório"
-                return
-
-            cv_max_str = (self.ref_cv_max_threshold or "10.0").replace(",", ".")
-            cv_max = float(cv_max_str)
-
-            if cv_max <= 0:
-                self.ref_error_message = "Limite máximo de CV% deve ser maior que zero"
-                return
-
-            target_val = float(self.ref_target_value.replace(",", "."))
-            if target_val <= 0:
-                self.ref_error_message = "Valor-alvo deve ser maior que zero"
-                return
-
-            # Criar registro
-            data = {
-                "name": self.ref_name,
-                "exam_name": self.ref_exam_name,
-                "valid_from": self.ref_valid_from,
-                "valid_until": self.ref_valid_until or None,
-                "target_value": target_val,
-                "cv_max_threshold": cv_max,
-                "lot_number": self.ref_lot_number,
-                "manufacturer": self.ref_manufacturer,
-                "level": self.ref_level,
-                "notes": self.ref_notes,
-                "is_active": True
-            }
-
-            result = await QCReferenceService.create_reference(data)
-
-            if result:
-                self.ref_success_message = "Referência salva com sucesso!"
-                # Limpar formulário
-                self.ref_name = ""
-                self.ref_exam_name = ""
-                self.ref_valid_from = ""
-                self.ref_valid_until = ""
-                self.ref_target_value = ""
-                self.ref_cv_max_threshold = "10.0"
-                self.ref_lot_number = ""
-                self.ref_manufacturer = ""
-                self.ref_level = "Normal"
-                self.ref_notes = ""
-                # Recarregar lista
-                await self.load_qc_references()
-            else:
-                self.ref_error_message = "Erro ao salvar referência"
-
-        except ValueError as ve:
-            self.ref_error_message = f"Valor inválido: {ve}"
-        except Exception as e:
-            self.ref_error_message = f"Erro: {e}"
-        finally:
-            self.is_saving_reference = False
+        await _reference_ops.save_qc_reference(self)
 
     async def deactivate_qc_reference(self, id: str):
         """Desativa uma referência"""
-        try:
-            success = await QCReferenceService.deactivate_reference(id)
-            if success:
-                await self.load_qc_references()
-        except Exception as e:
-            logger.error(f"Erro ao desativar referência: {e}")
+        await _reference_ops.deactivate_qc_reference(self, id)
 
     # === Métodos de Exclusão Permanente com Confirmação ===
 
@@ -1232,32 +1045,15 @@ class QCState(DashboardState):
 
     def open_delete_reference_modal(self, ref_id: str, ref_name: str):
         """Abre modal de confirmação para excluir referência"""
-        self.delete_reference_id = ref_id
-        self.delete_reference_name = ref_name
-        self.show_delete_reference_modal = True
+        _reference_ops.open_delete_reference_modal(self, ref_id, ref_name)
 
     def close_delete_reference_modal(self):
         """Fecha modal de confirmação de exclusão de referência"""
-        self.show_delete_reference_modal = False
-        self.delete_reference_id = ""
-        self.delete_reference_name = ""
+        _reference_ops.close_delete_reference_modal(self)
 
     async def confirm_delete_reference(self):
         """Confirma e executa exclusão permanente da referência"""
-        if not self.delete_reference_id:
-            return
-
-        try:
-            success = await QCReferenceService.delete_reference(self.delete_reference_id)
-            if success:
-                self.ref_success_message = "Referência excluída permanentemente!"
-                await self.load_qc_references()
-            else:
-                self.ref_error_message = "Erro ao excluir referência do banco de dados"
-        except Exception as e:
-            self.ref_error_message = f"Erro ao excluir: {e}"
-        finally:
-            self.close_delete_reference_modal()
+        await _reference_ops.confirm_delete_reference(self)
 
     # Setters para formulário de referência
     def set_ref_name(self, value: str):
@@ -1294,34 +1090,11 @@ class QCState(DashboardState):
 
     def open_post_calibration_modal(self, record_id: str):
         """Abre o modal de pós-calibração para o registro selecionado"""
-        # Buscar o registro pelo ID
-        record = next((r for r in self.qc_records if r.id == record_id), None)
-        if record:
-            self.selected_qc_record_for_calibration = {
-                "id": record.id,
-                "exam_name": record.exam_name,
-                "date": record.date,
-                "value": record.value,
-                "cv": record.cv,
-                "target_value": record.target_value,
-                "status": record.status
-            }
-            self.show_post_calibration_modal = True
-            self.post_cal_value = ""
-            self.post_cal_analyst = ""
-            self.post_cal_notes = ""
-            self.post_cal_success_message = ""
-            self.post_cal_error_message = ""
+        _post_calibration_ops.open_post_calibration_modal(self, record_id)
 
     def close_post_calibration_modal(self):
         """Fecha o modal de pós-calibração"""
-        self.show_post_calibration_modal = False
-        self.selected_qc_record_for_calibration = None
-        self.post_cal_value = ""
-        self.post_cal_analyst = ""
-        self.post_cal_notes = ""
-        self.post_cal_success_message = ""
-        self.post_cal_error_message = ""
+        _post_calibration_ops.close_post_calibration_modal(self)
 
     def set_post_cal_value(self, value: str):
         self.post_cal_value = value
@@ -1349,104 +1122,7 @@ class QCState(DashboardState):
 
     async def save_post_calibration(self):
         """Salva o registro de medição pós-calibração no Supabase"""
-        self.is_saving_post_calibration = True
-        self.post_cal_success_message = ""
-        self.post_cal_error_message = ""
-
-        try:
-            if not self.post_cal_value:
-                self.post_cal_error_message = "Informe o valor da medição pós-calibração"
-                return
-
-            if not self.selected_qc_record_for_calibration:
-                self.post_cal_error_message = "Nenhum registro selecionado"
-                return
-
-            val = float(self.post_cal_value.replace(",", "."))
-            target = float(self.selected_qc_record_for_calibration.get("target_value", 0))
-
-            # Calcular CV pós calibração
-            post_cv = 0.0
-            if target > 0:
-                diff = abs(val - target)
-                post_cv = round((diff / target) * 100, 2)
-
-            qc_record_id = self.selected_qc_record_for_calibration.get("id", "")
-
-            # Persistir no Supabase
-            db_result = await PostCalibrationService.create_record({
-                "qc_record_id": qc_record_id,
-                "date": datetime.now().isoformat(),
-                "exam_name": self.selected_qc_record_for_calibration.get("exam_name", ""),
-                "original_value": float(self.selected_qc_record_for_calibration.get("value", 0)),
-                "original_cv": float(self.selected_qc_record_for_calibration.get("cv", 0)),
-                "post_calibration_value": val,
-                "post_calibration_cv": post_cv,
-                "target_value": target,
-                "analyst": self.post_cal_analyst,
-                "notes": self.post_cal_notes,
-            })
-
-            new_record = PostCalibrationRecord(
-                id=str(db_result.get("id", "")),
-                qc_record_id=qc_record_id,
-                date=datetime.now().isoformat(),
-                exam_name=self.selected_qc_record_for_calibration.get("exam_name", ""),
-                original_value=float(self.selected_qc_record_for_calibration.get("value", 0)),
-                original_cv=float(self.selected_qc_record_for_calibration.get("cv", 0)),
-                post_calibration_value=val,
-                post_calibration_cv=post_cv,
-                target_value=target,
-                analyst=self.post_cal_analyst,
-                notes=self.post_cal_notes,
-                created_at=datetime.now().isoformat()
-            )
-
-            # Adicionar ao histórico local
-            self.post_calibration_records.insert(0, new_record)
-
-            # Atualizar o registro QC original para indicar que tem pós-calibração
-            for i, r in enumerate(self.qc_records):
-                if r.id == qc_record_id:
-                    updated_record = QCRecord(
-                        id=r.id,
-                        date=r.date,
-                        exam_name=r.exam_name,
-                        level=r.level,
-                        lot_number=r.lot_number,
-                        value=r.value,
-                        value1=r.value1,
-                        value2=r.value2,
-                        mean=r.mean,
-                        sd=r.sd,
-                        cv=r.cv,
-                        cv_max_threshold=r.cv_max_threshold,
-                        target_value=r.target_value,
-                        target_sd=r.target_sd,
-                        equipment=r.equipment,
-                        analyst=r.analyst,
-                        status=r.status,
-                        westgard_violations=r.westgard_violations,
-                        z_score=r.z_score,
-                        reference_id=r.reference_id,
-                        needs_calibration=r.needs_calibration,
-                        post_calibration_id=new_record.id
-                    )
-                    self.qc_records[i] = updated_record
-                    break
-
-            self.post_cal_success_message = "Medição pós-calibração salva com sucesso!"
-
-            # Fechar modal após pequeno delay para mostrar mensagem de sucesso
-            await asyncio.sleep(1.5)
-            self.close_post_calibration_modal()
-
-        except ValueError:
-            self.post_cal_error_message = "Valor inválido. Use números."
-        except Exception as e:
-            self.post_cal_error_message = f"Erro ao salvar: {str(e)}"
-        finally:
-            self.is_saving_post_calibration = False
+        await _post_calibration_ops.save_post_calibration(self)
 
     @rx.var
     def has_post_calibration_records(self) -> bool:
@@ -1473,84 +1149,7 @@ class QCState(DashboardState):
 
     async def _generate_pdf_bytes(self):
         """Helper para gerar bytes do PDF"""
-        try:
-            now = datetime.now()
-            start_date = None
-            end_date = None
-            period_desc = ""
-            
-            if self.qc_report_type == "Mês Atual":
-                start_date = now.replace(day=1).date().isoformat()
-                end_date = now.date().isoformat()
-                period_desc = f"Mês Atual ({now.strftime('%B/%Y')})"
-                
-            elif self.qc_report_type == "Mês Específico":
-                try:
-                    month = int(self.qc_report_month)
-                    year = int(self.qc_report_year)
-                    last_day = calendar.monthrange(year, month)[1]
-                    start_date = f"{year}-{month:02d}-01"
-                    end_date = f"{year}-{month:02d}-{last_day}"
-                    period_desc = f"{month:02d}/{year}"
-                except (ValueError, TypeError):
-                    self.qc_error_message = "Mês/Ano inválidos"
-                    return None, None
-
-            elif self.qc_report_type == "3 Meses":
-                start_date = (now - timedelta(days=90)).date().isoformat()
-                end_date = now.date().isoformat()
-                period_desc = "Últimos 3 Meses"
-            
-            # Year specific
-            elif self.qc_report_type == "Ano Atual":
-                start_date = now.replace(month=1, day=1).date().isoformat()
-                end_date = now.replace(month=12, day=31).date().isoformat()
-                period_desc = f"Ano {now.year}"
-                
-            elif self.qc_report_type == "Ano Específico":
-                 try:
-                    year = int(self.qc_report_year)
-                    start_date = f"{year}-01-01"
-                    end_date = f"{year}-12-31"
-                    period_desc = f"Ano {year}"
-                 except (ValueError, TypeError):
-                    self.qc_error_message = "Ano inválido"
-                    return None, None
-
-            # Buscar dados (Mock via Service)
-            # records = await QCService.get_qc_records(limit=2000)
-            records = self.qc_records # Use local state records
-            
-            filtered_records = []
-            if start_date and end_date:
-                for r in records:
-                    # r.date format iso string
-                    if r.date >= start_date and r.date <= (end_date + "T23:59:59"):
-                        filtered_records.append(r)
-            else:
-                filtered_records = records
-            
-            # Sort by date
-            filtered_records.sort(key=lambda x: x.date, reverse=True)
-            
-            if not filtered_records:
-                self.qc_error_message = "Nenhum registro encontrado no período."
-                # Allow generating empty report or return None
-                # return None, None
-            
-            # Executar em thread pool
-            loop = asyncio.get_event_loop()
-            pdf_bytes = await loop.run_in_executor(
-                None,
-                lambda: generate_qc_pdf(filtered_records, period_desc, self.post_calibration_records)
-            )
-            
-            filename = f"QC_Report_{period_desc.replace('/', '_').replace(' ', '_')}.pdf"
-            return pdf_bytes, filename
-
-        except Exception as e:
-            logger.error(f"Erro interno PDF Generation: {e}")
-            raise
+        return await _report_ops.generate_pdf_bytes(self)
 
     async def regenerate_qc_report_pdf(self):
         """Recarrega dados do banco e gera novo PDF"""
@@ -1610,61 +1209,32 @@ class QCState(DashboardState):
         if not self.qc_records:
             self.qc_error_message = "Nenhum registro para exportar."
             return
-
-        header = "Data,Exame,Nível,Lote,Valor,Alvo,DP,CV%,Status,Equipamento,Analista\n"
-        rows = []
-        for r in self.qc_records:
-            row = f"{r.date},{r.exam_name},{r.level},{r.lot_number},{r.value},{r.target_value},{r.target_sd},{r.cv:.2f},{r.status},{r.equipment},{r.analyst}"
-            rows.append(row)
-
-        csv_content = header + "\n".join(rows)
+        csv_content = _report_ops.build_csv_content(self)
         csv_bytes = csv_content.encode("utf-8-sig")
         filename = f"QC_Export_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
         yield rx.download(data=csv_bytes, filename=filename)
 
     async def delete_maintenance_record(self, record_id: str):
         """Deleta registro de manutenção do Supabase"""
-        try:
-            await MaintenanceService.delete_record(record_id)
-        except Exception as e:
-            logger.error(f"Erro ao deletar manutenção: {e}")
-        self.maintenance_records = [r for r in self.maintenance_records if r.id != record_id]
+        await _maintenance_ops.delete_maintenance_record(self, record_id)
 
     # ===== Voice-to-Form Handlers =====
 
     def open_voice_modal(self, form_type: str):
         """Abre modal de gravacao de voz para o formulario especificado"""
-        self.show_voice_modal = True
-        self.voice_form_target = form_type
-        self.voice_is_recording = False
-        self.voice_is_processing = False
-        self.voice_audio_base64 = ""
-        self.voice_status_message = "Toque no microfone para iniciar"
-        self.voice_error_message = ""
+        _voice_ops.open_voice_modal(self, form_type)
 
     def close_voice_modal(self):
         """Fecha modal de voz e limpa estado"""
-        self.show_voice_modal = False
-        self.voice_form_target = ""
-        self.voice_is_recording = False
-        self.voice_is_processing = False
-        self.voice_audio_base64 = ""
-        self.voice_status_message = ""
-        self.voice_error_message = ""
+        _voice_ops.close_voice_modal(self)
 
     def set_voice_recording(self, is_recording: bool):
         """Chamado pelo JS callback quando gravacao inicia/para"""
-        self.voice_is_recording = is_recording
-        if is_recording:
-            self.voice_status_message = "Gravando... Fale os dados do formulario"
-            self.voice_error_message = ""
-        else:
-            self.voice_status_message = "Gravacao finalizada"
+        _voice_ops.set_voice_recording(self, is_recording)
 
     def receive_voice_audio(self, audio_base64: str):
         """Recebe audio base64 do JS MediaRecorder callback"""
-        self.voice_audio_base64 = audio_base64
-        self.voice_is_recording = False
+        _voice_ops.receive_voice_audio(self, audio_base64)
         return QCState.process_voice_audio
 
     async def process_voice_audio(self):
@@ -1672,100 +1242,16 @@ class QCState(DashboardState):
         if not self.voice_audio_base64:
             self.voice_error_message = "Nenhum audio capturado. Tente novamente."
             return
-
         self.voice_is_processing = True
         self.voice_status_message = "Analisando audio com IA..."
         self.voice_error_message = ""
         yield
-
-        try:
-            from ..services.voice_ai_service import VoiceAIService
-            result = await VoiceAIService.process_audio(
-                audio_base64=self.voice_audio_base64,
-                form_type=self.voice_form_target,
-            )
-
-            if "error" in result:
-                self.voice_error_message = result["error"]
-                self.voice_status_message = ""
-                return
-
-            self._apply_voice_data(result)
-            self.voice_status_message = "Campos preenchidos com sucesso!"
-            self.voice_error_message = ""
+        success = await _voice_ops.process_voice_audio(self)
+        if success:
             yield
-
             await asyncio.sleep(1.2)
-            self.close_voice_modal()
-
-        except Exception as e:
-            logger.error(f"Voice processing error: {e}")
-            self.voice_error_message = f"Erro: {str(e)}"
-            self.voice_status_message = ""
-        finally:
-            self.voice_is_processing = False
+            _voice_ops.close_voice_modal(self)
 
     def _apply_voice_data(self, data: Dict[str, Any]):
         """Aplica dados extraidos pelo Gemini nos campos do formulario correto"""
-        target = self.voice_form_target
-
-        if target == "registro":
-            if data.get("exam_name"):
-                self.qc_exam_name = data["exam_name"]
-            if data.get("value") is not None:
-                self.qc_value = str(data["value"])
-            if data.get("target_value") is not None:
-                self.qc_target_value = str(data["target_value"])
-                self.calculate_sd()
-            if data.get("equipment"):
-                self.qc_equipment = data["equipment"]
-            if data.get("analyst"):
-                self.qc_analyst = data["analyst"]
-
-        elif target == "referencia":
-            if data.get("name"):
-                self.ref_name = data["name"]
-            if data.get("exam_name"):
-                self.ref_exam_name = data["exam_name"]
-            if data.get("level"):
-                self.ref_level = data["level"]
-            if data.get("valid_from"):
-                self.ref_valid_from = data["valid_from"]
-            if data.get("valid_until"):
-                self.ref_valid_until = data["valid_until"]
-            if data.get("target_value") is not None:
-                self.ref_target_value = str(data["target_value"])
-            if data.get("cv_max") is not None:
-                self.ref_cv_max_threshold = str(data["cv_max"])
-            if data.get("lot_number"):
-                self.ref_lot_number = data["lot_number"]
-            if data.get("manufacturer"):
-                self.ref_manufacturer = data["manufacturer"]
-            if data.get("notes"):
-                self.ref_notes = data["notes"]
-
-        elif target == "reagente":
-            if data.get("name"):
-                self.reagent_name = data["name"]
-            if data.get("lot_number"):
-                self.reagent_lot_number = data["lot_number"]
-            if data.get("expiry_date"):
-                self.reagent_expiry_date = data["expiry_date"]
-            if data.get("initial_stock") is not None:
-                self.reagent_initial_stock = str(data["initial_stock"])
-            if data.get("daily_consumption") is not None:
-                self.reagent_daily_consumption = str(data["daily_consumption"])
-            if data.get("manufacturer"):
-                self.reagent_manufacturer = data["manufacturer"]
-
-        elif target == "manutencao":
-            if data.get("equipment"):
-                self.maintenance_equipment = data["equipment"]
-            if data.get("type"):
-                self.maintenance_type = data["type"]
-            if data.get("date"):
-                self.maintenance_date = data["date"]
-            if data.get("next_date"):
-                self.maintenance_next_date = data["next_date"]
-            if data.get("notes"):
-                self.maintenance_notes = data["notes"]
+        _voice_ops.apply_voice_data(self, data)

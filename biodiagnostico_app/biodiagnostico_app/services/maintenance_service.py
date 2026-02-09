@@ -4,6 +4,8 @@ Servico de Registros de Manutencao
 import logging
 from typing import List, Dict, Any
 from .supabase_client import SupabaseClient
+from .exceptions import ServiceError
+from .types import MaintenanceRecordRow
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +21,7 @@ class MaintenanceService:
     """CRUD para registros de manutenção no Supabase"""
 
     @staticmethod
-    async def create_record(data: Dict[str, Any]) -> Dict[str, Any]:
+    async def create_record(data: Dict[str, Any]) -> MaintenanceRecordRow:
         insert_data = {
             "equipment": data.get("equipment"),
             "type": data.get("type"),
@@ -30,10 +32,12 @@ class MaintenanceService:
         }
         insert_data = {k: v for k, v in insert_data.items() if v is not None}
         response = get_supabase().table("maintenance_records").insert(insert_data).execute()
-        return response.data[0] if response.data else {}
+        if not response.data:
+            raise ServiceError("Insert em maintenance_records não retornou dados.")
+        return response.data[0]
 
     @staticmethod
-    async def get_records(limit: int = 200) -> List[Dict[str, Any]]:
+    async def get_records(limit: int = 200) -> List[MaintenanceRecordRow]:
         response = get_supabase().table("maintenance_records")\
             .select("*")\
             .order("created_at", desc=True)\

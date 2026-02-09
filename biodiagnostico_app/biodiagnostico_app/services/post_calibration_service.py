@@ -4,6 +4,8 @@ Servico de Registros Pos-Calibracao
 import logging
 from typing import List, Optional, Dict, Any
 from .supabase_client import SupabaseClient
+from .exceptions import ServiceError
+from .types import PostCalibrationRow
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +21,7 @@ class PostCalibrationService:
     """CRUD para registros de pós-calibração no Supabase"""
 
     @staticmethod
-    async def create_record(data: Dict[str, Any]) -> Dict[str, Any]:
+    async def create_record(data: Dict[str, Any]) -> PostCalibrationRow:
         insert_data = {
             "qc_record_id": data.get("qc_record_id"),
             "date": data.get("date"),
@@ -34,10 +36,12 @@ class PostCalibrationService:
         }
         insert_data = {k: v for k, v in insert_data.items() if v is not None}
         response = get_supabase().table("post_calibration_records").insert(insert_data).execute()
-        return response.data[0] if response.data else {}
+        if not response.data:
+            raise ServiceError("Insert em post_calibration_records não retornou dados.")
+        return response.data[0]
 
     @staticmethod
-    async def get_records(limit: int = 200) -> List[Dict[str, Any]]:
+    async def get_records(limit: int = 200) -> List[PostCalibrationRow]:
         response = get_supabase().table("post_calibration_records")\
             .select("*")\
             .order("created_at", desc=True)\
@@ -46,7 +50,7 @@ class PostCalibrationService:
         return response.data if response.data else []
 
     @staticmethod
-    async def get_by_qc_record_id(qc_record_id: str) -> Optional[Dict[str, Any]]:
+    async def get_by_qc_record_id(qc_record_id: str) -> Optional[PostCalibrationRow]:
         response = get_supabase().table("post_calibration_records")\
             .select("*")\
             .eq("qc_record_id", qc_record_id)\

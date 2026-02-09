@@ -4,15 +4,25 @@ Serviço de Controle de Qualidade (QC)
 import logging
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
-from .supabase_client import supabase
+from .supabase_client import SupabaseClient
+from .exceptions import ServiceError
+from .types import QCRecordRow
 
 logger = logging.getLogger(__name__)
+
+
+def get_supabase():
+    client = SupabaseClient.get_client()
+    if client is None:
+        raise Exception("Cliente Supabase não inicializado.")
+    return client
+
 
 class QCService:
     """Operações de banco de dados para QC"""
     
     @staticmethod
-    async def create_qc_record(record_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def create_qc_record(record_data: Dict[str, Any]) -> QCRecordRow:
         """Insere novo registro de CQ"""
         data = {
             "date": record_data.get("date"),
@@ -33,11 +43,13 @@ class QCService:
         # (reference_id vazio "" causa erro pois coluna é UUID com FK)
         data = {k: v for k, v in data.items() if v is not None and v != ""}
 
-        response = supabase.table("qc_records").insert(data).execute()
-        return response.data[0] if response.data else {}
+        response = get_supabase().table("qc_records").insert(data).execute()
+        if not response.data:
+            raise ServiceError("Insert em qc_records não retornou dados.")
+        return response.data[0]
 
     @staticmethod
-    async def create_qc_records_batch(records_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    async def create_qc_records_batch(records_data: List[Dict[str, Any]]) -> List[QCRecordRow]:
         """Insere múltiplos registros de CQ em lote"""
         data_list = []
         for record_data in records_data:
@@ -54,7 +66,7 @@ class QCService:
                 # status is a generated column
             })
         
-        response = supabase.table("qc_records").insert(data_list).execute()
+        response = get_supabase().table("qc_records").insert(data_list).execute()
         return response.data if response.data else []
     
     @staticmethod
@@ -63,9 +75,9 @@ class QCService:
         exam_name: Optional[str] = None,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
+    ) -> List[QCRecordRow]:
         """Busca registros de CQ com filtros"""
-        query = supabase.table("qc_records").select("*")
+        query = get_supabase().table("qc_records").select("*")
         
         if exam_name:
             query = query.eq("exam_name", exam_name)
@@ -85,7 +97,7 @@ class QCService:
         today = datetime.now().date().isoformat()
         
         # Total de registros hoje
-        total = supabase.table("qc_records")\
+        total = get_supabase().table("qc_records")\
             .select("id", count="exact")\
             .gte("date", today)\
             .execute()
@@ -93,7 +105,7 @@ class QCService:
         # Registros com alerta (Status != OK) - Ajuste conforme lógica do banco
         # Supondo que o banco calcule o status ou que a aplicação filtre
         # Aqui vamos filtrar pelo status gerado se possível, ou calcular na query se não
-        alerts = supabase.table("qc_records")\
+        alerts = get_supabase().table("qc_records")\
             .select("id", count="exact")\
             .gte("date", today)\
             .neq("status", "OK")\
@@ -110,7 +122,7 @@ class QCService:
         today = datetime.now()
         first_day = today.replace(day=1).date().isoformat()
         
-        total = supabase.table("qc_records")\
+        total = get_supabase().table("qc_records")\
             .select("id", count="exact")\
             .gte("date", first_day)\
             .execute()
@@ -124,7 +136,7 @@ class QCService:
         first_day = today.replace(day=1).date().isoformat()
         
         # Total do mês
-        total_response = supabase.table("qc_records")\
+        total_response = get_supabase().table("qc_records")\
             .select("id", count="exact")\
             .gte("date", first_day)\
             .execute()
@@ -135,7 +147,7 @@ class QCService:
             return 0.0
             
         # Total aprovado (OK)
-        ok_response = supabase.table("qc_records")\
+        ok_response = get_supabase().table("qc_records")\
             .select("id", count="exact")\
             .gte("date", first_day)\
             .eq("status", "OK")\
@@ -147,11 +159,11 @@ class QCService:
     async def get_levey_jennings_data(
         exam_name: str,
         days: int = 30
-    ) -> List[Dict[str, Any]]:
+    ) -> List[QCRecordRow]:
         """Retorna dados para gráfico Levey-Jennings"""
         start_date = (datetime.now() - timedelta(days=days)).date().isoformat()
         
-        response = supabase.table("qc_records")\
+        response = get_supabase().table("qc_records")\
             .select("date, value, target_value, target_sd, cv")\
             .eq("exam_name", exam_name)\
             .gte("date", start_date)\
@@ -169,7 +181,7 @@ class QCService:
             update_data = {k: v for k, v in data.items() if v is not None and v != ""}
             if not update_data:
                 return False
-            response = supabase.table("qc_records").update(update_data).eq("id", record_id).execute()
+            response = get_supabase().table("qc_records").update(update_data).eq("id", record_id).execute()
             return bool(response.data)
         except Exception as e:
             logger.error(f"Erro ao atualizar QC record {record_id}: {e}")
@@ -193,20 +205,20 @@ class QCService:
             logger.info(f"Tentando deletar QC record: {record_id}")
 
             # Primeiro verifica se o registro existe
-            check = supabase.table("qc_records").select("id").eq("id", record_id).execute()
+            check = get_supabase().table("qc_records").select("id").eq("id", record_id).execute()
             if not check.data or len(check.data) == 0:
                 logger.warning(f"Registro {record_id} não encontrado no banco.")
                 return False
 
             # Deleta o registro
-            response = supabase.table("qc_records")\
+            response = get_supabase().table("qc_records")\
                 .delete()\
                 .eq("id", record_id)\
                 .execute()
 
             # DELETE no Supabase pode retornar lista vazia mesmo quando bem-sucedido
             # Verifica novamente se o registro ainda existe
-            verify = supabase.table("qc_records").select("id").eq("id", record_id).execute()
+            verify = get_supabase().table("qc_records").select("id").eq("id", record_id).execute()
             if not verify.data or len(verify.data) == 0:
                 logger.info(f"Registro {record_id} deletado com sucesso.")
                 return True

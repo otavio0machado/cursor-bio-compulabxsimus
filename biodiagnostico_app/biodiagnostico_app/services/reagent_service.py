@@ -4,6 +4,8 @@ Servico de Lotes de Reagentes
 import logging
 from typing import List, Dict, Any
 from .supabase_client import SupabaseClient
+from .exceptions import ServiceError
+from .types import ReagentLotRow
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +21,7 @@ class ReagentService:
     """CRUD para lotes de reagentes no Supabase"""
 
     @staticmethod
-    async def create_lot(data: Dict[str, Any]) -> Dict[str, Any]:
+    async def create_lot(data: Dict[str, Any]) -> ReagentLotRow:
         insert_data = {
             "name": data.get("name"),
             "lot_number": data.get("lot_number"),
@@ -32,10 +34,12 @@ class ReagentService:
         }
         insert_data = {k: v for k, v in insert_data.items() if v is not None}
         response = get_supabase().table("reagent_lots").insert(insert_data).execute()
-        return response.data[0] if response.data else {}
+        if not response.data:
+            raise ServiceError("Insert em reagent_lots não retornou dados.")
+        return response.data[0]
 
     @staticmethod
-    async def get_lots(limit: int = 200) -> List[Dict[str, Any]]:
+    async def get_lots(limit: int = 200) -> List[ReagentLotRow]:
         response = get_supabase().table("reagent_lots")\
             .select("*")\
             .order("created_at", desc=True)\
