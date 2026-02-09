@@ -28,11 +28,10 @@ def registro_qc_tab() -> rx.Component:
 
         ui.card(
             rx.vstack(
-                ui.text("Dados da Amostra", size="label", color=Color.PRIMARY, style={"letter_spacing": "0.05em", "text_transform": "uppercase"}, margin_bottom=Spacing.MD),
-
+                # Linha 1: Exame, Data, Medição, Valor Alvo
                 rx.grid(
                     ui.form_field(
-                        "Nome do Exame (Obrigatório)",
+                        "Exame",
                         ui.select(
                             State.unique_exam_names,
                             placeholder="Selecione o Exame",
@@ -42,108 +41,98 @@ def registro_qc_tab() -> rx.Component:
                         required=True
                     ),
                     ui.form_field(
-                        "Data (Automatico)",
-                        ui.input(type="date", value=State.qc_date, read_only=True),
+                        "Data",
+                        ui.input(type="date", value=State.qc_date, on_change=State.set_qc_date),
                     ),
-                    columns={"initial": "1", "sm": "2"},
-                    spacing="4", width="100%",
+                    ui.form_field("Medição", ui.input(placeholder="0.00", value=State.qc_value, on_change=State.update_qc_value), required=True),
+                    ui.form_field("Valor Alvo", ui.input(placeholder="0.00", value=State.qc_target_value, on_change=State.update_qc_target_value), required=True),
+                    columns={"initial": "1", "sm": "2", "md": "4"},
+                    spacing="3", width="100%",
                 ),
 
-                # Indicador de Referencia Ativa
-                rx.cond(
-                    State.has_active_reference,
-                    rx.callout(
-                        rx.hstack(
-                            rx.icon(tag="circle-check", size=16),
-                            rx.text("Referencia ativa: ", font_weight="600"),
-                            rx.text(State.current_exam_reference["name"]),
-                            rx.spacer(),
-                            rx.text("CV% Max: <=" + format_cv(State.current_cv_max_threshold) + "%", font_size=Typography.SIZE_SM),
-                            width="100%", align_items="center", flex_wrap="wrap", gap="2"
-                        ),
-                        icon="info", color_scheme="green", width="100%", margin_y=Spacing.SM
-                    ),
-                    rx.cond(
-                        State.qc_exam_name != "",
-                        rx.callout(
-                            "Nenhuma referencia cadastrada para este exame. Usando limite padrao (10%).",
-                            icon="info", color_scheme="yellow", width="100%", margin_y=Spacing.SM
-                        )
-                    )
-                ),
-
-                rx.divider(margin_y=Spacing.LG, opacity=0.3),
-
-                ui.text("Resultados & Metas", size="label", color=Color.PRIMARY, style={"letter_spacing": "0.05em", "text_transform": "uppercase"}, margin_bottom=Spacing.MD),
-
+                # Linha 2: SD, CV%, Equipamento, Analista
                 rx.grid(
-                    ui.form_field("Medição (Obrigatório)", ui.input(placeholder="0.00", value=State.qc_value, on_change=State.update_qc_value), required=True),
-                    ui.form_field("Valor Alvo (Obrigatório)", ui.input(placeholder="0.00", value=State.qc_target_value, on_change=State.update_qc_target_value), required=True),
-                    ui.form_field("Desvio Padrão (Automático)", ui.input(placeholder="0.00", value=State.qc_target_sd, on_change=State.set_qc_target_sd, read_only=True)),
-                    # CV% with dynamic color indicator
+                    ui.form_field("Desvio Padrão", ui.input(placeholder="0.00", value=State.qc_target_sd, on_change=State.set_qc_target_sd, read_only=True)),
                     ui.form_field(
-                        "Variação % (Automático)",
+                        "Variação %",
                         rx.box(
                             rx.hstack(
                                 rx.text(
                                     format_cv(State.qc_calculated_cv) + "%",
-                                    font_size=Typography.H3["font_size"], font_weight="bold",
+                                    font_size=Typography.H4["font_size"], font_weight="bold",
                                     color=rx.cond(State.qc_cv_status == "OK", Color.SUCCESS, Color.ERROR)
                                 ),
                                 rx.icon(
                                     tag=rx.cond(State.qc_cv_status == "OK", "circle_check", "circle_x"),
-                                    size=18,
+                                    size=16,
                                     color=rx.cond(State.qc_cv_status == "OK", Color.SUCCESS, Color.ERROR)
                                 ),
-                                align_items="center", style={"gap": Spacing.SM}, height="100%",
+                                align_items="center", style={"gap": Spacing.XS}, height="100%",
                             ),
-                            width="100%", height="44px", display="flex", align_items="center", padding_x=Spacing.MD, bg=Color.SURFACE, border_radius=Design.RADIUS_LG,
+                            width="100%", height="40px", display="flex", align_items="center", padding_x=Spacing.SM, bg=Color.SURFACE, border_radius=Design.RADIUS_LG,
                             border=rx.cond(State.qc_cv_status == "OK", f"1px solid {Color.SUCCESS}40", f"1px solid {Color.ERROR}40")
                         ),
                     ),
+                    ui.form_field("Equipamento", ui.input(placeholder="Ex: Cobas c111", value=State.qc_equipment, on_change=State.set_qc_equipment)),
+                    ui.form_field("Analista", ui.input(placeholder="Nome do analista", value=State.qc_analyst, on_change=State.set_qc_analyst)),
                     columns={"initial": "1", "sm": "2", "md": "4"},
-                    spacing="4", width="100%",
+                    spacing="3", width="100%",
                 ),
 
-                rx.divider(margin_y=Spacing.LG, opacity=0.3),
-
-                rx.grid(
-                    ui.form_field("Equipamento (Automatico)", ui.input(placeholder="Ex: Cobas c111", value=State.qc_equipment, on_change=State.set_qc_equipment)),
-                    ui.form_field("Analista Responsável (Opcional)", ui.input(placeholder="Nome do analista", value=State.qc_analyst, on_change=State.set_qc_analyst)),
-                    columns={"initial": "1", "sm": "2"},
-                    spacing="4", width="100%",
+                # Indicador de Referência (compacto)
+                rx.cond(
+                    State.has_active_reference,
+                    rx.hstack(
+                        rx.icon(tag="circle-check", size=14, color=Color.SUCCESS),
+                        rx.text("Ref: ", font_weight="600", font_size=Typography.SIZE_SM, color=Color.TEXT_SECONDARY),
+                        rx.text(State.current_exam_reference["name"], font_size=Typography.SIZE_SM),
+                        rx.text(" | CV% Max: ≤" + format_cv(State.current_cv_max_threshold) + "%", font_size=Typography.SIZE_SM, color=Color.TEXT_SECONDARY),
+                        align_items="center", gap="1", flex_wrap="wrap",
+                        padding_x=Spacing.SM, padding_y=Spacing.XS,
+                        bg=Color.SUCCESS_BG, border_radius=Design.RADIUS_MD, width="100%",
+                    ),
+                    rx.cond(
+                        State.qc_exam_name != "",
+                        rx.hstack(
+                            rx.icon(tag="info", size=14, color=Color.WARNING),
+                            rx.text("Sem referência cadastrada. Limite padrão: 10%", font_size=Typography.SIZE_SM, color=Color.TEXT_SECONDARY),
+                            align_items="center", gap="1",
+                            padding_x=Spacing.SM, padding_y=Spacing.XS,
+                            bg=Color.WARNING_BG, border_radius=Design.RADIUS_MD, width="100%",
+                        )
+                    )
                 ),
 
-                rx.grid(
-                    ui.button("Limpar", icon="eraser", on_click=State.clear_qc_form, variant="secondary", width="100%"),
-                    ui.button("Salvar Registro", icon="save", is_loading=State.is_saving_qc, on_click=State.save_qc_record, width="100%"),
-                    columns={"initial": "1", "sm": "2"},
-                    spacing="4", width="100%", margin_top=Spacing.LG
+                # Botões de ação
+                rx.hstack(
+                    ui.button("Limpar", icon="eraser", on_click=State.clear_qc_form, variant="secondary"),
+                    ui.button("Salvar Registro", icon="save", is_loading=State.is_saving_qc, on_click=State.save_qc_record),
+                    spacing="3", width="100%", justify_content="flex-end",
                 ),
 
                 # Feedback Messages
                 rx.cond(
                     State.qc_success_message != "",
-                    rx.callout(State.qc_success_message, icon="circle_check", color_scheme="green", width="100%", margin_top=Spacing.MD),
+                    rx.callout(State.qc_success_message, icon="circle_check", color_scheme="green", width="100%"),
                 ),
                 rx.cond(
                     State.qc_warning_message != "",
-                    rx.callout(State.qc_warning_message, icon="triangle_alert", color_scheme="yellow", width="100%", margin_top=Spacing.MD),
+                    rx.callout(State.qc_warning_message, icon="triangle_alert", color_scheme="yellow", width="100%"),
                 ),
                 rx.cond(
                     State.qc_error_message != "",
-                    rx.callout(State.qc_error_message, icon="triangle_alert", color_scheme="red", width="100%", margin_top=Spacing.MD),
+                    rx.callout(State.qc_error_message, icon="triangle_alert", color_scheme="red", width="100%"),
                 ),
-                width="100%"
+                width="100%", spacing="3",
             ),
-            width="100%"
+            width="100%", padding=Spacing.MD,
         ),
 
         # Histórico Table Section
         rx.box(
             rx.vstack(
                 rx.hstack(
-                    ui.heading("Histórico Recente", level=3),
+                    ui.heading("Histórico", level=3),
                     rx.spacer(),
                     rx.cond(
                         State.qc_records.length() > 0,
@@ -152,7 +141,57 @@ def registro_qc_tab() -> rx.Component:
                             on_click=State.open_clear_all_modal, variant="ghost", color_scheme="red", size="1", opacity="0.7", _hover={"opacity": "1"}
                         ),
                     ),
-                    width="100%", align_items="center", margin_bottom=Spacing.MD
+                    width="100%", align_items="center",
+                ),
+                # Banner de desfazer exclusão
+                rx.cond(
+                    State.has_undo_delete,
+                    rx.hstack(
+                        rx.icon(tag="undo-2", size=16, color=Color.PRIMARY),
+                        rx.text("Registro excluído.", font_size=Typography.SIZE_SM, color=Color.TEXT_PRIMARY),
+                        rx.button(
+                            "Desfazer", size="1", variant="solid", color_scheme="green",
+                            on_click=State.restore_last_deleted_qc_record,
+                        ),
+                        rx.button(
+                            rx.icon(tag="x", size=14), size="1", variant="ghost",
+                            on_click=State.dismiss_undo_delete, aria_label="Fechar",
+                        ),
+                        align_items="center", gap="3", width="100%",
+                        padding=Spacing.SM, bg=Color.WARNING_BG,
+                        border=f"1px solid {Color.WARNING}40",
+                        border_radius=Design.RADIUS_MD,
+                        margin_bottom=Spacing.SM,
+                    ),
+                ),
+                # Barra de busca e filtros
+                rx.hstack(
+                    rx.box(
+                        rx.input(
+                            placeholder="Buscar exame...",
+                            value=State.qc_search_term,
+                            on_change=State.set_qc_search_term,
+                            size="2",
+                            width="100%",
+                            max_width="280px",
+                        ),
+                        rx.icon(tag="search", size=16, color=Color.TEXT_SECONDARY,
+                                position="absolute", right="10px", top="50%",
+                                transform="translateY(-50%)", pointer_events="none"),
+                        position="relative", flex="1", max_width="280px",
+                    ),
+                    rx.select(
+                        ["Todos", "OK", "ALERTA", "ERRO"],
+                        value=State.qc_status_filter,
+                        on_change=State.set_qc_status_filter,
+                        size="2", width="130px",
+                    ),
+                    rx.text(
+                        State.filtered_qc_records.length().to_string() + " registros",
+                        font_size=Typography.SIZE_SM, color=Color.TEXT_SECONDARY,
+                    ),
+                    width="100%", align_items="center", gap="3", flex_wrap="wrap",
+                    margin_bottom=Spacing.SM,
                 ),
                 rx.cond(
                     State.qc_records.length() > 0,

@@ -146,6 +146,9 @@ class QCState(DashboardState):
     delete_qc_record_id: str = ""
     delete_qc_record_name: str = ""
 
+    # Soft-delete: registro recém-excluído disponível para restauração
+    last_deleted_qc_record: Optional[Dict[str, Any]] = None
+
     show_delete_reference_modal: bool = False
     delete_reference_id: str = ""
     delete_reference_name: str = ""
@@ -164,6 +167,10 @@ class QCState(DashboardState):
 
     # Loading state for initial data load
     is_loading_data: bool = False
+
+    # Busca e filtros da tabela QC
+    qc_search_term: str = ""
+    qc_status_filter: str = "Todos"
 
     # Pagination
     qc_page: int = 0
@@ -198,6 +205,14 @@ class QCState(DashboardState):
 
     def set_qc_date(self, value: str):
         self.qc_date = value
+
+    def set_qc_search_term(self, value: str):
+        self.qc_search_term = value
+        self.qc_page = 0  # Reset paginação ao buscar
+
+    def set_qc_status_filter(self, value: str):
+        self.qc_status_filter = value
+        self.qc_page = 0
 
     def set_maintenance_type(self, value: str):
         self.maintenance_type = value
@@ -265,16 +280,35 @@ class QCState(DashboardState):
             return 0.0
 
     @rx.var
+    def filtered_qc_records(self) -> List[QCRecord]:
+        """Registros filtrados por busca e status"""
+        records = self.qc_records
+        # Filtro por nome do exame
+        search = (self.qc_search_term or "").strip().upper()
+        if search:
+            records = [r for r in records if search in (r.exam_name or "").upper()]
+        # Filtro por status
+        status_filter = self.qc_status_filter or "Todos"
+        if status_filter == "OK":
+            records = [r for r in records if r.status == "OK"]
+        elif status_filter == "ALERTA":
+            records = [r for r in records if "ALERTA" in (r.status or "")]
+        elif status_filter == "ERRO":
+            records = [r for r in records if "ERRO" in (r.status or "")]
+        return records
+
+    @rx.var
     def paginated_qc_records(self) -> List[QCRecord]:
-        """Retorna registros paginados"""
+        """Retorna registros filtrados e paginados"""
+        records = self.filtered_qc_records
         start = self.qc_page * self.qc_page_size
         end = start + self.qc_page_size
-        return self.qc_records[start:end]
+        return records[start:end]
 
     @rx.var
     def total_qc_pages(self) -> int:
-        """Total de páginas"""
-        total = len(self.qc_records)
+        """Total de páginas (com filtros aplicados)"""
+        total = len(self.filtered_qc_records)
         if total == 0:
             return 1
         return (total + self.qc_page_size - 1) // self.qc_page_size
@@ -350,6 +384,11 @@ class QCState(DashboardState):
         if self.current_exam_reference:
             return float(self.current_exam_reference.get("cv_max_threshold", 10.0))
         return 10.0
+
+    @rx.var
+    def has_undo_delete(self) -> bool:
+        """Há registro recém-excluído disponível para restauração"""
+        return self.last_deleted_qc_record is not None
 
     @rx.var
     def has_active_reference(self) -> bool:
@@ -792,6 +831,37 @@ class QCState(DashboardState):
         self.is_saving_qc = True
         self.reset_qc_messages()
         try:
+             # === Validação de campos obrigatórios ===
+             if not (self.qc_exam_name or "").strip():
+                 self.qc_error_message = "Selecione um exame."
+                 self.is_saving_qc = False
+                 return
+
+             if not (self.qc_value or "").strip():
+                 self.qc_error_message = "Informe o valor da medição."
+                 self.is_saving_qc = False
+                 return
+
+             if not (self.qc_target_value or "").strip():
+                 self.qc_error_message = "Informe o valor alvo."
+                 self.is_saving_qc = False
+                 return
+
+             # Validação numérica
+             try:
+                 float(self.qc_value.strip().replace(",", "."))
+             except (ValueError, TypeError):
+                 self.qc_error_message = "Medição deve ser um valor numérico válido."
+                 self.is_saving_qc = False
+                 return
+
+             try:
+                 float(self.qc_target_value.strip().replace(",", "."))
+             except (ValueError, TypeError):
+                 self.qc_error_message = "Valor alvo deve ser um valor numérico válido."
+                 self.is_saving_qc = False
+                 return
+
              # Normalizar nome do exame antes de salvar
              canonical_name = self.qc_exam_name.strip()
              
@@ -839,6 +909,9 @@ class QCState(DashboardState):
              # Validação Westgard
              violations = WestgardService.check_rules(new_record, history)
              
+             _toast_msg = ""
+             _toast_level = "success"
+
              if violations:
                  new_record.westgard_violations = violations
                  # Determine status severity
@@ -848,31 +921,38 @@ class QCState(DashboardState):
                  if rejections:
                      rule = rejections[0]['rule']
                      new_record.status = f"ERRO ({rule})"
-                     new_record.needs_calibration = True  # Rejeição exige calibração
+                     new_record.needs_calibration = True
                      self.qc_error_message = f"Regra {rule} violada: {rejections[0]['description']}"
-                     self.qc_success_message = "" # Limpa sucesso se houve erro crítico
+                     self.qc_success_message = ""
+                     _toast_msg = f"⚠ Regra {rule} violada!"
+                     _toast_level = "error"
                  elif warnings:
                      rule = warnings[0]['rule']
                      new_record.status = f"ALERTA ({rule})"
                      self.qc_warning_message = f"Salvo com Alerta ({rule}): {warnings[0]['description']}"
                      self.qc_success_message = ""
+                     _toast_msg = f"Salvo com alerta ({rule})"
+                     _toast_level = "warning"
                  else:
                      new_record.status = "OK"
              else:
                  self.qc_success_message = "Registro salvo! Sem violações de regras."
                  self.qc_error_message = ""
                  self.qc_warning_message = ""
+                 _toast_msg = "Registro salvo com sucesso!"
+                 _toast_level = "success"
 
              # Aplicar regra de CV% para calibração e status
              cv_out = cv > cv_max_threshold
              if cv_out:
                  new_record.needs_calibration = True
-                 # Definir status de CV no registro se nao houve violacao Westgard mais grave
                  if new_record.status == "OK":
                      new_record.status = "ALERTA (CV)"
                  if not self.qc_error_message and not self.qc_warning_message:
                      self.qc_warning_message = "CV acima do limite. Calibração necessária."
                      self.qc_success_message = ""
+                     _toast_msg = "CV acima do limite. Calibração necessária."
+                     _toast_level = "warning"
 
              # Persistir no banco de dados
              db_saved = False
@@ -919,17 +999,24 @@ class QCState(DashboardState):
              # Only append to local state if DB save succeeded
              if db_saved:
                  self.qc_records.append(new_record)
-                 # Reordenar por data decrescente (mais recente primeiro)
                  self.qc_records = sorted(self.qc_records, key=lambda x: x.date, reverse=True)
 
-             # Se houve erro, não limpa o form imediatamente para permitir ajuste se foi digitação errada?
-             # Por enquanto limpa para seguir fluxo normal, mas mantém msg
              self.qc_value = ""
-             
+             self.is_saving_qc = False
+
+             # Toast notification
+             if _toast_level == "success":
+                 yield rx.toast.success(_toast_msg, duration=4000, position="bottom-right")
+             elif _toast_level == "warning":
+                 yield rx.toast.warning(_toast_msg, duration=6000, position="bottom-right")
+             elif _toast_level == "error":
+                 yield rx.toast.error(_toast_msg, duration=8000, position="bottom-right")
+             return
+
         except Exception as e:
             self.qc_error_message = f"Erro: {e}"
-        finally:
             self.is_saving_qc = False
+            yield rx.toast.error(f"Erro ao salvar: {e}", duration=8000, position="bottom-right")
 
     async def delete_qc_record(self, id: str):
         # Deletar do banco de dados
@@ -1027,21 +1114,81 @@ class QCState(DashboardState):
         self.delete_qc_record_name = ""
 
     async def confirm_delete_qc_record(self):
-        """Confirma e executa exclusão permanente do registro de CQ"""
+        """Exclui registro de CQ com opção de restaurar"""
         if not self.delete_qc_record_id:
             return
+
+        # Guardar registro para possível restauração
+        deleted_record = next((r for r in self.qc_records if r.id == self.delete_qc_record_id), None)
+        if deleted_record:
+            self.last_deleted_qc_record = deleted_record.dict()
 
         try:
             success = await QCService.delete_qc_record(self.delete_qc_record_id)
             if success:
                 self.qc_records = [r for r in self.qc_records if r.id != self.delete_qc_record_id]
-                self.qc_success_message = "Registro excluído permanentemente!"
+                self.close_delete_qc_record_modal()
+                yield rx.toast.info("Registro excluído. Use 'Desfazer' para restaurar.", duration=8000, position="bottom-right")
+                return
             else:
                 self.qc_error_message = "Erro ao excluir registro do banco de dados"
+                self.last_deleted_qc_record = None
         except Exception as e:
             self.qc_error_message = f"Erro ao excluir: {e}"
-        finally:
-            self.close_delete_qc_record_modal()
+            self.last_deleted_qc_record = None
+        self.close_delete_qc_record_modal()
+
+    async def restore_last_deleted_qc_record(self):
+        """Restaura o último registro excluído re-inserindo no banco"""
+        if not self.last_deleted_qc_record:
+            return
+        try:
+            record_data = self.last_deleted_qc_record
+            db_record = await QCService.create_qc_record({
+                "date": record_data.get("date", ""),
+                "exam_name": record_data.get("exam_name", ""),
+                "level": record_data.get("level", "Normal"),
+                "lot_number": record_data.get("lot_number", ""),
+                "value": record_data.get("value", 0),
+                "target_value": record_data.get("target_value", 0),
+                "target_sd": record_data.get("target_sd", 0),
+                "equipment": record_data.get("equipment", ""),
+                "analyst": record_data.get("analyst", ""),
+                "cv": record_data.get("cv", 0),
+                "status": record_data.get("status", "OK"),
+                "reference_id": record_data.get("reference_id", ""),
+                "needs_calibration": record_data.get("needs_calibration", False),
+            })
+            if db_record and db_record.get("id"):
+                restored = QCRecord(
+                    id=str(db_record.get("id")),
+                    date=record_data.get("date", ""),
+                    exam_name=record_data.get("exam_name", ""),
+                    level=record_data.get("level", "Normal"),
+                    lot_number=record_data.get("lot_number", ""),
+                    value=float(record_data.get("value", 0)),
+                    target_value=float(record_data.get("target_value", 0)),
+                    target_sd=float(record_data.get("target_sd", 0)),
+                    cv=float(record_data.get("cv", 0)),
+                    cv_max_threshold=float(record_data.get("cv_max_threshold", 10.0)),
+                    status=record_data.get("status", "OK"),
+                    westgard_violations=[],
+                    reference_id=record_data.get("reference_id", ""),
+                    needs_calibration=record_data.get("needs_calibration", False),
+                    post_calibration_id=record_data.get("post_calibration_id", ""),
+                )
+                self.qc_records.append(restored)
+                self.qc_records = sorted(self.qc_records, key=lambda x: x.date, reverse=True)
+            self.last_deleted_qc_record = None
+            yield rx.toast.success("Registro restaurado!", duration=3000, position="bottom-right")
+        except Exception as e:
+            logger.error(f"Erro ao restaurar registro: {e}")
+            self.last_deleted_qc_record = None
+            yield rx.toast.error(f"Erro ao restaurar: {e}", duration=5000, position="bottom-right")
+
+    def dismiss_undo_delete(self):
+        """Descarta a opção de desfazer exclusão"""
+        self.last_deleted_qc_record = None
 
     def open_delete_reference_modal(self, ref_id: str, ref_name: str):
         """Abre modal de confirmação para excluir referência"""

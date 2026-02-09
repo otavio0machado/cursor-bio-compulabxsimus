@@ -50,10 +50,18 @@ class DashboardState(AuthState):
 
     @rx.var
     def qc_records_with_alerts(self) -> List[Dict[str, Any]]:
-        """Registros com alerta (apenas status != OK, definido por regras Westgard/CV no momento do registro)"""
-        if not hasattr(self, 'qc_records'):
+        """Alertas ativos: apenas o registro MAIS RECENTE de cada exame, se estiver com status != OK.
+        Evita mostrar alertas de registros antigos já corrigidos por novas medições."""
+        if not hasattr(self, 'qc_records') or not self.qc_records:
             return []
-        return [r.dict() for r in self.qc_records if r.status != "OK"]
+        # Agrupar por exame e pegar o mais recente de cada
+        latest_by_exam: Dict[str, Any] = {}
+        sorted_records = sorted(self.qc_records, key=lambda r: r.date, reverse=True)
+        for r in sorted_records:
+            if r.exam_name not in latest_by_exam:
+                latest_by_exam[r.exam_name] = r
+        # Retornar apenas os que estão em alerta
+        return [r.dict() for r in latest_by_exam.values() if r.status != "OK"]
 
     @rx.var
     def dashboard_pending_maintenances(self) -> str:

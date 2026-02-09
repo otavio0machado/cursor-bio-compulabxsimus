@@ -39,7 +39,7 @@ def dashboard_tab() -> rx.Component:
                 ui.stat_card("Taxa de Aprova\u00e7\u00e3o", State.dashboard_approval_rate.to_string() + "%", "circle-check", "success", "CV \u2264 5%"),
                 rx.cond(
                     State.has_alerts,
-                    ui.stat_card("Alertas CV > 5%", State.dashboard_alerts_count, "triangle-alert", "error"),
+                    ui.stat_card("Exames em Alerta", State.dashboard_alerts_count, "triangle-alert", "error", "CV fora"),
                     ui.stat_card("Sem Alertas", "0", "sparkles", "success")
                 ),
                 columns={"initial": "1", "sm": "2", "md": "2", "lg": "4"},
