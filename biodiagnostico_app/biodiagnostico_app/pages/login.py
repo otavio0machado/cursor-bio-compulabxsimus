@@ -42,7 +42,7 @@ def login_page() -> rx.Component:
             rx.vstack(
                 rx.box(
                     rx.image(src="/logo_lab.jpg", height="52px", border_radius=Design.RADIUS_SM),
-                    margin_bottom=Spacing.XL
+                    margin_bottom=Spacing.LG
                 ),
 
                 ui.heading("Bem-vindo", level=2, text_align="center"),
@@ -146,7 +146,8 @@ def login_page() -> rx.Component:
                 padding=Spacing.LG
             ),
             width=["100%", "100%", "50%"],
-            height="100vh",
+            min_height="100vh",
+            overflow_y="auto",
             bg=Color.BACKGROUND
         ),
         
