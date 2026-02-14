@@ -11,19 +11,18 @@ def format_cv(value) -> rx.Var:
 
 
 def qc_status_label(status, cv, cv_max) -> rx.Var:
-    """Status exibido baseado APENAS no status salvo no banco (Westgard + CV ja avaliados ao salvar)."""
-    status_var = rx.Var.create(status)
-    return status_var
+    """Status exibido SOMENTE baseado em CV% vs threshold configurado.
+    Alerta aparece apenas quando CV% ultrapassa o limite determinado."""
+    cv_var = rx.Var.create(cv).to(float)
+    cv_max_var = rx.Var.create(cv_max).to(float)
+    return rx.cond(cv_var <= cv_max_var, "OK", "ALERTA (CV)")
 
 
 def qc_status_kind(status, cv, cv_max) -> rx.Var:
-    """Tipo visual do status baseado APENAS no status salvo no banco."""
-    status_var = rx.Var.create(status)
-    return rx.cond(
-        status_var == "OK",
-        "success",
-        rx.cond(status_var.contains("ALERTA"), "warning", "error")
-    )
+    """Tipo visual SOMENTE baseado em CV% vs threshold configurado."""
+    cv_var = rx.Var.create(cv).to(float)
+    cv_max_var = rx.Var.create(cv_max).to(float)
+    return rx.cond(cv_var <= cv_max_var, "success", "warning")
 
 
 def tab_button(label: str, icon: str, tab_id: str) -> rx.Component:

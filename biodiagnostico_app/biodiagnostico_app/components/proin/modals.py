@@ -58,61 +58,131 @@ def post_calibration_modal() -> rx.Component:
 
                 rx.divider(margin_y=Spacing.SM, opacity=0.3),
 
-                # Formulário de pós-calibração
-                rx.vstack(
-                    ui.form_field(
-                        "Nova Medição (Pós-Calibração)",
-                        ui.input(
-                            placeholder="Digite o novo valor...",
-                            value=State.post_cal_value,
-                            on_change=State.set_post_cal_value,
-                        ),
-                        required=True
-                    ),
-
-                    # Exibição do CV% calculado em tempo real
-                    rx.cond(
-                        State.post_cal_value != "",
-                        rx.box(
-                            rx.hstack(
-                                rx.text("CV% Pós-Calibração: ", font_size=Typography.H5["font_size"]),
-                                rx.text(
-                                    format_cv(State.post_cal_calculated_cv) + "%",
-                                    font_weight="700",
-                                    color=rx.cond(State.post_cal_calculated_cv <= 10.0, Color.SUCCESS, Color.WARNING)
-                                ),
-                                rx.cond(
-                                    State.post_cal_calculated_cv <= 10.0,
-                                    rx.icon(tag="circle_check", size=16, color=Color.SUCCESS),
-                                    rx.icon(tag="circle_alert", size=16, color=Color.WARNING)
-                                ),
-                                spacing="2", align_items="center"
+                # Layout lado a lado: formulário + histórico de calibrações
+                rx.grid(
+                    # Coluna esquerda: formulário de pós-calibração
+                    rx.vstack(
+                        ui.form_field(
+                            "Nova Medição (Pós-Calibração)",
+                            ui.input(
+                                placeholder="Digite o novo valor...",
+                                value=State.post_cal_value,
+                                on_change=State.set_post_cal_value,
                             ),
-                            bg=rx.cond(State.post_cal_calculated_cv <= 10.0, Color.SUCCESS + "15", Color.WARNING + "15"),
-                            padding=Spacing.SM, border_radius=Design.RADIUS_MD, width="100%"
-                        )
+                            required=True
+                        ),
+
+                        # Exibição do CV% calculado em tempo real
+                        rx.cond(
+                            State.post_cal_value != "",
+                            rx.box(
+                                rx.hstack(
+                                    rx.text("CV% Pós-Calibração: ", font_size=Typography.H5["font_size"]),
+                                    rx.text(
+                                        format_cv(State.post_cal_calculated_cv) + "%",
+                                        font_weight="700",
+                                        color=rx.cond(State.post_cal_calculated_cv <= 10.0, Color.SUCCESS, Color.WARNING)
+                                    ),
+                                    rx.cond(
+                                        State.post_cal_calculated_cv <= 10.0,
+                                        rx.icon(tag="circle_check", size=16, color=Color.SUCCESS),
+                                        rx.icon(tag="circle_alert", size=16, color=Color.WARNING)
+                                    ),
+                                    spacing="2", align_items="center"
+                                ),
+                                bg=rx.cond(State.post_cal_calculated_cv <= 10.0, Color.SUCCESS + "15", Color.WARNING + "15"),
+                                padding=Spacing.SM, border_radius=Design.RADIUS_MD, width="100%"
+                            )
+                        ),
+
+                        ui.form_field(
+                            "Analista Responsável",
+                            ui.input(
+                                placeholder="Nome do analista...",
+                                value=State.post_cal_analyst,
+                                on_change=State.set_post_cal_analyst
+                            )
+                        ),
+
+                        ui.form_field(
+                            "Observações",
+                            rx.text_area(
+                                placeholder="Descreva as ações tomadas na calibração...",
+                                value=State.post_cal_notes,
+                                on_change=State.set_post_cal_notes,
+                                width="100%", min_height="80px"
+                            )
+                        ),
+
+                        spacing="3", width="100%"
                     ),
 
-                    ui.form_field(
-                        "Analista Responsável",
-                        ui.input(
-                            placeholder="Nome do analista...",
-                            value=State.post_cal_analyst,
-                            on_change=State.set_post_cal_analyst
-                        )
+                    # Coluna direita: histórico de calibrações do exame
+                    rx.vstack(
+                        rx.hstack(
+                            rx.icon(tag="history", size=16, color=Color.PRIMARY),
+                            rx.text("Histórico de Calibrações", font_weight="600", font_size=Typography.SIZE_SM, color=Color.DEEP),
+                            spacing="2", align_items="center",
+                        ),
+                        rx.cond(
+                            State.calibration_history_for_selected.length() > 0,
+                            rx.box(
+                                rx.table.root(
+                                    rx.table.header(
+                                        rx.table.row(
+                                            rx.table.column_header_cell(rx.text("DATA", style=Typography.CAPTION, color=Color.TEXT_SECONDARY)),
+                                            rx.table.column_header_cell(rx.text("VALOR", style=Typography.CAPTION, color=Color.TEXT_SECONDARY)),
+                                            rx.table.column_header_cell(rx.text("CV%", style=Typography.CAPTION, color=Color.TEXT_SECONDARY)),
+                                            rx.table.column_header_cell(rx.text("ANALISTA", style=Typography.CAPTION, color=Color.TEXT_SECONDARY)),
+                                        ),
+                                    ),
+                                    rx.table.body(
+                                        rx.foreach(
+                                            State.calibration_history_for_selected,
+                                            lambda pc: rx.table.row(
+                                                rx.table.cell(rx.text(pc.date[:10], font_size=Typography.SIZE_SM_XS, color=Color.TEXT_SECONDARY)),
+                                                rx.table.cell(rx.text(pc.post_calibration_value.to_string(), font_size=Typography.SIZE_SM, font_weight="600")),
+                                                rx.table.cell(
+                                                    rx.text(
+                                                        format_cv(pc.post_calibration_cv) + "%",
+                                                        font_size=Typography.SIZE_SM, font_weight="600",
+                                                        color=rx.cond(pc.post_calibration_cv <= 10.0, Color.SUCCESS, Color.ERROR),
+                                                    )
+                                                ),
+                                                rx.table.cell(rx.text(pc.analyst, font_size=Typography.SIZE_SM_XS, color=Color.TEXT_SECONDARY)),
+                                            ),
+                                        ),
+                                    ),
+                                    width="100%",
+                                ),
+                                bg=Color.SURFACE,
+                                border=f"1px solid {Color.BORDER}",
+                                border_radius=Design.RADIUS_LG,
+                                overflow="hidden",
+                                overflow_x="auto",
+                                width="100%",
+                                max_height="260px",
+                                overflow_y="auto",
+                            ),
+                            rx.center(
+                                rx.vstack(
+                                    rx.icon(tag="clipboard_list", size=24, color=Color.TEXT_SECONDARY, opacity=0.3),
+                                    rx.text("Nenhuma calibração anterior.", font_size=Typography.SIZE_SM_XS, color=Color.TEXT_SECONDARY),
+                                    spacing="1", align_items="center",
+                                ),
+                                bg=Color.SURFACE,
+                                border=f"1px solid {Color.BORDER}",
+                                border_radius=Design.RADIUS_LG,
+                                padding=Spacing.MD,
+                                width="100%",
+                            ),
+                        ),
+                        spacing="2", width="100%",
                     ),
 
-                    ui.form_field(
-                        "Observações",
-                        rx.text_area(
-                            placeholder="Descreva as ações tomadas na calibração...",
-                            value=State.post_cal_notes,
-                            on_change=State.set_post_cal_notes,
-                            width="100%", min_height="80px"
-                        )
-                    ),
-
-                    spacing="3", width="100%"
+                    columns={"initial": "1", "md": "2"},
+                    spacing="4",
+                    width="100%",
                 ),
 
                 # Mensagens de feedback
@@ -139,7 +209,7 @@ def post_calibration_modal() -> rx.Component:
                 spacing="3", width="100%", padding_top=Spacing.MD
             ),
 
-            style={"max_width": Design.MODAL_WIDTH_MD}
+            style={"max_width": "800px"}
         ),
         open=State.show_post_calibration_modal
     )

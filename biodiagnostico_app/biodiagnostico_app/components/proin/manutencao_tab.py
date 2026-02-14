@@ -31,7 +31,38 @@ def manutencao_tab() -> rx.Component:
             ui.card(
                 rx.vstack(
                     ui.text("Novo Registro", size="label", color=Color.PRIMARY, style={"letter_spacing": "0.05em", "text_transform": "uppercase"}, margin_bottom=Spacing.SM),
-                    ui.form_field("Equipamento", ui.input(placeholder="Nome do equipamento...", value=State.maintenance_equipment, on_change=State.set_maintenance_equipment), True),
+                    # Equipamento: select de existentes ou input para novo
+                    rx.vstack(
+                        rx.hstack(
+                            rx.text("Equipamento", font_size=Typography.SMALL["font_size"], font_weight="600", color=Color.TEXT_PRIMARY),
+                            rx.text("*", color=Color.ERROR, font_size=Typography.SMALL["font_size"]),
+                            rx.spacer(),
+                            rx.button(
+                                rx.hstack(
+                                    rx.icon(tag=rx.cond(State.maintenance_new_equipment_mode, "list", "plus"), size=14),
+                                    rx.text(
+                                        rx.cond(State.maintenance_new_equipment_mode, "Selecionar existente", "Novo equipamento"),
+                                        font_size=Typography.SIZE_SM_XS,
+                                    ),
+                                    spacing="1", align_items="center",
+                                ),
+                                on_click=State.set_maintenance_new_equipment_mode(~State.maintenance_new_equipment_mode),
+                                variant="ghost", size="1", color_scheme="blue",
+                            ),
+                            width="100%", align_items="center",
+                        ),
+                        rx.cond(
+                            State.maintenance_new_equipment_mode | (State.unique_equipment_names.length() == 0),
+                            ui.input(placeholder="Nome do novo equipamento...", value=State.maintenance_equipment, on_change=State.set_maintenance_equipment),
+                            ui.select(
+                                State.unique_equipment_names,
+                                placeholder="Selecione o equipamento",
+                                value=State.maintenance_equipment,
+                                on_change=State.set_maintenance_equipment,
+                            ),
+                        ),
+                        spacing="1", width="100%",
+                    ),
                     ui.form_field("Tipo", ui.select(["Preventiva", "Corretiva", "Calibração"], value=State.maintenance_type, on_change=State.set_maintenance_type), True),
                     rx.grid(
                         ui.form_field("Data", ui.input(type="date", value=State.maintenance_date, on_change=State.set_maintenance_date)),

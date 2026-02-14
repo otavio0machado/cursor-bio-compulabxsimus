@@ -187,7 +187,7 @@ def registro_qc_tab() -> rx.Component:
                         size="2", width="130px",
                     ),
                     rx.text(
-                        State.filtered_qc_records.length().to_string() + " registros",
+                        State.paginated_qc_records.length().to_string() + " registros no dia",
                         font_size=Typography.SIZE_SM, color=Color.TEXT_SECONDARY,
                     ),
                     width="100%", align_items="center", gap="3", flex_wrap="wrap",
@@ -225,7 +225,7 @@ def registro_qc_tab() -> rx.Component:
                                         ),
                                         rx.table.cell(
                                             rx.cond(
-                                                r.needs_calibration,
+                                                r.cv > r.cv_max_threshold,
                                                 rx.cond(
                                                     r.post_calibration_id != "",
                                                     # Já tem pós-calibração registrada
@@ -288,31 +288,29 @@ def registro_qc_tab() -> rx.Component:
                         bg=Color.SURFACE, border=f"1px solid {Color.BORDER}", border_radius=Design.RADIUS_XL, padding=Spacing.XL, width="100%"
                     )
                 ),
-                # Pagination Controls
-                rx.cond(
-                    State.total_qc_pages > 1,
-                    rx.hstack(
-                        rx.button(
-                            rx.icon(tag="chevron_left", size=16),
-                            on_click=State.prev_qc_page,
-                            variant="outline", size="1",
-                            disabled=State.qc_page == 0,
-                            aria_label="Página anterior",
-                        ),
-                        rx.text(
-                            (State.qc_page + 1).to_string() + " / " + State.total_qc_pages.to_string(),
-                            font_size=Typography.SIZE_SM, color=Color.TEXT_SECONDARY
-                        ),
-                        rx.button(
-                            rx.icon(tag="chevron_right", size=16),
-                            on_click=State.next_qc_page,
-                            variant="outline", size="1",
-                            disabled=State.qc_page >= State.total_qc_pages - 1,
-                            aria_label="Próxima página",
-                        ),
-                        justify_content="center", align_items="center",
-                        style={"gap": Spacing.MD}, width="100%", margin_top=Spacing.MD
+                # Navegação por dia
+                rx.hstack(
+                    rx.button(
+                        rx.icon(tag="chevron_left", size=16),
+                        on_click=State.prev_qc_day,
+                        variant="outline", size="1",
+                        aria_label="Dia anterior",
                     ),
+                    rx.input(
+                        type="date",
+                        value=State.qc_history_date,
+                        on_change=State.set_qc_history_date,
+                        size="2",
+                        width="160px",
+                    ),
+                    rx.button(
+                        rx.icon(tag="chevron_right", size=16),
+                        on_click=State.next_qc_day,
+                        variant="outline", size="1",
+                        aria_label="Próximo dia",
+                    ),
+                    justify_content="center", align_items="center",
+                    style={"gap": Spacing.SM}, width="100%", margin_top=Spacing.MD
                 ),
                 width="100%"
             ),

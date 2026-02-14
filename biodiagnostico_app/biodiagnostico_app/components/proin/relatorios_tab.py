@@ -85,6 +85,89 @@ def relatorios_tab() -> rx.Component:
         ),
         rx.divider(margin_bottom=Spacing.LG, opacity=0.3),
 
+        # Section: Exportação PDF por Área Laboratorial
+        ui.card(
+            rx.vstack(
+                rx.hstack(
+                    rx.box(rx.icon(tag="folder_open", size=20, color=Color.PRIMARY), bg=Color.PRIMARY_LIGHT, p="2", border_radius=Design.RADIUS_SM),
+                    ui.heading("Exportar Relatórios por Área (PDF)", level=3),
+                    style={"gap": Spacing.SM}, align_items="center", margin_bottom=Spacing.MD, width="100%"
+                ),
+                ui.text("Gere relatórios PDF para cada área laboratorial", size="small", color=Color.TEXT_SECONDARY, margin_bottom=Spacing.MD),
+                rx.grid(
+                    # Hematologia
+                    rx.box(
+                        rx.hstack(
+                            rx.icon(tag="droplets", size=18, color=Color.PRIMARY),
+                            rx.text("Hematologia", font_weight="600", font_size=Typography.SMALL["font_size"]),
+                            spacing="2", align_items="center",
+                        ),
+                        rx.hstack(
+                            ui.button("Baixar PDF", icon="download", on_click=State.generate_area_report_pdf("hematologia"), variant="secondary", size="2"),
+                            spacing="2", margin_top=Spacing.SM,
+                        ),
+                        padding=Spacing.MD, bg=Color.SURFACE, border=f"1px solid {Color.BORDER}", border_radius=Design.RADIUS_LG,
+                    ),
+                    # Imunologia
+                    rx.box(
+                        rx.hstack(
+                            rx.icon(tag="shield", size=18, color=Color.PRIMARY),
+                            rx.text("Imunologia", font_weight="600", font_size=Typography.SMALL["font_size"]),
+                            spacing="2", align_items="center",
+                        ),
+                        rx.hstack(
+                            ui.button("Baixar PDF", icon="download", on_click=State.generate_area_report_pdf("imunologia"), variant="secondary", size="2"),
+                            spacing="2", margin_top=Spacing.SM,
+                        ),
+                        padding=Spacing.MD, bg=Color.SURFACE, border=f"1px solid {Color.BORDER}", border_radius=Design.RADIUS_LG,
+                    ),
+                    # Parasitologia
+                    rx.box(
+                        rx.hstack(
+                            rx.icon(tag="bug", size=18, color=Color.PRIMARY),
+                            rx.text("Parasitologia", font_weight="600", font_size=Typography.SMALL["font_size"]),
+                            spacing="2", align_items="center",
+                        ),
+                        rx.hstack(
+                            ui.button("Baixar PDF", icon="download", on_click=State.generate_area_report_pdf("parasitologia"), variant="secondary", size="2"),
+                            spacing="2", margin_top=Spacing.SM,
+                        ),
+                        padding=Spacing.MD, bg=Color.SURFACE, border=f"1px solid {Color.BORDER}", border_radius=Design.RADIUS_LG,
+                    ),
+                    # Microbiologia
+                    rx.box(
+                        rx.hstack(
+                            rx.icon(tag="microscope", size=18, color=Color.PRIMARY),
+                            rx.text("Microbiologia", font_weight="600", font_size=Typography.SMALL["font_size"]),
+                            spacing="2", align_items="center",
+                        ),
+                        rx.hstack(
+                            ui.button("Baixar PDF", icon="download", on_click=State.generate_area_report_pdf("microbiologia"), variant="secondary", size="2"),
+                            spacing="2", margin_top=Spacing.SM,
+                        ),
+                        padding=Spacing.MD, bg=Color.SURFACE, border=f"1px solid {Color.BORDER}", border_radius=Design.RADIUS_LG,
+                    ),
+                    # Uroanálise
+                    rx.box(
+                        rx.hstack(
+                            rx.icon(tag="test_tube", size=18, color=Color.PRIMARY),
+                            rx.text("Uroanálise", font_weight="600", font_size=Typography.SMALL["font_size"]),
+                            spacing="2", align_items="center",
+                        ),
+                        rx.hstack(
+                            ui.button("Baixar PDF", icon="download", on_click=State.generate_area_report_pdf("uroanalise"), variant="secondary", size="2"),
+                            spacing="2", margin_top=Spacing.SM,
+                        ),
+                        padding=Spacing.MD, bg=Color.SURFACE, border=f"1px solid {Color.BORDER}", border_radius=Design.RADIUS_LG,
+                    ),
+                    columns={"initial": "1", "sm": "2", "md": "3", "lg": "5"},
+                    spacing="4", width="100%",
+                ),
+            ),
+            border_left=f"4px solid {Color.PRIMARY}", margin_bottom=Spacing.LG,
+        ),
+        rx.divider(margin_bottom=Spacing.LG, opacity=0.3),
+
         rx.vstack(
             ui.heading("Análise Levey-Jennings", level=2),
             ui.text("Visualização gráfica de tendências", size="small", color=Color.TEXT_SECONDARY),

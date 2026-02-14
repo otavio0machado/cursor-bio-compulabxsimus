@@ -95,6 +95,99 @@ class MaintenanceRecord(BaseModel):
     created_at: str = ""
 
 
+class ImunologiaRecord(BaseModel):
+    """Registro de Controle de Qualidade - Imunologia"""
+    id: str = ""
+    controle: str = ""
+    fabricante: str = ""
+    lote: str = ""
+    data: str = ""
+    resultado: str = ""
+    created_at: str = ""
+
+
+class HematologyQCParameter(BaseModel):
+    """Parâmetro (regra) de CQ Hematologia — Intervalo ou Percentual"""
+    id: str = ""
+    analito: str = ""
+    equipamento: str = ""
+    lote_controle: str = ""
+    nivel_controle: str = ""
+    modo: str = "INTERVALO"     # 'INTERVALO' | 'PERCENTUAL'
+    alvo_valor: float = 0.0
+    min_valor: float = 0.0
+    max_valor: float = 0.0
+    tolerancia_percentual: float = 0.0
+    is_active: bool = True
+    # Campos calculados da VIEW
+    min_calc: float = 0.0
+    max_calc: float = 0.0
+    percentual_equivalente: float = 0.0
+    created_at: str = ""
+    updated_at: str = ""
+
+
+class HematologyQCMeasurement(BaseModel):
+    """Medição (lançamento) de CQ Hematologia"""
+    id: str = ""
+    data_medicao: str = ""
+    analito: str = ""
+    valor_medido: float = 0.0
+    parameter_id: str = ""
+    modo_usado: str = ""        # 'INTERVALO' | 'PERCENTUAL'
+    min_aplicado: float = 0.0
+    max_aplicado: float = 0.0
+    status: str = ""            # 'APROVADO' | 'REPROVADO'
+    observacao: str = ""
+    created_at: str = ""
+
+
+class HematologyBioRecord(BaseModel):
+    """Registro da Tabela Bio x Controle Interno (Hematologia)"""
+    id: str = ""
+    data_bio: str = ""
+    data_pad: str = ""
+    registro_bio: str = ""
+    registro_pad: str = ""
+    modo_ci: str = "bio"  # 'bio' | 'intervalo' | 'porcentagem'
+    bio_hemacias: float = 0.0
+    bio_hematocrito: float = 0.0
+    bio_hemoglobina: float = 0.0
+    bio_leucocitos: float = 0.0
+    bio_plaquetas: float = 0.0
+    bio_rdw: float = 0.0
+    bio_vpm: float = 0.0
+    pad_hemacias: float = 0.0
+    pad_hematocrito: float = 0.0
+    pad_hemoglobina: float = 0.0
+    pad_leucocitos: float = 0.0
+    pad_plaquetas: float = 0.0
+    pad_rdw: float = 0.0
+    pad_vpm: float = 0.0
+    ci_min_hemacias: float = 0.0
+    ci_max_hemacias: float = 0.0
+    ci_min_hematocrito: float = 0.0
+    ci_max_hematocrito: float = 0.0
+    ci_min_hemoglobina: float = 0.0
+    ci_max_hemoglobina: float = 0.0
+    ci_min_leucocitos: float = 0.0
+    ci_max_leucocitos: float = 0.0
+    ci_min_plaquetas: float = 0.0
+    ci_max_plaquetas: float = 0.0
+    ci_min_rdw: float = 0.0
+    ci_max_rdw: float = 0.0
+    ci_min_vpm: float = 0.0
+    ci_max_vpm: float = 0.0
+    ci_pct_hemacias: float = 0.0
+    ci_pct_hematocrito: float = 0.0
+    ci_pct_hemoglobina: float = 0.0
+    ci_pct_leucocitos: float = 0.0
+    ci_pct_plaquetas: float = 0.0
+    ci_pct_rdw: float = 0.0
+    ci_pct_vpm: float = 0.0
+    created_at: str = ""
+
+
 class LeveyJenningsPoint(BaseModel):
     """Ponto do gráfico Levey-Jennings"""
     date: str = ""

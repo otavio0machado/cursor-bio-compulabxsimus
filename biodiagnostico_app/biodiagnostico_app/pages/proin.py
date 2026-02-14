@@ -20,6 +20,7 @@ from ..components.proin import (
     relatorios_tab,
     importar_tab,
     referencias_tab,
+    outros_registros_tab,
     post_calibration_modal,
     delete_qc_record_modal,
     clear_all_qc_modal,
@@ -61,6 +62,7 @@ def proin_page() -> rx.Component:
                     tab_button("Manutenção", "wrench", "manutencao"),
                     tab_button("Relatórios", "bar_chart_3", "relatorios"),
                     tab_button("Importar", "upload", "importar"),
+                    tab_button("Outros Registros", "folder_open", "outros_registros"),
                     spacing="2", justify_content="center", width="100%", flex_wrap="wrap"
                 ),
                 margin_bottom=Spacing.XL, width="100%"
@@ -75,6 +77,7 @@ def proin_page() -> rx.Component:
                 rx.cond(State.proin_current_tab == "manutencao", manutencao_tab()),
                 rx.cond(State.proin_current_tab == "relatorios", relatorios_tab()),
                 rx.cond(State.proin_current_tab == "importar", importar_tab()),
+                rx.cond(State.proin_current_tab == "outros_registros", outros_registros_tab()),
                 width="100%", max_width="6xl", margin_x="auto"
             ),
 

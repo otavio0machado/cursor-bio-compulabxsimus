@@ -93,3 +93,84 @@ class QCRegistryNameRow(TypedDict, total=False):
     name: str
     is_active: bool
     created_at: str
+
+
+class HematologyQCParameterRow(TypedDict, total=False):
+    id: str
+    created_at: str
+    updated_at: str
+    analito: str
+    equipamento: str
+    lote_controle: str
+    nivel_controle: str
+    modo: str
+    alvo_valor: float
+    min_valor: float
+    max_valor: float
+    tolerancia_percentual: float
+    is_active: bool
+    user_id: str
+    min_calc: float
+    max_calc: float
+    percentual_equivalente: float
+
+
+class HematologyQCMeasurementRow(TypedDict, total=False):
+    id: str
+    created_at: str
+    data_medicao: str
+    analito: str
+    valor_medido: float
+    parameter_id: str
+    modo_usado: str
+    min_aplicado: float
+    max_aplicado: float
+    status: str
+    observacao: str
+    user_id: str
+
+
+class HematologyBioRecordRow(TypedDict, total=False):
+    id: str
+    created_at: str
+    data_bio: str
+    data_pad: str
+    registro_bio: str
+    registro_pad: str
+    modo_ci: str
+    bio_hemacias: float
+    bio_hematocrito: float
+    bio_hemoglobina: float
+    bio_leucocitos: float
+    bio_plaquetas: float
+    bio_rdw: float
+    bio_vpm: float
+    pad_hemacias: float
+    pad_hematocrito: float
+    pad_hemoglobina: float
+    pad_leucocitos: float
+    pad_plaquetas: float
+    pad_rdw: float
+    pad_vpm: float
+    ci_min_hemacias: float
+    ci_max_hemacias: float
+    ci_min_hematocrito: float
+    ci_max_hematocrito: float
+    ci_min_hemoglobina: float
+    ci_max_hemoglobina: float
+    ci_min_leucocitos: float
+    ci_max_leucocitos: float
+    ci_min_plaquetas: float
+    ci_max_plaquetas: float
+    ci_min_rdw: float
+    ci_max_rdw: float
+    ci_min_vpm: float
+    ci_max_vpm: float
+    ci_pct_hemacias: float
+    ci_pct_hematocrito: float
+    ci_pct_hemoglobina: float
+    ci_pct_leucocitos: float
+    ci_pct_plaquetas: float
+    ci_pct_rdw: float
+    ci_pct_vpm: float
+    user_id: str
