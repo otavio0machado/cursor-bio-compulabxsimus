@@ -575,3 +575,113 @@ new Promise((resolve) => {
         ),
         open=State.show_voice_modal,
     )
+
+
+def levey_jennings_chart_modal() -> rx.Component:
+    """Modal para exibir gráfico Levey-Jennings de um exame específico"""
+    return rx.dialog.root(
+        rx.dialog.content(
+            rx.dialog.title(
+                rx.hstack(
+                    rx.icon(tag="chart_line", size=24, color=Color.PRIMARY),
+                    rx.text("Gráfico Levey-Jennings", font_weight="700", font_size=Typography.SIZE_XL),
+                    spacing="2", align_items="center"
+                )
+            ),
+            rx.dialog.description(
+                rx.hstack(
+                    rx.text("Exame: ", color=Color.TEXT_SECONDARY, font_size=Typography.H5["font_size"]),
+                    rx.text(State.chart_modal_exam_name, font_weight="600", font_size=Typography.H5["font_size"], color=Color.DEEP),
+                    rx.spacer(),
+                    rx.badge(State.levey_jennings_data.length().to_string() + " pontos", color_scheme="blue", variant="soft"),
+                    spacing="2", align_items="center", width="100%"
+                )
+            ),
+
+            rx.vstack(
+                # Controles de período
+                rx.hstack(
+                    rx.box(
+                        ui.text("Período (dias)", size="label", margin_bottom=Spacing.XS),
+                        ui.select(["7", "15", "30", "60", "90"], value=State.chart_modal_period, on_change=State.set_chart_modal_period),
+                        width="150px"
+                    ),
+                    ui.button("Atualizar", icon="refresh-cw", on_click=State.update_chart_modal_data, size="2"),
+                    spacing="3", align_items="end", width="100%"
+                ),
+
+                # Legenda
+                rx.hstack(
+                    rx.hstack(rx.box(width="12px", height="12px", border_radius=Design.RADIUS_FULL, bg=Color.SUCCESS), rx.text("±1 DP", style=Typography.CAPTION), style={"gap": Spacing.XS}),
+                    rx.hstack(rx.box(width="12px", height="12px", border_radius=Design.RADIUS_FULL, bg=Color.WARNING), rx.text("±2 DP", style=Typography.CAPTION), style={"gap": Spacing.XS}),
+                    rx.hstack(rx.box(width="12px", height="12px", border_radius=Design.RADIUS_FULL, bg=Color.ERROR), rx.text("±3 DP", style=Typography.CAPTION), style={"gap": Spacing.XS}),
+                    style={"gap": Spacing.LG}, justify_content="center", width="100%", margin_top=Spacing.MD
+                ),
+
+                # Gráfico
+                rx.cond(
+                    State.levey_jennings_data.length() > 0,
+                    rx.box(
+                        rx.recharts.line_chart(
+                            rx.recharts.line(data_key="value", stroke=Color.PRIMARY, stroke_width=2, dot=True, name="Valor"),
+                            rx.recharts.line(data_key="target", stroke=Color.SUCCESS, stroke_width=1, stroke_dash_array="5 5", dot=False, name="Alvo"),
+                            rx.recharts.x_axis(data_key="date"),
+                            rx.recharts.y_axis(domain=[State.lj_min_domain, State.lj_max_domain]),
+                            # Westgard Zones (Background)
+                            rx.recharts.reference_area(y1=State.lj_target_minus_1sd.to_string(), y2=State.lj_target_plus_1sd.to_string(), fill=Color.SUCCESS, fill_opacity=0.1),
+                            rx.recharts.reference_area(y1=State.lj_target_plus_1sd.to_string(), y2=State.lj_target_plus_2sd.to_string(), fill=Color.WARNING, fill_opacity=0.15),
+                            rx.recharts.reference_area(y1=State.lj_target_minus_2sd.to_string(), y2=State.lj_target_minus_1sd.to_string(), fill=Color.WARNING, fill_opacity=0.15),
+                            rx.recharts.reference_area(y1=State.lj_target_plus_2sd.to_string(), y2=State.lj_max_domain.to_string(), fill=Color.ERROR, fill_opacity=0.1),
+                            rx.recharts.reference_area(y1=State.lj_min_domain.to_string(), y2=State.lj_target_minus_2sd.to_string(), fill=Color.ERROR, fill_opacity=0.1),
+                            rx.recharts.cartesian_grid(stroke_dasharray="3 3", opacity=0.4),
+                            rx.recharts.graphing_tooltip(),
+                            rx.recharts.legend(),
+                            rx.recharts.reference_line(y=State.lj_target_plus_1sd.to_string(), stroke=Color.SUCCESS, stroke_width=1, stroke_dasharray="3 3", label="+1s"),
+                            rx.recharts.reference_line(y=State.lj_target_minus_1sd.to_string(), stroke=Color.SUCCESS, stroke_width=1, stroke_dasharray="3 3", label="-1s"),
+                            rx.recharts.reference_line(y=State.lj_target_plus_2sd.to_string(), stroke=Color.WARNING, stroke_width=1, stroke_dasharray="3 3", label="+2s"),
+                            rx.recharts.reference_line(y=State.lj_target_minus_2sd.to_string(), stroke=Color.WARNING, stroke_width=1, stroke_dasharray="3 3", label="-2s"),
+                            rx.recharts.reference_line(y=State.lj_target_plus_3sd.to_string(), stroke=Color.ERROR, stroke_width=1, stroke_dasharray="3 3", label="+3s"),
+                            rx.recharts.reference_line(y=State.lj_target_minus_3sd.to_string(), stroke=Color.ERROR, stroke_width=1, stroke_dasharray="3 3", label="-3s"),
+                            data=State.levey_jennings_chart_data, width="100%", height=350,
+                        ),
+                        bg=Color.SURFACE, border=f"1px solid {Color.BORDER}", border_radius=Design.RADIUS_LG, padding=Spacing.MD,
+                        margin_top=Spacing.MD, width="100%"
+                    ),
+                    rx.center(
+                        rx.vstack(
+                            rx.icon(tag="chart_bar", size=48, color=Color.TEXT_SECONDARY, opacity=0.3),
+                            ui.text("Nenhum dado encontrado para o período selecionado", color=Color.TEXT_SECONDARY),
+                            spacing="2", align_items="center"
+                        ),
+                        bg=Color.BACKGROUND, border=f"2px dashed {Color.BORDER}", border_radius=Design.RADIUS_XL,
+                        padding=Spacing.XL, width="100%", margin_top=Spacing.MD, height="350px"
+                    )
+                ),
+
+                # Estatísticas
+                rx.cond(
+                    State.levey_jennings_data.length() > 0,
+                    rx.grid(
+                        ui.stat_card("Média", State.lj_mean, "target", "primary"),
+                        ui.stat_card("Desvio Padrão", State.lj_sd, "variable", "primary"),
+                        ui.stat_card("CV% Médio", format_cv(State.lj_cv_mean) + "%", "percent", "primary"),
+                        ui.stat_card("Pontos", State.levey_jennings_data.length(), "list", "primary"),
+                        columns={"initial": "2", "sm": "4"},
+                        spacing="3", width="100%", margin_top=Spacing.MD
+                    )
+                ),
+
+                # Botão fechar
+                rx.hstack(
+                    ui.button("Fechar", icon="x", variant="secondary", on_click=State.close_chart_modal),
+                    justify_content="flex-end", width="100%", margin_top=Spacing.MD
+                ),
+
+                spacing="3", width="100%", padding_top=Spacing.MD
+            ),
+
+            style={"max_width": "900px", "max_height": "90vh"},
+            overflow_y="auto"
+        ),
+        open=State.show_chart_modal
+    )

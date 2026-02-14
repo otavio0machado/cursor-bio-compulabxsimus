@@ -25,8 +25,9 @@ from . import (
     _reference_ops, _post_calibration_ops, _import_ops,
 )
 from .dashboard_state import DashboardState
+from ._outras_areas_qc import OutrasAreasQCMixin
 
-class QCState(DashboardState):
+class QCState(OutrasAreasQCMixin, DashboardState):
     """Estado responsável pelo Controle de Qualidade (ProIn), Reagentes e Manutenções"""
     
     # ===== ProIn QC - Sistema de Controle de Qualidade =====

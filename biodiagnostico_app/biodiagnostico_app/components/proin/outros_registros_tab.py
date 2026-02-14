@@ -882,6 +882,123 @@ def _imunologia_content() -> rx.Component:
     )
 
 
+def _parasitologia_content() -> rx.Component:
+    """Conteúdo CQ de Parasitologia."""
+    from .generic_qc_tab import generic_qc_tab
+    return rx.cond(
+        State.outros_registros_area == "parasitologia",
+        rx.box(
+            generic_qc_tab(
+                area_id="parasitologia",
+                area_label="Parasitologia",
+                state_module=State,
+                param_analito_var=State.para_param_analito,
+                param_modo_var=State.para_param_modo,
+                param_alvo_var=State.para_param_alvo,
+                param_min_var=State.para_param_min,
+                param_max_var=State.para_param_max,
+                param_tolerancia_var=State.para_param_tolerancia,
+                param_equipamento_var=State.para_param_equipamento,
+                param_lote_var=State.para_param_lote,
+                param_nivel_var=State.para_param_nivel,
+                meas_data_var=State.para_meas_data,
+                meas_analito_var=State.para_meas_analito,
+                meas_valor_var=State.para_meas_valor,
+                meas_observacao_var=State.para_meas_observacao,
+                params_list_var=State.para_params_list,
+                measurements_list_var=State.para_measurements_list,
+                load_params_handler=lambda: State.load_area_data("parasitologia"),
+                save_param_handler=lambda: State.save_area_param("parasitologia"),
+                load_measurements_handler=lambda: State.load_area_data("parasitologia"),
+                register_measurement_handler=lambda: State.register_area_measurement("parasitologia"),
+            ),
+            width="100%",
+            bg=Color.SURFACE,
+            border=f"1px solid {Color.BORDER}",
+            border_radius=Design.RADIUS_XL,
+            padding=Spacing.LG,
+        ),
+    )
+
+
+def _microbiologia_content() -> rx.Component:
+    """Conteúdo CQ de Microbiologia."""
+    from .generic_qc_tab import generic_qc_tab
+    return rx.cond(
+        State.outros_registros_area == "microbiologia",
+        rx.box(
+            generic_qc_tab(
+                area_id="microbiologia",
+                area_label="Microbiologia",
+                state_module=State,
+                param_analito_var=State.micro_param_analito,
+                param_modo_var=State.micro_param_modo,
+                param_alvo_var=State.micro_param_alvo,
+                param_min_var=State.micro_param_min,
+                param_max_var=State.micro_param_max,
+                param_tolerancia_var=State.micro_param_tolerancia,
+                param_equipamento_var=State.micro_param_equipamento,
+                param_lote_var=State.micro_param_lote,
+                param_nivel_var=State.micro_param_nivel,
+                meas_data_var=State.micro_meas_data,
+                meas_analito_var=State.micro_meas_analito,
+                meas_valor_var=State.micro_meas_valor,
+                meas_observacao_var=State.micro_meas_observacao,
+                params_list_var=State.micro_params_list,
+                measurements_list_var=State.micro_measurements_list,
+                load_params_handler=lambda: State.load_area_data("microbiologia"),
+                save_param_handler=lambda: State.save_area_param("microbiologia"),
+                load_measurements_handler=lambda: State.load_area_data("microbiologia"),
+                register_measurement_handler=lambda: State.register_area_measurement("microbiologia"),
+            ),
+            width="100%",
+            bg=Color.SURFACE,
+            border=f"1px solid {Color.BORDER}",
+            border_radius=Design.RADIUS_XL,
+            padding=Spacing.LG,
+        ),
+    )
+
+
+def _uroanalise_content() -> rx.Component:
+    """Conteúdo CQ de Uroanálise."""
+    from .generic_qc_tab import generic_qc_tab
+    return rx.cond(
+        State.outros_registros_area == "uroanalise",
+        rx.box(
+            generic_qc_tab(
+                area_id="uroanalise",
+                area_label="Uroanálise",
+                state_module=State,
+                param_analito_var=State.urine_param_analito,
+                param_modo_var=State.urine_param_modo,
+                param_alvo_var=State.urine_param_alvo,
+                param_min_var=State.urine_param_min,
+                param_max_var=State.urine_param_max,
+                param_tolerancia_var=State.urine_param_tolerancia,
+                param_equipamento_var=State.urine_param_equipamento,
+                param_lote_var=State.urine_param_lote,
+                param_nivel_var=State.urine_param_nivel,
+                meas_data_var=State.urine_meas_data,
+                meas_analito_var=State.urine_meas_analito,
+                meas_valor_var=State.urine_meas_valor,
+                meas_observacao_var=State.urine_meas_observacao,
+                params_list_var=State.urine_params_list,
+                measurements_list_var=State.urine_measurements_list,
+                load_params_handler=lambda: State.load_area_data("uroanalise"),
+                save_param_handler=lambda: State.save_area_param("uroanalise"),
+                load_measurements_handler=lambda: State.load_area_data("uroanalise"),
+                register_measurement_handler=lambda: State.register_area_measurement("uroanalise"),
+            ),
+            width="100%",
+            bg=Color.SURFACE,
+            border=f"1px solid {Color.BORDER}",
+            border_radius=Design.RADIUS_XL,
+            padding=Spacing.LG,
+        ),
+    )
+
+
 def outros_registros_tab() -> rx.Component:
     """Aba Outros Registros com sub-menu por área laboratorial."""
     return rx.vstack(
@@ -919,7 +1036,9 @@ def outros_registros_tab() -> rx.Component:
         # Conteúdo da área ativa
         _hematologia_content(),
         _imunologia_content(),
-        *[_area_content(area_id, label) for area_id, label, _ in AREAS if area_id not in ("hematologia", "imunologia")],
+        _parasitologia_content(),
+        _microbiologia_content(),
+        _uroanalise_content(),
 
         width="100%",
         spacing="4",
